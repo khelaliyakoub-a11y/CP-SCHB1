@@ -22,13 +22,15 @@
   var SOURCES = [
     // Primary: official Google CDN
     {
-      app: 'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
-      db:  'https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js'
+      app:  'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
+      auth: 'https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js',
+      db:   'https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js'
     },
     // Fallback mirror: same official package, served via jsDelivr
     {
-      app: 'https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.js',
-      db:  'https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-database.js'
+      app:  'https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-app.js',
+      auth: 'https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-auth.js',
+      db:   'https://cdn.jsdelivr.net/npm/firebase@8.10.1/firebase-database.js'
     }
   ];
 
@@ -43,13 +45,15 @@
   }
 
   function loadPair(pair) {
-    // app must finish before database (database extends the firebase namespace)
-    return loadScript(pair.app).then(function(){ return loadScript(pair.db); });
+    // app must finish before auth/database (they extend the firebase namespace)
+    return loadScript(pair.app)
+      .then(function(){ return loadScript(pair.auth); })
+      .then(function(){ return loadScript(pair.db); });
   }
 
   function tryNext(i) {
     if (i >= SOURCES.length) {
-      console.error('Firebase SDK non chargé depuis aucune source (bloqué par un bloqueur de publicité/réseau ?). Mode hors-ligne (localStorage) uniquement.');
+      console.error('Firebase SDK non chargé depuis aucune source (bloqué par un bloqueur de publicité/réseau ?). Les fonctions en ligne sont indisponibles.');
       window.dispatchEvent(new Event('firebase-sdk-failed'));
       return;
     }
@@ -80,28 +84,70 @@
       });
 
       var _fbDb = firebase.database();
+      var _fbAuth = firebase.auth();
+      var _adminRef = null;
+      var _adminValueHandler = null;
 
-      // Save one demande (called from soumettreDemande)
-      window.fbSaveDemande = function(d) {
-        return _fbDb.ref('demandes/' + d.num).set(d);
+      // Public creation: atomically creates the private request and a separate
+      // secret-code tracking record that never contains the ordonnance.
+      window.fbCreateDemande = function(d, suiviPublic) {
+        var updates = {};
+        updates['demandes/' + d.num] = d;
+        updates['suivi/' + d.trackingCode] = suiviPublic;
+        return _fbDb.ref().update(updates);
       };
 
-      // Update fields (called from validerDemande / refuserDemande)
-      window.fbUpdateDemande = function(num, patch) {
-        return _fbDb.ref('demandes/' + num).update(patch);
+      // Secret-code lookup. The security rules allow reading exactly this child,
+      // never the complete /demandes collection.
+      window.fbReadSuivi = function(code) {
+        return _fbDb.ref('suivi/' + code).once('value').then(function(snapshot) {
+          return snapshot.val();
+        });
       };
 
-      // Delete one demande (called from supprimerDemande)
-      window.fbDeleteDemande = function(num) {
-        return _fbDb.ref('demandes/' + num).remove();
+      // Admin authentication (Email/Password configured in Firebase Console).
+      window.fbAdminLogin = function(email, password) {
+        return _fbAuth.signInWithEmailAndPassword(email, password);
+      };
+      window.fbAdminLogout = function() {
+        return _fbAuth.signOut();
+      };
+      window.fbOnAuthChanged = function(callback) {
+        return _fbAuth.onAuthStateChanged(callback);
       };
 
-      // Real-time listener — keeps local array in sync
-      window.fbListen = function(callback) {
-        _fbDb.ref('demandes').on('value', function(snapshot) {
+      // Admin-only full-data listener. It is attached only after authentication.
+      window.fbListenAdmin = function(callback, errorCallback) {
+        if (_adminRef && _adminValueHandler) _adminRef.off('value', _adminValueHandler);
+        _adminRef = _fbDb.ref('demandes');
+        _adminValueHandler = function(snapshot) {
           var data = snapshot.val();
           callback(data ? Object.values(data) : []);
-        });
+        };
+        _adminRef.on('value', _adminValueHandler, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopAdminListen = function() {
+        if (_adminRef && _adminValueHandler) _adminRef.off('value', _adminValueHandler);
+        _adminRef = null; _adminValueHandler = null;
+      };
+
+      // Admin updates are mirrored to the public secret tracking record when one exists.
+      window.fbUpdateDemande = function(num, patch, trackingCode) {
+        var updates = {};
+        Object.keys(patch).forEach(function(k){ updates['demandes/' + num + '/' + k] = patch[k]; });
+        if (trackingCode) {
+          ['statut','dateValidation','numPC'].forEach(function(k){
+            if (Object.prototype.hasOwnProperty.call(patch, k)) updates['suivi/' + trackingCode + '/' + k] = patch[k];
+          });
+        }
+        return _fbDb.ref().update(updates);
+      };
+
+      window.fbDeleteDemande = function(num, trackingCode) {
+        var updates = {};
+        updates['demandes/' + num] = null;
+        if (trackingCode) updates['suivi/' + trackingCode] = null;
+        return _fbDb.ref().update(updates);
       };
 
       window.dispatchEvent(new Event('firebase-sdk-ready'));
@@ -442,9 +488,10 @@ footer strong{color:var(--or-clair);}
       <div class="trow"><div class="trow-lbl">Bénéficiaire</div><div class="trow-val" id="tk-benef"></div></div>
       <div class="trow"><div class="trow-lbl">Établissement</div><div class="trow-val" id="tk-etab"></div></div>
       <div class="trow"><div class="trow-lbl">Date</div><div class="trow-val" id="tk-date"></div></div>
+      <div class="trow" style="grid-column:1/-1;border:1.5px solid var(--or);"><div class="trow-lbl">Code de suivi confidentiel</div><div class="trow-val" id="tk-code" style="font-family:monospace;font-size:16px;letter-spacing:.04em;color:var(--bleu);"></div></div>
     </div>
     <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;">
-      📌 <strong>Conservez votre numéro de demande</strong> pour le suivi dans l'onglet "Suivi de demande".
+      🔐 <strong>Conservez votre code de suivi confidentiel.</strong> Il est nécessaire pour consulter votre dossier sans exposer les autres demandes.
     </div>
   </div>
 </div>
@@ -454,10 +501,10 @@ footer strong{color:var(--or-clair);}
   <div class="sec-hdr">
     <span class="eyebrow">Suivre ma demande</span>
     <h2 class="sec-title">État de votre prise en charge</h2>
-    <p class="sec-desc">Saisissez votre numéro de demande (ex: PC-0001) ou votre matricule pour consulter l'état de votre dossier.</p>
+    <p class="sec-desc">Saisissez le code de suivi confidentiel remis lors de l'enregistrement de votre demande.</p>
   </div>
   <div class="panneau" style="max-width:500px;margin-bottom:24px;">
-    <div class="grp"><label>Numéro de demande ou Matricule</label><input id="suivi-q" type="text" placeholder="PC-0001 ou votre matricule"></div>
+    <div class="grp"><label>Code de suivi confidentiel</label><input id="suivi-q" type="text" autocomplete="off" placeholder="SCHB-XXXXXXXXXXXX"></div>
     <button class="btn btn-primary" onclick="rechercherSuivi()">🔍 Rechercher</button>
   </div>
   <div id="suivi-result"></div>
@@ -472,8 +519,9 @@ footer strong{color:var(--or-clair);}
         <h2 class="serif" style="color:var(--bleu);font-size:22px;margin:8px 0 4px;">Espace Administration</h2>
         <p style="color:#7A6F58;font-size:13.5px;">Comité de Participation — SCHB</p>
       </div>
-      <div class="grp"><label>Mot de passe</label><input id="admin-pwd" type="password" placeholder="••••••••"></div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="loginAdmin()">Accéder</button>
+      <div class="grp"><label>Adresse e-mail</label><input id="admin-email" type="email" autocomplete="username" placeholder="votre@email.dz"></div>
+      <div class="grp"><label>Mot de passe</label><input id="admin-pwd" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+      <button id="btn-admin-login" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="loginAdmin()">Accéder de façon sécurisée</button>
       <div class="msg" id="msg-login"></div>
     </div>
   </div>
@@ -483,6 +531,7 @@ footer strong{color:var(--or-clair);}
       <div>
         <div class="eyebrow">Administration</div>
         <h2 class="sec-title" style="margin-bottom:0;">Tableau de bord</h2>
+        <div id="admin-user-email" style="font-size:12px;color:#7A6F58;margin-top:3px;"></div>
       </div>
       <button class="btn btn-outline" onclick="logoutAdmin()" style="color:var(--rouge);border-color:var(--rouge);">🔓 Déconnexion</button>
     </div>
@@ -616,8 +665,47 @@ function notifierAdminParEmail(d) {
 
 // ===== STATE =====
 var demandes = [];
-// Bootstrap from Firebase (real-time listener set up after DOM ready)
-// Falls back to empty array until Firebase responds
+var suiviCache = {};
+var adminAuthReady = false;
+
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function randomSecret(len) {
+  var alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var out = '';
+  if (window.crypto && window.crypto.getRandomValues) {
+    var buf = new Uint8Array(len);
+    window.crypto.getRandomValues(buf);
+    for (var i=0;i<len;i++) out += alphabet[buf[i] % alphabet.length];
+  } else {
+    for (var j=0;j<len;j++) out += alphabet[Math.floor(Math.random()*alphabet.length)];
+  }
+  return out;
+}
+
+function newRequestNumber(now) {
+  var y = String(now.getFullYear()).slice(-2);
+  var m = String(now.getMonth()+1).padStart(2,'0');
+  var d = String(now.getDate()).padStart(2,'0');
+  return 'PC-' + y + m + d + '-' + randomSecret(6);
+}
+
+function newTrackingCode() { return 'SCHB-' + randomSecret(20); }
+
+function makeSuiviPublic(d) {
+  // No prescription image/PDF is copied here. The secret code is the capability key.
+  return {
+    code: d.trackingCode, num: d.num, statut: d.statut, date: d.date, dateObj: d.dateObj,
+    nom: d.nom, prenom: d.prenom, mat: d.mat, tel: d.tel, service: d.service || '',
+    benefVal: d.benefVal, benefLabel: d.benefLabel, benefName: d.benefName,
+    etab: d.etab, acte: d.acte, numPC: d.numPC || '', dateValidation: d.dateValidation || ''
+  };
+}
+
 var ordoBase64 = null;
 var ordoType = null;
 var GICA_B64 = "data:image/jpeg;base64,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";
@@ -671,7 +759,7 @@ function previewFile(inp) {
 }
 
 // ===== SOUMETTRE =====
-function soumettreDemande() {
+async function soumettreDemande() {
   var nom = document.getElementById('f-nom').value.trim().toUpperCase();
   var prenom = document.getElementById('f-prenom').value.trim();
   var mat = document.getElementById('f-matricule').value.trim();
@@ -689,19 +777,24 @@ function soumettreDemande() {
 
   if (!nom || !prenom || !mat || !tel || !etab || !acte) {
     msg.className = 'msg err'; msg.style.display = 'flex';
-    msg.innerHTML = '⚠️ Veuillez remplir tous les champs obligatoires.'; return;
+    msg.textContent = '⚠️ Veuillez remplir tous les champs obligatoires.'; return;
   }
   if (benefVal !== 'l_adherent' && (!bnNom || !bnPrenom)) {
     msg.className = 'msg err'; msg.style.display = 'flex';
-    msg.innerHTML = '⚠️ Veuillez renseigner le nom et prénom du bénéficiaire.'; return;
+    msg.textContent = '⚠️ Veuillez renseigner le nom et prénom du bénéficiaire.'; return;
   }
   if (!ordoBase64 && ACTES_SANS_ORDONNANCE.indexOf(acte) === -1) {
     msg.className = 'msg err'; msg.style.display = 'flex';
-    msg.innerHTML = "⚠️ Veuillez joindre l'ordonnance médicale."; return;
+    msg.textContent = "⚠️ Veuillez joindre l'ordonnance médicale."; return;
+  }
+  if (typeof window.fbCreateDemande !== 'function') {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '❌ Connexion sécurisée indisponible. Réessayez dans quelques instants.'; return;
   }
 
-  var num = 'PC-' + String(demandes.length + 1).padStart(4, '0');
   var now = new Date();
+  var num = newRequestNumber(now);
+  var trackingCode = newTrackingCode();
   var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
 
   var labelMap = {l_adherent: "l'adhérent", conjoint: 'conjoint', enfants: 'enfants', pere: 'père', mere: 'mère'};
@@ -709,7 +802,7 @@ function soumettreDemande() {
   var benefName = (benefVal === 'l_adherent') ? (nom + ' ' + prenom) : (bnNom + ' ' + bnPrenom);
 
   var d = {
-    num: num, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
+    num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
     benefVal: benefVal, benefLabel: benefLabel, benefName: benefName,
     etab: etab, acte: acte, ordo: ordoBase64, ordoType: ordoType,
     date: dateStr, statut: 'En attente', dateObj: now.toISOString(),
@@ -717,22 +810,25 @@ function soumettreDemande() {
     bnPrenom: (benefVal !== 'l_adherent') ? bnPrenom : ''
   };
 
-  demandes.push(d);
-  saveData();
-  // Persist to Firebase
-  if (typeof window.fbSaveDemande === 'function') {
-    window.fbSaveDemande(d).catch(function(err){ console.error('Firebase save error:', err); });
+  msg.className = 'msg info'; msg.style.display = 'flex';
+  msg.textContent = '⏳ Enregistrement sécurisé de la demande…';
+  try {
+    await window.fbCreateDemande(d, makeSuiviPublic(d));
+    notifierAdminParEmail(d);
+    document.getElementById('tk-num').textContent = num;
+    document.getElementById('tk-adh').textContent = nom + ' ' + prenom + ' (' + mat + ')';
+    document.getElementById('tk-benef').textContent = benefName + ' — ' + benefLabel;
+    document.getElementById('tk-etab').textContent = etab;
+    document.getElementById('tk-date').textContent = dateStr;
+    document.getElementById('tk-code').textContent = trackingCode;
+    document.getElementById('ticket-confirm').classList.add('visible');
+    msg.className = 'msg ok'; msg.style.display = 'flex';
+    msg.innerHTML = '✅ Demande <strong>' + esc(num) + '</strong> enregistrée. Notez votre code de suivi confidentiel.';
+  } catch (err) {
+    console.error('Firebase create error:', err);
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = "❌ La demande n'a pas été enregistrée. Vérifiez votre connexion puis réessayez.";
   }
-  notifierAdminParEmail(d);
-  document.getElementById('tk-num').textContent = num;
-  document.getElementById('tk-adh').textContent = nom + ' ' + prenom + ' (' + mat + ')';
-  document.getElementById('tk-benef').textContent = benefName + ' — ' + benefLabel;
-  document.getElementById('tk-etab').textContent = etab;
-  document.getElementById('tk-date').textContent = dateStr;
-  var tk = document.getElementById('ticket-confirm');
-  tk.classList.add('visible');
-  msg.className = 'msg ok'; msg.style.display = 'flex';
-  msg.innerHTML = '✅ Demande <strong>' + num + '</strong> soumise avec succès. Conservez ce numéro.';
 }
 
 function resetForm() {
@@ -752,70 +848,110 @@ function resetForm() {
 }
 
 // ===== SUIVI =====
-function rechercherSuivi() {
-  var q = document.getElementById('suivi-q').value.trim().toUpperCase();
+async function rechercherSuivi() {
+  var code = document.getElementById('suivi-q').value.trim().toUpperCase();
   var res = document.getElementById('suivi-result');
-  if (!q) { res.innerHTML = ''; return; }
-  var found = demandes.filter(function(d){ return d.num.toUpperCase() === q || d.mat.toUpperCase() === q; });
-  if (!found.length) {
-    res.innerHTML = '<div class="msg info" style="display:flex">ℹ️ Aucune demande trouvée pour « ' + q + ' ».</div>'; return;
+  if (!code) { res.innerHTML = ''; return; }
+  if (typeof window.fbReadSuivi !== 'function') {
+    res.innerHTML = '<div class="msg err" style="display:flex">❌ Service de suivi indisponible. Réessayez dans quelques instants.</div>'; return;
   }
-  var html = '';
-  found.forEach(function(d) {
+  res.innerHTML = '<div class="msg info" style="display:flex">⏳ Recherche sécurisée…</div>';
+  try {
+    var d = await window.fbReadSuivi(code);
+    if (!d) {
+      res.innerHTML = '<div class="msg info" style="display:flex">ℹ️ Aucun dossier trouvé avec ce code. Vérifiez le code reçu lors du dépôt.</div>'; return;
+    }
+    suiviCache[code] = d;
     var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
-    html += '<div class="suivi-card">';
+    var html = '<div class="suivi-card">';
     html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">';
     html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7A6F58;">Demande</div>';
-    html += '<div class="serif" style="font-size:22px;font-weight:700;color:var(--bleu);">' + d.num + '</div></div>';
-    html += '<span class="badge ' + bc + '">' + d.statut + '</span></div>';
+    html += '<div class="serif" style="font-size:22px;font-weight:700;color:var(--bleu);">' + esc(d.num) + '</div></div>';
+    html += '<span class="badge ' + bc + '">' + esc(d.statut) + '</span></div>';
     html += '<div class="detail-grid">';
-    html += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + d.nom + ' ' + d.prenom + '</div></div>';
-    html += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + d.mat + '</div></div>';
-    html += '<div class="detail-item"><div class="detail-lbl">Bénéficiaire</div><div class="detail-val">' + d.benefName + ' (' + d.benefLabel + ')</div></div>';
-    html += '<div class="detail-item"><div class="detail-lbl">Établissement</div><div class="detail-val">' + d.etab + '</div></div>';
-    html += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + d.date + '</div></div>';
-    html += '<div class="detail-item"><div class="detail-lbl">Acte</div><div class="detail-val">' + d.acte + '</div></div>';
-    html += '</div>';
-    html += '<div class="tl">';
-    html += '<div class="tl-item"><div class="tl-dot tl-done">✓</div><div class="tl-text"><div class="tl-title">Demande soumise</div><div class="tl-sub">' + d.date + '</div></div></div>';
+    html += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+    html += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+    html += '<div class="detail-item"><div class="detail-lbl">Bénéficiaire</div><div class="detail-val">' + esc(d.benefName) + ' (' + esc(d.benefLabel) + ')</div></div>';
+    html += '<div class="detail-item"><div class="detail-lbl">Établissement</div><div class="detail-val">' + esc(d.etab) + '</div></div>';
+    html += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+    html += '<div class="detail-item"><div class="detail-lbl">Acte</div><div class="detail-val">' + esc(d.acte) + '</div></div>';
+    html += '</div><div class="tl">';
+    html += '<div class="tl-item"><div class="tl-dot tl-done">✓</div><div class="tl-text"><div class="tl-title">Demande soumise</div><div class="tl-sub">' + esc(d.date) + '</div></div></div>';
     var dot2 = d.statut !== 'En attente' ? 'tl-done' : 'tl-pend';
     var icon2 = d.statut !== 'En attente' ? '✓' : '⏳';
     html += '<div class="tl-item"><div class="tl-dot ' + dot2 + '">' + icon2 + '</div><div class="tl-text"><div class="tl-title">Examen par le Comité</div><div class="tl-sub">' + (d.statut === 'En attente' ? 'En cours de traitement' : 'Traité') + '</div></div></div>';
     var dot3 = d.statut === 'Validé' ? 'tl-done' : 'tl-empty';
     var icon3 = d.statut === 'Validé' ? '✓' : d.statut === 'Refusé' ? '✗' : '○';
     var txt3 = d.statut === 'Validé' ? 'Prise en charge validée' : d.statut === 'Refusé' ? 'Demande refusée' : 'Décision finale';
-    html += '<div class="tl-item"><div class="tl-dot ' + dot3 + '">' + icon3 + '</div><div class="tl-text"><div class="tl-title">' + txt3 + '</div><div class="tl-sub">' + (d.statut === 'Validé' ? 'Vous pouvez télécharger votre document' : d.statut === 'Refusé' ? 'Contactez le Comité de Participation' : 'En attente') + '</div></div></div>';
+    html += '<div class="tl-item"><div class="tl-dot ' + dot3 + '">' + icon3 + '</div><div class="tl-text"><div class="tl-title">' + txt3 + '</div><div class="tl-sub">' + (d.statut === 'Validé' ? 'Votre prise en charge est disponible' : d.statut === 'Refusé' ? 'Contactez le Comité de Participation' : 'En attente') + '</div></div></div>';
     html += '</div>';
-    if (d.statut === 'Validé') {
-      html += '<div style="margin-top:18px;"><button class="btn btn-or" onclick="genererPDF(&quot;' + d.num + '&quot;)">📥 Télécharger la prise en charge</button></div>';
-    }
+    if (d.statut === 'Validé') html += '<div style="margin-top:18px;"><button class="btn btn-or" onclick="genererPDFSuivi(&quot;' + esc(code) + '&quot;)">📥 Télécharger la prise en charge</button></div>';
     html += '</div>';
-  });
-  res.innerHTML = html;
-}
-
-// ===== ADMIN =====
-function loginAdmin() {
-  var pwd = document.getElementById('admin-pwd').value;
-  var msg = document.getElementById('msg-login');
-  if (pwd === 'KOUBA2030') {
-    document.getElementById('admin-login-wrap').style.display = 'none';
-    document.getElementById('admin-board').style.display = 'block';
-    renderStats(); renderTableau(); renderStatsChart();
-    showAdminTab('demandes');
-  } else {
-    msg.className = 'msg err'; msg.style.display = 'flex';
-    msg.innerHTML = '❌ Mot de passe incorrect.';
+    res.innerHTML = html;
+  } catch(err) {
+    console.error('Suivi read error:', err);
+    res.innerHTML = '<div class="msg err" style="display:flex">❌ Impossible de consulter le dossier actuellement.</div>';
   }
 }
 
+// ===== ADMIN =====
+async function loginAdmin() {
+  var email = document.getElementById('admin-email').value.trim();
+  var pwd = document.getElementById('admin-pwd').value;
+  var msg = document.getElementById('msg-login');
+  var btn = document.getElementById('btn-admin-login');
+  if (!email || !pwd) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = "⚠️ Saisissez l'adresse e-mail et le mot de passe."; return;
+  }
+  if (typeof window.fbAdminLogin !== 'function') {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '❌ Firebase Authentication est indisponible.'; return;
+  }
+  btn.disabled = true; msg.className = 'msg info'; msg.style.display = 'flex'; msg.textContent = '⏳ Connexion sécurisée…';
+  try {
+    await window.fbAdminLogin(email, pwd);
+    document.getElementById('admin-pwd').value = '';
+  } catch(err) {
+    console.error('Admin login error:', err);
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '❌ Adresse e-mail ou mot de passe incorrect.';
+  } finally { btn.disabled = false; }
+}
+
 document.getElementById('admin-pwd').addEventListener('keydown', function(e){ if(e.key==='Enter') loginAdmin(); });
+document.getElementById('admin-email').addEventListener('keydown', function(e){ if(e.key==='Enter') loginAdmin(); });
 
 function logoutAdmin() {
-  document.getElementById('admin-login-wrap').style.display = 'block';
-  document.getElementById('admin-board').style.display = 'none';
-  document.getElementById('admin-pwd').value = '';
-  document.getElementById('msg-login').style.display = 'none';
+  if (typeof window.fbAdminLogout === 'function') window.fbAdminLogout().catch(function(err){ console.error(err); });
+}
+
+function applyAdminAuthState(user) {
+  adminAuthReady = true;
+  var wrap = document.getElementById('admin-login-wrap');
+  var board = document.getElementById('admin-board');
+  var msg = document.getElementById('msg-login');
+  if (user) {
+    wrap.style.display = 'none'; board.style.display = 'block';
+    document.getElementById('admin-user-email').textContent = user.email || 'Compte authentifié';
+    if (msg) msg.style.display = 'none';
+    if (typeof window.fbListenAdmin === 'function') {
+      window.fbListenAdmin(function(arr) {
+        demandes = arr;
+        renderStats(); renderTableau(); renderStatsChart();
+      }, function(err) {
+        console.error('Admin database read error:', err);
+        alert("Connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture. Appliquez les règles sécurisées fournies.");
+      });
+    }
+    showAdminTab('demandes');
+  } else {
+    if (typeof window.fbStopAdminListen === 'function') window.fbStopAdminListen();
+    demandes = [];
+    try { localStorage.removeItem('pcm_demandes'); } catch(e) {}
+    wrap.style.display = 'block'; board.style.display = 'none';
+    document.getElementById('admin-user-email').textContent = '';
+  }
 }
 
 function showAdminTab(id) {
@@ -885,7 +1021,7 @@ function renderStatsChart() {
     var pctAttente = d.total ? (d.attente / maxTotal * 100) : 0;
     var pctRefuse = d.total ? (d.refuse / maxTotal * 100) : 0;
     html += '<div class="chart-bar-row">';
-    html += '<div class="chart-bar-label">' + d.nom + '</div>';
+    html += '<div class="chart-bar-label">' + esc(d.nom) + '</div>';
     html += '<div class="chart-bar-track">';
     if (d.valide) html += '<div class="chart-bar-seg" style="width:' + pctValide + '%;background:var(--vert);" title="' + d.valide + ' validée(s)">' + (pctValide > 8 ? d.valide : '') + '</div>';
     if (d.attente) html += '<div class="chart-bar-seg" style="width:' + pctAttente + '%;background:#F59E0B;" title="' + d.attente + ' en attente">' + (pctAttente > 8 ? d.attente : '') + '</div>';
@@ -900,7 +1036,7 @@ function renderStatsChart() {
   data.forEach(function(d) {
     var taux = d.total ? Math.round(d.valide / d.total * 100) : 0;
     rows += '<tr>';
-    rows += '<td style="font-weight:600;">' + d.nom + '</td>';
+    rows += '<td style="font-weight:600;">' + esc(d.nom) + '</td>';
     rows += '<td>' + d.total + '</td>';
     rows += '<td style="color:var(--vert);font-weight:700;">' + d.valide + '</td>';
     rows += '<td style="color:#92400E;font-weight:700;">' + d.attente + '</td>';
@@ -927,13 +1063,13 @@ function renderTableau() {
   filtered.forEach(function(d) {
     var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
     rows += '<tr>';
-    rows += '<td><strong>' + d.num + '</strong></td>';
-    rows += '<td style="font-size:12px;">' + d.date + '</td>';
-    rows += '<td>' + d.nom + ' ' + d.prenom + '</td>';
-    rows += '<td>' + d.mat + '</td>';
-    rows += '<td>' + d.benefName + '<br><span style="font-size:11px;color:#7A6F58;">' + d.benefLabel + '</span></td>';
-    rows += '<td style="font-size:12px;">' + d.etab + '</td>';
-    rows += '<td><span class="badge ' + bc + '">' + d.statut + '</span></td>';
+    rows += '<td><strong>' + esc(d.num) + '</strong></td>';
+    rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
+    rows += '<td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td>';
+    rows += '<td>' + esc(d.mat) + '</td>';
+    rows += '<td>' + esc(d.benefName) + '<br><span style="font-size:11px;color:#7A6F58;">' + esc(d.benefLabel) + '</span></td>';
+    rows += '<td style="font-size:12px;">' + esc(d.etab) + '</td>';
+    rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
     rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
     rows += '<button class="btn-view-sm" onclick="voirDetail(&quot;' + d.num + '&quot;)">👁 Voir</button>';
     rows += '<button class="btn-ordo-sm" onclick="voirOrdonnance(&quot;' + d.num + '&quot;)">📄 Ordonnance</button>';
@@ -960,7 +1096,7 @@ function validerDemande(num) {
   saveData(); renderStats(); renderTableau();
   // Sync to Firebase
   if (typeof window.fbUpdateDemande === 'function') {
-    window.fbUpdateDemande(num, { statut: d.statut, dateValidation: d.dateValidation, numPC: d.numPC })
+    window.fbUpdateDemande(num, { statut: d.statut, dateValidation: d.dateValidation, numPC: d.numPC }, d.trackingCode || '')
       .catch(function(err){ console.error('Firebase update error:', err); });
   }
 }
@@ -973,7 +1109,7 @@ function refuserDemande(num) {
   saveData(); renderStats(); renderTableau();
   // Sync to Firebase
   if (typeof window.fbUpdateDemande === 'function') {
-    window.fbUpdateDemande(num, { statut: 'Refusé' })
+    window.fbUpdateDemande(num, { statut: 'Refusé' }, d.trackingCode || '')
       .catch(function(err){ console.error('Firebase update error:', err); });
   }
 }
@@ -983,16 +1119,17 @@ function voirDetail(num) {
   if (!d) return;
   var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
   var body = '<div class="detail-grid">';
-  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + d.statut + '</span></div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + d.date + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + d.nom + ' ' + d.prenom + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + d.mat + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Téléphone</div><div class="detail-val">' + d.tel + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + (d.service||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Téléphone</div><div class="detail-val">' + esc(d.tel) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service||'—') + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Bénéficiaire</div><div class="detail-val">' + d.benefName + ' (' + d.benefLabel + ')</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Établissement</div><div class="detail-val">' + d.etab + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Établissement</div><div class="detail-val">' + esc(d.etab) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Code de suivi</div><div class="detail-val" style="font-family:monospace;">' + esc(d.trackingCode || 'Ancienne demande — sans code') + '</div></div>';
   body += '</div>';
-  body += '<div class="detail-item" style="margin-bottom:14px;"><div class="detail-lbl">Acte médical</div><div class="detail-val" style="margin-top:4px;">' + d.acte + '</div></div>';
+  body += '<div class="detail-item" style="margin-bottom:14px;"><div class="detail-lbl">Acte médical</div><div class="detail-val" style="margin-top:4px;">' + esc(d.acte) + '</div></div>';
   if (d.ordo && d.ordoType && d.ordoType.startsWith('image/')) {
     body += '<div><div class="detail-lbl" style="margin-bottom:6px;">Ordonnance</div><img src="' + d.ordo + '" class="ord-preview"></div>';
   } else if (d.ordo) {
@@ -1025,7 +1162,7 @@ function supprimerDemande(num) {
   saveData(); renderStats(); renderTableau();
   // Sync to Firebase
   if (typeof window.fbDeleteDemande === 'function') {
-    window.fbDeleteDemande(num)
+    window.fbDeleteDemande(num, d.trackingCode || '')
       .catch(function(err){ console.error('Firebase delete error:', err); });
   }
 }
@@ -1080,8 +1217,14 @@ function exporterExcel() {
 }
 
 // ===== PDF =====
-function genererPDF(num) {
-  var d = demandes.find(function(x){ return x.num === num; });
+function genererPDFSuivi(code) {
+  var d = suiviCache[code];
+  if (!d) { alert('Relancez la recherche avec votre code de suivi.'); return; }
+  genererPDF(null, d);
+}
+
+function genererPDF(num, dataOverride) {
+  var d = dataOverride || demandes.find(function(x){ return x.num === num; });
   if (!d || d.statut !== 'Validé') { alert("Cette demande n'est pas encore validée."); return; }
 
   var jsPDF = window.jspdf.jsPDF;
@@ -1254,32 +1397,19 @@ function genererPDF(num) {
 function saveData() {
   // Legacy localStorage kept as offline fallback
   try { localStorage.setItem('pcm_demandes', JSON.stringify(demandes)); } catch(e) {}
-  // Primary persistence: Firebase (fbSaveDemande is called individually per demande)
+  // Firebase is the primary persistence layer.
 }
 
-// ===== FIREBASE REAL-TIME SYNC =====
-// Wait for the Firebase module to be ready, then start listening.
-// Capped retries: if fbListen never appears (both CDN sources blocked/offline),
-// stop polling after ~25s and fall back to localStorage-only mode silently.
-(function waitForFirebase(attempt) {
+// ===== FIREBASE AUTH / ADMIN DATA BOOTSTRAP =====
+(function waitForFirebaseAuth(attempt) {
   attempt = attempt || 0;
-  if (typeof window.fbListen === 'function') {
-    window.fbListen(function(arr) {
-      demandes = arr;
-      // Refresh admin panel if it is visible
-      if (document.getElementById('admin-board') &&
-          document.getElementById('admin-board').style.display !== 'none') {
-        renderStats();
-        renderTableau();
-        renderStatsChart();
-      }
-    });
+  if (typeof window.fbOnAuthChanged === 'function') {
+    window.fbOnAuthChanged(function(user) { applyAdminAuthState(user); });
   } else if (attempt < 125) {
-    // Retry until Firebase has finished loading (max ~25s, allows time
-    // for the primary CDN to fail and the fallback mirror to load)
-    setTimeout(function(){ waitForFirebase(attempt + 1); }, 200);
+    setTimeout(function(){ waitForFirebaseAuth(attempt + 1); }, 200);
   } else {
-    console.warn('Firebase indisponible après 25s : mode hors-ligne (localStorage) actif.');
+    console.error('Firebase Authentication indisponible après 25s.');
+    applyAdminAuthState(null);
   }
 })();
 </script>
