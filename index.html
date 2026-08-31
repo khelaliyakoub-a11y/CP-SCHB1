@@ -1000,50 +1000,6 @@ function mergePrets(fbArr) {
   return Object.values(map);
 }
 
-
-// ===== SYNCHRONISATION ROBUSTE LIVRES / PRETS =====
-// GitHub Pages est un hébergement statique : localStorage reste propre au navigateur.
-// Firebase doit donc recevoir les demandes. Comme le SDK Firebase est chargé
-// de façon asynchrone plus haut, une soumission très rapide pouvait rester uniquement
-// en local. Cette file de synchronisation renvoie automatiquement les demandes
-// locales vers Firebase dès que le SDK est prêt.
-var _syncInProgress = false;
-
-function syncPendingCloudData() {
-  if (_syncInProgress) return;
-  if (typeof window.fbCreateLivre !== 'function' || typeof window.fbCreatePret !== 'function') return;
-
-  _syncInProgress = true;
-
-  var livresLocaux = loadLivresLocal();
-  var pretsLocaux = loadPretsLocal();
-  var jobs = [];
-
-  livresLocaux.forEach(function(d) {
-    if (!d || !d.num || !d.trackingCode) return;
-    jobs.push(
-      Promise.resolve()
-        .then(function(){ return window.fbCreateLivre(d, makeSuiviPublicLivre(d)); })
-        .catch(function(err){ console.warn('Synchronisation livre en attente:', d.num, err); })
-    );
-  });
-
-  pretsLocaux.forEach(function(d) {
-    if (!d || !d.num || !d.trackingCode) return;
-    jobs.push(
-      Promise.resolve()
-        .then(function(){ return window.fbCreatePret(d, makeSuiviPublicPret(d)); })
-        .catch(function(err){ console.warn('Synchronisation prêt en attente:', d.num, err); })
-    );
-  });
-
-  Promise.all(jobs).finally(function(){ _syncInProgress = false; });
-}
-
-// Le SDK peut être prêt avant ou après le chargement de ce script.
-window.addEventListener('firebase-sdk-ready', syncPendingCloudData);
-setTimeout(syncPendingCloudData, 1500);
-
 // ===== STATE =====
 var demandes = [];
 var suiviCache = {};
@@ -1327,13 +1283,11 @@ async function soumettrePret() {
   msg.innerHTML = '✅ Demande <strong>' + esc(num) + '</strong> enregistrée. Notez votre code de suivi confidentiel.';
 
   if (typeof window.fbCreatePret === 'function') {
-    try {
-      await window.fbCreatePret(d, makeSuiviPublicPret(d));
-      msg.innerHTML = '✅ Demande <strong>' + esc(num) + '</strong> enregistrée et synchronisée.';
-    } catch(err) {
-      console.error('Synchronisation Firebase échouée (prêt):', err);
-      msg.innerHTML = '⚠️ Demande <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Synchronisation cloud en attente.';
-    }
+    window.fbCreatePret(d, makeSuiviPublicPret(d)).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (prêt) :', err);
+      msg.className = 'msg err'; msg.style.display = 'flex';
+      msg.innerHTML = "⚠️ Demande <strong>" + esc(num) + "</strong> enregistrée sur cet appareil uniquement : la synchronisation avec le serveur a échoué (" + esc(err && err.message || 'erreur inconnue') + "). Le Comité de Participation ne pourra pas la voir tant que ce problème n'est pas corrigé.";
+    });
   }
 }
 
@@ -1488,17 +1442,13 @@ async function soumettreLivre() {
   msg.className = 'msg ok'; msg.style.display = 'flex';
   msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
 
-  // Synchronisation cloud : si Firebase est déjà prêt, on attend la confirmation.
-  // Sinon, la demande reste en local et sera automatiquement synchronisée dès que
-  // le SDK Firebase sera disponible.
+  // Synchronisation Firebase en arrière-plan (best-effort, ne bloque jamais l'enregistrement local)
   if (typeof window.fbCreateLivre === 'function') {
-    try {
-      await window.fbCreateLivre(d, makeSuiviPublicLivre(d));
-      msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée et synchronisée.';
-    } catch(err) {
-      console.error('Synchronisation Firebase échouée (livre):', err);
-      msg.innerHTML = '⚠️ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Synchronisation cloud en attente.';
-    }
+    window.fbCreateLivre(d, makeSuiviPublicLivre(d)).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (inscription tout de même enregistrée localement) :', err);
+      msg.className = 'msg err'; msg.style.display = 'flex';
+      msg.innerHTML = "⚠️ Inscription <strong>" + esc(num) + "</strong> enregistrée sur cet appareil uniquement : la synchronisation avec le serveur a échoué (" + esc(err && err.message || 'erreur inconnue') + "). Le Comité de Participation ne pourra pas la voir tant que ce problème n'est pas corrigé.";
+    });
   }
 }
 
@@ -1697,6 +1647,7 @@ function applyAdminAuthState(user) {
         renderTableauLivres();
       }, function(err) {
         console.error('Admin database read error (livres):', err);
+        alert("Livre scolaire : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'livres'. Ajoutez les règles pour ce chemin dans la console Firebase.");
       });
     }
     // Idem pour les demandes de prêt social.
@@ -1708,6 +1659,7 @@ function applyAdminAuthState(user) {
         renderTableauPrets(); renderStatsPret();
       }, function(err) {
         console.error('Admin database read error (prêts):', err);
+        alert("Prêt social : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'prets'. Ajoutez les règles pour ce chemin dans la console Firebase.");
       });
     }
     showAdminTab('demandes');
