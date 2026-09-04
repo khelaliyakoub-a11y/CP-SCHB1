@@ -305,6 +305,137 @@
         return _fbDb.ref().update(updates);
       };
 
+      // ===== BOÎTE À IDÉES (propositions des travailleurs) =====
+      var _adminRefIdees = null;
+      var _adminValueHandlerIdees = null;
+
+      window.fbCreateIdee = function(d) {
+        var updates = {};
+        updates['idees/' + d.num] = d;
+        return _fbDb.ref().update(updates);
+      };
+      window.fbListenAdminIdees = function(callback, errorCallback) {
+        if (_adminRefIdees && _adminValueHandlerIdees) _adminRefIdees.off('value', _adminValueHandlerIdees);
+        _adminRefIdees = _fbDb.ref('idees');
+        _adminValueHandlerIdees = function(snapshot) {
+          var data = snapshot.val();
+          callback(data ? Object.values(data) : []);
+        };
+        _adminRefIdees.on('value', _adminValueHandlerIdees, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopAdminListenIdees = function() {
+        if (_adminRefIdees && _adminValueHandlerIdees) _adminRefIdees.off('value', _adminValueHandlerIdees);
+        _adminRefIdees = null; _adminValueHandlerIdees = null;
+      };
+      window.fbUpdateIdee = function(num, patch) {
+        var updates = {};
+        Object.keys(patch).forEach(function(k){ updates['idees/' + num + '/' + k] = patch[k]; });
+        return _fbDb.ref().update(updates);
+      };
+      window.fbDeleteIdee = function(num) {
+        var updates = {};
+        updates['idees/' + num] = null;
+        return _fbDb.ref().update(updates);
+      };
+
+      // ===== REGISTRE DE DOLÉANCES =====
+      var _adminRefDoleances = null;
+      var _adminValueHandlerDoleances = null;
+
+      window.fbCreateDoleance = function(d) {
+        var updates = {};
+        updates['doleances/' + d.num] = d;
+        return _fbDb.ref().update(updates);
+      };
+      window.fbListenAdminDoleances = function(callback, errorCallback) {
+        if (_adminRefDoleances && _adminValueHandlerDoleances) _adminRefDoleances.off('value', _adminValueHandlerDoleances);
+        _adminRefDoleances = _fbDb.ref('doleances');
+        _adminValueHandlerDoleances = function(snapshot) {
+          var data = snapshot.val();
+          callback(data ? Object.values(data) : []);
+        };
+        _adminRefDoleances.on('value', _adminValueHandlerDoleances, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopAdminListenDoleances = function() {
+        if (_adminRefDoleances && _adminValueHandlerDoleances) _adminRefDoleances.off('value', _adminValueHandlerDoleances);
+        _adminRefDoleances = null; _adminValueHandlerDoleances = null;
+      };
+      window.fbUpdateDoleance = function(num, patch) {
+        var updates = {};
+        Object.keys(patch).forEach(function(k){ updates['doleances/' + num + '/' + k] = patch[k]; });
+        return _fbDb.ref().update(updates);
+      };
+      window.fbDeleteDoleance = function(num) {
+        var updates = {};
+        updates['doleances/' + num] = null;
+        return _fbDb.ref().update(updates);
+      };
+
+      // ===== ADMIN : CHANGEMENT DE MOT DE PASSE =====
+      // Ré-authentifie l'admin avec son mot de passe actuel avant de définir le nouveau
+      // (obligatoire côté Firebase pour cette opération sensible).
+      window.fbAdminChangePassword = function(currentPassword, newPassword) {
+        var user = _fbAuth.currentUser;
+        if (!user || !user.email) return Promise.reject(new Error('Aucun administrateur connecté.'));
+        var cred = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+        return user.reauthenticateWithCredential(cred).then(function() {
+          return user.updatePassword(newPassword);
+        });
+      };
+
+      // ===== EFFECTIFS (import Excel pour pré-remplissage automatique des formulaires) =====
+      // Deux nœuds distincts, pour des raisons de confidentialité :
+      //  - "effectifsPublic/{matricule}"  → champs non sensibles (nom, prénom, unité, direction,
+      //    département, service, poste). Lisible par tout le monde (même non connecté) afin que
+      //    le pré-remplissage fonctionne sur les formulaires publics. Écriture réservée à l'admin.
+      //  - "effectifs/{matricule}"        → fiche complète (salaire, date de naissance, diplôme…).
+      //    Lecture ET écriture réservées à l'administrateur connecté.
+      window.fbImportEffectifs = function(liste) {
+        var updatesPublic = {};
+        var updatesPrives = {};
+        liste.forEach(function(e) {
+          if (!e || !e.mat) return;
+          updatesPublic['effectifsPublic/' + e.mat] = {
+            nom: e.nom || '', prenom: e.prenom || '', unite: e.unite || '',
+            direction: e.direction || '', departement: e.departement || '',
+            service: e.service || '', poste: e.poste || ''
+          };
+          updatesPrives['effectifs/' + e.mat] = e;
+        });
+        return _fbDb.ref().update(updatesPublic).then(function() {
+          return _fbDb.ref().update(updatesPrives);
+        });
+      };
+
+      // Recherche publique (autocomplétion des formulaires) : ne renvoie que les champs non sensibles.
+      window.fbFindEffectifPublic = function(mat) {
+        if (!mat) return Promise.resolve(null);
+        return _fbDb.ref('effectifsPublic/' + mat).once('value').then(function(s) { return s.val(); });
+      };
+
+      // Listing complet — réservé à l'espace admin (pour vérifier/gérer les fiches importées).
+      var _adminRefEffectifs = null;
+      var _adminValueHandlerEffectifs = null;
+      window.fbListenAdminEffectifs = function(callback, errorCallback) {
+        if (_adminRefEffectifs && _adminValueHandlerEffectifs) _adminRefEffectifs.off('value', _adminValueHandlerEffectifs);
+        _adminRefEffectifs = _fbDb.ref('effectifs');
+        _adminValueHandlerEffectifs = function(snapshot) {
+          var data = snapshot.val();
+          callback(data ? Object.values(data) : []);
+        };
+        _adminRefEffectifs.on('value', _adminValueHandlerEffectifs, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopAdminListenEffectifs = function() {
+        if (_adminRefEffectifs && _adminValueHandlerEffectifs) _adminRefEffectifs.off('value', _adminValueHandlerEffectifs);
+        _adminRefEffectifs = null; _adminValueHandlerEffectifs = null;
+      };
+      window.fbDeleteAllEffectifs = function() {
+        var updates = {};
+        updates['effectifs'] = null;
+        updates['effectifsPublic'] = null;
+        return _fbDb.ref().update(updates);
+      };
+
       // ===== META (clôture automatique par année) =====
       window.fbSetMetaCloture = function(annee) {
         return _fbDb.ref('meta/derniereClotureAnnee').set(annee);
@@ -648,6 +779,8 @@ footer strong{color:var(--or-clair);}
   <button onclick="showVue('livre',this)" data-i18n="nav.livre">📚 Livre scolaire</button>
   <button onclick="showVue('pret',this)" data-i18n="nav.pret">💰 Prêt social</button>
   <button onclick="showVue('omra',this)" data-i18n="nav.omra">🕋 Omra</button>
+  <button onclick="showVue('idees',this)" data-i18n="nav.idees">📬 Boîte à idées</button>
+  <button onclick="showVue('doleances',this)" data-i18n="nav.doleances">📝 Registre de doléances</button>
   <button onclick="showVue('suivi',this)" data-i18n="nav.suivi">🔍 Suivi</button>
   <button onclick="showVue('admin',this)" data-i18n="nav.admin">🔐 Administration</button>
 </nav>
@@ -691,6 +824,22 @@ footer strong{color:var(--or-clair);}
       <div class="act-body">
         <div class="act-title" data-i18n="accueil.card.omra.title">Omra</div>
         <div class="act-desc" data-i18n="accueil.card.omra.desc">Inscription au programme annuel de l'Omra.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('idees')">
+      <div class="act-icon" style="background:#E3F2FD;">📬</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.idees.title">Boîte à idées</div>
+        <div class="act-desc" data-i18n="accueil.card.idees.desc">Proposez vos idées pour améliorer le Comité de Participation.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('doleances')">
+      <div class="act-icon" style="background:#FFEBEE;">📝</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.doleances.title">Registre de doléances</div>
+        <div class="act-desc" data-i18n="accueil.card.doleances.desc">Signalez une réclamation ou une doléance auprès du Comité de Participation.</div>
       </div>
       <div class="act-arrow">→</div>
     </div>
@@ -1055,6 +1204,65 @@ footer strong{color:var(--or-clair);}
   </div>
 </div>
 
+<!-- ===== BOÎTE À IDÉES ===== -->
+<div id="vue-idees" class="vue">
+  <div class="sec-hdr">
+    <span class="eyebrow" data-i18n="idees.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="idees.title">📬 Boîte à idées</h2>
+    <p class="sec-desc" data-i18n="idees.desc">Proposez vos idées et suggestions pour améliorer le fonctionnement du Comité de Participation. Vos propositions sont transmises directement au Comité.</p>
+  </div>
+  <div class="panneau">
+    <div class="grp" style="display:flex;align-items:center;gap:8px;flex-direction:row;">
+      <input id="fi-anonyme" type="checkbox" style="width:auto;" onchange="toggleAnonymeIdee()">
+      <label for="fi-anonyme" style="margin:0;" data-i18n="idees.anonyme">Soumettre cette idée de façon anonyme</label>
+    </div>
+    <div id="fi-identite-wrap" class="cols2">
+      <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="fi-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+      <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="fi-prenom" type="text" placeholder="Prénom"></div>
+    </div>
+    <div id="fi-identite-wrap2" class="cols2">
+      <div class="grp"><label data-i18n="f.matricule">Matricule</label><input id="fi-matricule" type="text" placeholder="Ex : 12345"></div>
+      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="fi-service" type="text" placeholder="Ex : Production"></div>
+    </div>
+    <div class="grp"><label data-i18n="idees.message">Votre idée / suggestion <span class="req">*</span></label><textarea id="fi-message" rows="6" placeholder="Décrivez votre idée ou suggestion pour améliorer le Comité de Participation…"></textarea></div>
+  </div>
+  <div class="bar-actions">
+    <button class="btn btn-primary" onclick="soumettreIdee()" data-i18n="btn.soumettre.idee">✅ Envoyer ma proposition</button>
+    <button class="btn btn-outline" onclick="resetFormIdee()" data-i18n="btn.reset">🔄 Réinitialiser</button>
+  </div>
+  <div class="msg" id="msg-idees"></div>
+</div>
+
+<!-- ===== REGISTRE DE DOLÉANCES ===== -->
+<div id="vue-doleances" class="vue">
+  <div class="sec-hdr">
+    <span class="eyebrow" data-i18n="doleances.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="doleances.title">📝 Registre de doléances</h2>
+    <p class="sec-desc" data-i18n="doleances.desc">Signalez une réclamation, une difficulté ou une doléance auprès du Comité de Participation. Elle sera enregistrée et traitée en toute confidentialité.</p>
+  </div>
+  <div class="panneau">
+    <div class="grp" style="display:flex;align-items:center;gap:8px;flex-direction:row;">
+      <input id="fd-anonyme" type="checkbox" style="width:auto;" onchange="toggleAnonymeDoleance()">
+      <label for="fd-anonyme" style="margin:0;" data-i18n="doleances.anonyme">Soumettre cette doléance de façon anonyme</label>
+    </div>
+    <div id="fd-identite-wrap" class="cols2">
+      <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="fd-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+      <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="fd-prenom" type="text" placeholder="Prénom"></div>
+    </div>
+    <div id="fd-identite-wrap2" class="cols2">
+      <div class="grp"><label data-i18n="f.matricule">Matricule</label><input id="fd-matricule" type="text" placeholder="Ex : 12345"></div>
+      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="fd-service" type="text" placeholder="Ex : Production"></div>
+    </div>
+    <div class="grp"><label data-i18n="doleances.objet">Objet de la doléance <span class="req">*</span></label><input id="fd-objet" type="text" placeholder="Ex : Conditions de transport"></div>
+    <div class="grp"><label data-i18n="doleances.description">Description détaillée <span class="req">*</span></label><textarea id="fd-description" rows="6" placeholder="Décrivez votre réclamation ou doléance en détail…"></textarea></div>
+  </div>
+  <div class="bar-actions">
+    <button class="btn btn-primary" onclick="soumettreDoleance()" data-i18n="btn.soumettre.doleance">✅ Envoyer ma doléance</button>
+    <button class="btn btn-outline" onclick="resetFormDoleance()" data-i18n="btn.reset">🔄 Réinitialiser</button>
+  </div>
+  <div class="msg" id="msg-doleances"></div>
+</div>
+
 <!-- ===== SUIVI ===== -->
 <div id="vue-suivi" class="vue">
   <div class="sec-hdr">
@@ -1092,7 +1300,22 @@ footer strong{color:var(--or-clair);}
         <h2 class="sec-title" style="margin-bottom:0;">Tableau de bord</h2>
         <div id="admin-user-email" style="font-size:12px;color:#7A6F58;margin-top:3px;"></div>
       </div>
-      <button class="btn btn-outline" onclick="logoutAdmin()" style="color:var(--rouge);border-color:var(--rouge);" data-i18n="admin.logout">🔓 Déconnexion</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-outline" onclick="toggleChangePasswordPanel()" data-i18n="admin.changepwd.btn">🔑 Changer le mot de passe</button>
+        <button class="btn btn-outline" onclick="logoutAdmin()" style="color:var(--rouge);border-color:var(--rouge);" data-i18n="admin.logout">🔓 Déconnexion</button>
+      </div>
+    </div>
+
+    <div id="admin-changepwd-panel" class="panneau" style="display:none;max-width:460px;margin-bottom:18px;">
+      <h3 class="serif" style="color:var(--bleu);margin-bottom:14px;font-size:16px;" data-i18n="admin.changepwd.title">🔑 Changer le mot de passe administrateur</h3>
+      <div class="grp"><label data-i18n="admin.changepwd.current">Mot de passe actuel</label><input id="pwd-current" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+      <div class="grp"><label data-i18n="admin.changepwd.new">Nouveau mot de passe</label><input id="pwd-new" type="password" autocomplete="new-password" placeholder="8 caractères minimum"></div>
+      <div class="grp"><label data-i18n="admin.changepwd.confirm">Confirmer le nouveau mot de passe</label><input id="pwd-confirm" type="password" autocomplete="new-password" placeholder="••••••••"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="changerMotDePasseAdmin()" data-i18n="admin.changepwd.submit">✅ Mettre à jour le mot de passe</button>
+        <button class="btn btn-outline" onclick="toggleChangePasswordPanel()" data-i18n="btn.reset">Annuler</button>
+      </div>
+      <div class="msg" id="msg-changepwd"></div>
     </div>
     <div class="admin-stats" id="admin-stats"></div>
 
@@ -1101,8 +1324,11 @@ footer strong{color:var(--or-clair);}
       <button class="btn-admin-tab" id="tab-btn-livres" onclick="showAdminTab('livres')" data-i18n="admtab.livres">📚 Livres scolaires</button>
       <button class="btn-admin-tab" id="tab-btn-prets" onclick="showAdminTab('prets')" data-i18n="admtab.prets">💰 Prêts sociaux</button>
       <button class="btn-admin-tab" id="tab-btn-omra" onclick="showAdminTab('omra')" data-i18n="admtab.omra">🕋 Omra</button>
+      <button class="btn-admin-tab" id="tab-btn-idees" onclick="showAdminTab('idees')" data-i18n="admtab.idees">📬 Boîte à idées</button>
+      <button class="btn-admin-tab" id="tab-btn-doleances" onclick="showAdminTab('doleances')" data-i18n="admtab.doleances">📝 Doléances</button>
       <button class="btn-admin-tab" id="tab-btn-stats" onclick="showAdminTab('stats')" data-i18n="admtab.stats">📊 Statistiques par établissement</button>
       <button class="btn-admin-tab" id="tab-btn-rapport" onclick="showAdminTab('rapport')" data-i18n="admtab.rapport">📈 Rapport global</button>
+      <button class="btn-admin-tab" id="tab-btn-effectifs" onclick="showAdminTab('effectifs')" data-i18n="admtab.effectifs">🧑‍💼 Effectifs</button>
     </div>
 
     <div id="admin-tab-demandes">
@@ -1211,6 +1437,49 @@ footer strong{color:var(--or-clair);}
       </div>
     </div>
 
+    <div id="admin-tab-idees" style="display:none;">
+      <div class="admin-stats" id="idees-stats"></div>
+      <div class="panneau">
+        <div class="filter-bar">
+          <input id="filter-search-idees" type="text" placeholder="🔍 Rechercher nom, matricule, service…" oninput="renderTableauIdees()" style="flex:1;min-width:200px;">
+          <select id="filter-status-idees" onchange="renderTableauIdees()">
+            <option value="" data-i18n="filter.tous">Tous les statuts</option>
+            <option value="Nouveau" data-i18n="statut.nouveau">Nouveau</option>
+            <option value="Lu" data-i18n="statut.lu">Lu</option>
+          </select>
+          <button class="btn-excel" onclick="exporterExcelIdees()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
+        </div>
+        <div class="tableau-wrap">
+          <table class="tab">
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="f.service">Service</th><th data-i18n="idees.message">Idée</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
+            <tbody id="tbody-idees"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-tab-doleances" style="display:none;">
+      <div class="admin-stats" id="doleances-stats"></div>
+      <div class="panneau">
+        <div class="filter-bar">
+          <input id="filter-search-doleances" type="text" placeholder="🔍 Rechercher nom, matricule, service, objet…" oninput="renderTableauDoleances()" style="flex:1;min-width:200px;">
+          <select id="filter-status-doleances" onchange="renderTableauDoleances()">
+            <option value="" data-i18n="filter.tous">Tous les statuts</option>
+            <option value="Nouveau" data-i18n="statut.nouveau">Nouveau</option>
+            <option value="En cours" data-i18n="statut.encours">En cours</option>
+            <option value="Traité" data-i18n="statut.traite">Traité</option>
+          </select>
+          <button class="btn-excel" onclick="exporterExcelDoleances()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
+        </div>
+        <div class="tableau-wrap">
+          <table class="tab">
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="f.service">Service</th><th data-i18n="doleances.objet">Objet</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
+            <tbody id="tbody-doleances"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div id="admin-tab-rapport" style="display:none;">
       <div class="panneau">
         <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:18px;" data-i18n="rapport.h1">📈 Rapport global des activités</h3>
@@ -1249,6 +1518,33 @@ footer strong{color:var(--or-clair);}
           <table class="tab">
             <thead><tr><th>Établissement</th><th>Total</th><th>Validées</th><th>En attente</th><th>Refusées</th><th>Taux de validation</th></tr></thead>
             <tbody id="stats-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-tab-effectifs" style="display:none;">
+      <div class="panneau">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:18px;">🧑‍💼 État des effectifs (import Excel)</h3>
+        <p style="font-size:13.5px;color:#5C5142;margin-bottom:16px;line-height:1.6;">
+          Importez le fichier Excel « État des effectifs » (colonnes : Matricule, Unité, Nom, Prénom, Direction, Département, Service, Poste, etc.).
+          Une fois importé, le <b>matricule</b> saisi par un travailleur dans n'importe quel formulaire (prise en charge, livre scolaire, prêt social, Omra, idée, doléance)
+          remplira automatiquement son nom, prénom et service — ce qui évite les erreurs de saisie.
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+          <input type="file" id="effectifs-file" accept=".xlsx,.xls" style="max-width:320px;">
+          <button class="btn btn-primary" onclick="importerEffectifsExcel()">📥 Importer dans Firebase</button>
+          <button class="btn btn-outline" onclick="if(confirm('Supprimer toute la base des effectifs ?')) supprimerTousLesEffectifs();">🗑️ Vider la base des effectifs</button>
+        </div>
+        <div class="msg" id="msg-effectifs"></div>
+        <div style="font-size:13px;color:#5C5142;margin:10px 0;"><b id="effectifs-total">0</b> fiche(s) actuellement enregistrée(s) dans Firebase.</div>
+        <div class="filter-bar">
+          <input id="filter-search-effectifs" type="text" placeholder="🔍 Rechercher nom, matricule, service…" oninput="renderTableauEffectifs()" style="flex:1;min-width:200px;">
+        </div>
+        <div class="tableau-wrap">
+          <table class="tab">
+            <thead><tr><th>Matricule</th><th>Nom</th><th>Prénom</th><th>Unité</th><th>Direction</th><th>Département</th><th>Service</th><th>Poste</th></tr></thead>
+            <tbody id="tbody-effectifs"></tbody>
           </table>
         </div>
       </div>
@@ -1391,10 +1687,95 @@ function retirerOmraLocal(num) {
   var arr = loadOmraLocal().filter(function(x){ return x.num !== num; });
   saveOmraLocal(arr);
 }
+// Suivi des suppressions Omra : si la suppression Firebase échoue (ex. règles
+// manquantes pour le chemin 'omra'), on empêche quand même l'inscription supprimée
+// de réapparaître via la fusion avec les données Firebase.
+function loadOmraSupprimesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_omra_supprimes') || '[]'); } catch(e) { return []; }
+}
+function saveOmraSupprimesLocal(arr) {
+  try { localStorage.setItem('schb_omra_supprimes', JSON.stringify(arr)); } catch(e) {}
+}
+function marquerOmraSupprime(num) {
+  var arr = loadOmraSupprimesLocal();
+  if (arr.indexOf(num) === -1) { arr.push(num); saveOmraSupprimesLocal(arr); }
+}
+
 function mergeOmra(fbArr) {
   var map = {};
   loadOmraLocal().forEach(function(d){ map[d.num] = d; });
   (fbArr||[]).forEach(function(d){ map[d.num] = d; });
+  loadOmraSupprimesLocal().forEach(function(num){ delete map[num]; });
+  return Object.values(map);
+}
+
+// ===== BOÎTE À IDÉES (local) =====
+function loadIdeesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_idees') || '[]'); } catch(e) { return []; }
+}
+function saveIdeesLocal(arr) {
+  try { localStorage.setItem('schb_idees', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (idées):', e); }
+}
+function persistIdeeLocal(d) {
+  var arr = loadIdeesLocal();
+  var idx = arr.findIndex(function(x){ return x.num === d.num; });
+  if (idx >= 0) arr[idx] = d; else arr.push(d);
+  saveIdeesLocal(arr);
+}
+function retirerIdeeLocal(num) {
+  var arr = loadIdeesLocal().filter(function(x){ return x.num !== num; });
+  saveIdeesLocal(arr);
+}
+function loadIdeesSupprimesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_idees_supprimes') || '[]'); } catch(e) { return []; }
+}
+function saveIdeesSupprimesLocal(arr) {
+  try { localStorage.setItem('schb_idees_supprimes', JSON.stringify(arr)); } catch(e) {}
+}
+function marquerIdeeSupprimee(num) {
+  var arr = loadIdeesSupprimesLocal();
+  if (arr.indexOf(num) === -1) { arr.push(num); saveIdeesSupprimesLocal(arr); }
+}
+function mergeIdees(fbArr) {
+  var map = {};
+  loadIdeesLocal().forEach(function(d){ map[d.num] = d; });
+  (fbArr||[]).forEach(function(d){ map[d.num] = d; });
+  loadIdeesSupprimesLocal().forEach(function(num){ delete map[num]; });
+  return Object.values(map);
+}
+
+// ===== REGISTRE DE DOLÉANCES (local) =====
+function loadDoleancesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_doleances') || '[]'); } catch(e) { return []; }
+}
+function saveDoleancesLocal(arr) {
+  try { localStorage.setItem('schb_doleances', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (doléances):', e); }
+}
+function persistDoleanceLocal(d) {
+  var arr = loadDoleancesLocal();
+  var idx = arr.findIndex(function(x){ return x.num === d.num; });
+  if (idx >= 0) arr[idx] = d; else arr.push(d);
+  saveDoleancesLocal(arr);
+}
+function retirerDoleanceLocal(num) {
+  var arr = loadDoleancesLocal().filter(function(x){ return x.num !== num; });
+  saveDoleancesLocal(arr);
+}
+function loadDoleancesSupprimesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_doleances_supprimes') || '[]'); } catch(e) { return []; }
+}
+function saveDoleancesSupprimesLocal(arr) {
+  try { localStorage.setItem('schb_doleances_supprimes', JSON.stringify(arr)); } catch(e) {}
+}
+function marquerDoleanceSupprimee(num) {
+  var arr = loadDoleancesSupprimesLocal();
+  if (arr.indexOf(num) === -1) { arr.push(num); saveDoleancesSupprimesLocal(arr); }
+}
+function mergeDoleances(fbArr) {
+  var map = {};
+  loadDoleancesLocal().forEach(function(d){ map[d.num] = d; });
+  (fbArr||[]).forEach(function(d){ map[d.num] = d; });
+  loadDoleancesSupprimesLocal().forEach(function(num){ delete map[num]; });
   return Object.values(map);
 }
 
@@ -1430,6 +1811,9 @@ var prets = loadPretsLocal();
 var suiviCachePret = {};
 var omra = loadOmraLocal();
 var suiviCacheOmra = {};
+var idees = loadIdeesLocal();
+var doleances = loadDoleancesLocal();
+var effectifs = []; // fiches importées depuis le fichier Excel "État des effectifs" (voir onglet admin dédié)
 var adminAuthReady = false;
 
 function esc(v) {
@@ -1989,6 +2373,125 @@ function resetFormOmra() {
   document.getElementById('msg-omra').style.display = 'none';
 }
 
+// ===== BOÎTE À IDÉES =====
+function newIdeeNumber(now) {
+  var y = String(now.getFullYear()).slice(-2);
+  var m = String(now.getMonth()+1).padStart(2,'0');
+  var d = String(now.getDate()).padStart(2,'0');
+  return 'IDE-' + y + m + d + '-' + randomSecret(6);
+}
+function toggleAnonymeIdee() {
+  var anonyme = document.getElementById('fi-anonyme').checked;
+  document.getElementById('fi-identite-wrap').style.display = anonyme ? 'none' : '';
+  document.getElementById('fi-identite-wrap2').style.display = anonyme ? 'none' : '';
+}
+async function soumettreIdee() {
+  var msg = document.getElementById('msg-idees');
+  msg.className = 'msg';
+  var anonyme = document.getElementById('fi-anonyme').checked;
+  var nom = anonyme ? '' : document.getElementById('fi-nom').value.trim().toUpperCase();
+  var prenom = anonyme ? '' : document.getElementById('fi-prenom').value.trim();
+  var mat = anonyme ? '' : document.getElementById('fi-matricule').value.trim();
+  var service = anonyme ? '' : document.getElementById('fi-service').value.trim();
+  var message = document.getElementById('fi-message').value.trim();
+
+  if (!message) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez décrire votre idée avant de l\'envoyer.'; return;
+  }
+  if (!anonyme && (!nom || !prenom)) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez renseigner votre nom et prénom, ou cocher « anonyme ».'; return;
+  }
+
+  var now = new Date();
+  var num = newIdeeNumber(now);
+  var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
+
+  var d = {
+    num: num, anonyme: anonyme, nom: nom, prenom: prenom, mat: mat, service: service,
+    message: message, date: dateStr, dateObj: now.toISOString(), statut: 'Nouveau'
+  };
+
+  persistIdeeLocal(d);
+  resetFormIdee();
+  msg.className = 'msg ok'; msg.style.display = 'flex';
+  msg.innerHTML = '✅ Merci ! Votre proposition a bien été enregistrée' + (anonyme ? ' de façon anonyme' : '') + '.';
+
+  if (typeof window.fbCreateIdee === 'function') {
+    window.fbCreateIdee(d).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (idée, enregistrée localement) :', err);
+    });
+  }
+}
+function resetFormIdee() {
+  ['fi-nom','fi-prenom','fi-matricule','fi-service','fi-message'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('fi-anonyme').checked = false;
+  toggleAnonymeIdee();
+}
+
+// ===== REGISTRE DE DOLÉANCES =====
+function newDoleanceNumber(now) {
+  var y = String(now.getFullYear()).slice(-2);
+  var m = String(now.getMonth()+1).padStart(2,'0');
+  var d = String(now.getDate()).padStart(2,'0');
+  return 'DOL-' + y + m + d + '-' + randomSecret(6);
+}
+function toggleAnonymeDoleance() {
+  var anonyme = document.getElementById('fd-anonyme').checked;
+  document.getElementById('fd-identite-wrap').style.display = anonyme ? 'none' : '';
+  document.getElementById('fd-identite-wrap2').style.display = anonyme ? 'none' : '';
+}
+async function soumettreDoleance() {
+  var msg = document.getElementById('msg-doleances');
+  msg.className = 'msg';
+  var anonyme = document.getElementById('fd-anonyme').checked;
+  var nom = anonyme ? '' : document.getElementById('fd-nom').value.trim().toUpperCase();
+  var prenom = anonyme ? '' : document.getElementById('fd-prenom').value.trim();
+  var mat = anonyme ? '' : document.getElementById('fd-matricule').value.trim();
+  var service = anonyme ? '' : document.getElementById('fd-service').value.trim();
+  var objet = document.getElementById('fd-objet').value.trim();
+  var description = document.getElementById('fd-description').value.trim();
+
+  if (!objet || !description) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = "⚠️ Veuillez indiquer l'objet et la description de votre doléance."; return;
+  }
+  if (!anonyme && (!nom || !prenom)) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez renseigner votre nom et prénom, ou cocher « anonyme ».'; return;
+  }
+
+  var now = new Date();
+  var num = newDoleanceNumber(now);
+  var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
+
+  var d = {
+    num: num, anonyme: anonyme, nom: nom, prenom: prenom, mat: mat, service: service,
+    objet: objet, description: description, date: dateStr, dateObj: now.toISOString(), statut: 'Nouveau'
+  };
+
+  persistDoleanceLocal(d);
+  resetFormDoleance();
+  msg.className = 'msg ok'; msg.style.display = 'flex';
+  msg.innerHTML = '✅ Merci ! Votre doléance a bien été enregistrée' + (anonyme ? ' de façon anonyme' : '') + '.';
+
+  if (typeof window.fbCreateDoleance === 'function') {
+    window.fbCreateDoleance(d).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (doléance, enregistrée localement) :', err);
+    });
+  }
+}
+function resetFormDoleance() {
+  ['fd-nom','fd-prenom','fd-matricule','fd-service','fd-objet','fd-description'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('fd-anonyme').checked = false;
+  toggleAnonymeDoleance();
+}
+
 // ===== SUIVI =====
 async function rechercherSuivi() {
   var code = document.getElementById('suivi-q').value.trim().toUpperCase();
@@ -2229,15 +2732,54 @@ function applyAdminAuthState(user) {
         alert("Omra : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'omra'. Ajoutez les règles pour ce chemin dans la console Firebase.");
       });
     }
+    // Idem pour la boîte à idées.
+    idees = loadIdeesLocal();
+    renderTableauIdees(); renderStatsIdees();
+    if (typeof window.fbListenAdminIdees === 'function') {
+      window.fbListenAdminIdees(function(arr) {
+        idees = mergeIdees(arr);
+        renderTableauIdees(); renderStatsIdees();
+      }, function(err) {
+        console.error('Admin database read error (idées):', err);
+        alert("Boîte à idées : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'idees'. Ajoutez les règles pour ce chemin dans la console Firebase.");
+      });
+    }
+    // Idem pour le registre de doléances.
+    doleances = loadDoleancesLocal();
+    renderTableauDoleances(); renderStatsDoleances();
+    if (typeof window.fbListenAdminDoleances === 'function') {
+      window.fbListenAdminDoleances(function(arr) {
+        doleances = mergeDoleances(arr);
+        renderTableauDoleances(); renderStatsDoleances();
+      }, function(err) {
+        console.error('Admin database read error (doléances):', err);
+        alert("Registre de doléances : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'doleances'. Ajoutez les règles pour ce chemin dans la console Firebase.");
+      });
+    }
+    // Idem pour l'état des effectifs (import Excel).
+    effectifs = [];
+    if (typeof window.fbListenAdminEffectifs === 'function') {
+      window.fbListenAdminEffectifs(function(arr) {
+        effectifs = arr;
+        document.getElementById('effectifs-total').textContent = arr.length;
+        renderTableauEffectifs();
+      }, function(err) {
+        console.error('Admin database read error (effectifs):', err);
+        alert("Effectifs : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'effectifs'. Ajoutez les règles pour ce chemin dans la console Firebase.");
+      });
+    }
     showAdminTab('demandes');
     renderRapportStats();
     // Clôture automatique par année : vérifie une fois par session si une nouvelle année a commencé.
     setTimeout(function(){ cloturerAnneesPassees(false); }, 1500);
   } else {
+    if (typeof window.fbStopAdminListenEffectifs === 'function') window.fbStopAdminListenEffectifs();
     if (typeof window.fbStopAdminListen === 'function') window.fbStopAdminListen();
     if (typeof window.fbStopAdminListenLivre === 'function') window.fbStopAdminListenLivre();
     if (typeof window.fbStopAdminListenPret === 'function') window.fbStopAdminListenPret();
     if (typeof window.fbStopAdminListenOmra === 'function') window.fbStopAdminListenOmra();
+    if (typeof window.fbStopAdminListenIdees === 'function') window.fbStopAdminListenIdees();
+    if (typeof window.fbStopAdminListenDoleances === 'function') window.fbStopAdminListenDoleances();
     demandes = [];
     try { localStorage.removeItem('pcm_demandes'); } catch(e) {}
     wrap.style.display = 'block'; board.style.display = 'none';
@@ -2250,20 +2792,222 @@ function showAdminTab(id) {
   document.getElementById('admin-tab-livres').style.display = (id === 'livres') ? 'block' : 'none';
   document.getElementById('admin-tab-prets').style.display = (id === 'prets') ? 'block' : 'none';
   document.getElementById('admin-tab-omra').style.display = (id === 'omra') ? 'block' : 'none';
+  document.getElementById('admin-tab-idees').style.display = (id === 'idees') ? 'block' : 'none';
+  document.getElementById('admin-tab-doleances').style.display = (id === 'doleances') ? 'block' : 'none';
   document.getElementById('admin-tab-stats').style.display = (id === 'stats') ? 'block' : 'none';
   document.getElementById('admin-tab-rapport').style.display = (id === 'rapport') ? 'block' : 'none';
+  document.getElementById('admin-tab-effectifs').style.display = (id === 'effectifs') ? 'block' : 'none';
+  document.getElementById('tab-btn-effectifs').classList.toggle('actif', id === 'effectifs');
   document.getElementById('tab-btn-demandes').classList.toggle('actif', id === 'demandes');
   document.getElementById('tab-btn-livres').classList.toggle('actif', id === 'livres');
   document.getElementById('tab-btn-prets').classList.toggle('actif', id === 'prets');
   document.getElementById('tab-btn-omra').classList.toggle('actif', id === 'omra');
+  document.getElementById('tab-btn-idees').classList.toggle('actif', id === 'idees');
+  document.getElementById('tab-btn-doleances').classList.toggle('actif', id === 'doleances');
   document.getElementById('tab-btn-stats').classList.toggle('actif', id === 'stats');
   document.getElementById('tab-btn-rapport').classList.toggle('actif', id === 'rapport');
   if (id === 'stats') renderStatsChart();
   if (id === 'livres') renderTableauLivres();
   if (id === 'prets') { renderTableauPrets(); renderStatsPret(); }
   if (id === 'omra') { renderTableauOmra(); renderStatsOmra(); }
+  if (id === 'idees') { renderTableauIdees(); renderStatsIdees(); }
+  if (id === 'doleances') { renderTableauDoleances(); renderStatsDoleances(); }
   if (id === 'rapport') renderRapportStats();
+  if (id === 'effectifs') renderTableauEffectifs();
 }
+
+// ===== EFFECTIFS : import du fichier Excel, tableau admin, pré-remplissage des formulaires =====
+
+// Normalise un intitulé de colonne pour un rapprochement tolérant aux accents/espaces/majuscules
+// (ex: "Alaire de Base" ou "Salaire de Base" -> "salairedebase").
+function normaliserEntete(s) {
+  return (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Repère, dans une ligne d'en-têtes, l'index de colonne correspondant à chacun des champs voulus.
+function reperColonnesEffectifs(ligneEntetes) {
+  var entetesNorm = ligneEntetes.map(normaliserEntete);
+  var alias = {
+    mat: ['matricule'],
+    unite: ['unite'],
+    nom: ['nom'],
+    prenom: ['prenom'],
+    dateNaissance: ['datedenaissance'],
+    lieuNaissance: ['lieudenaissance'],
+    sexe: ['sexe'],
+    dateEntree: ['dateentree', 'datedentree'],
+    poste: ['poste'],
+    typeEmploi: ['typedemploi'],
+    finContrat: ['findecontrat', 'fincontrat'],
+    categorie: ['categorie'],
+    grilleSalaires: ['grilledessalaires'],
+    salaireBase: ['salairedebase', 'alairedebase'],
+    direction: ['direction'],
+    departement: ['departement'],
+    service: ['service'],
+    diplome: ['diplomeouniveaudinstruction', 'diplome']
+  };
+  var colonnes = {};
+  Object.keys(alias).forEach(function(champ) {
+    var idx = -1;
+    alias[champ].some(function(a) {
+      var i = entetesNorm.indexOf(a);
+      if (i !== -1) { idx = i; return true; }
+      return false;
+    });
+    colonnes[champ] = idx;
+  });
+  return colonnes;
+}
+
+function formaterDateExcel(v) {
+  if (v instanceof Date) {
+    var j = String(v.getDate()).padStart(2, '0'), m = String(v.getMonth() + 1).padStart(2, '0');
+    return j + '/' + m + '/' + v.getFullYear();
+  }
+  return v ? String(v).trim() : '';
+}
+
+function importerEffectifsExcel() {
+  var input = document.getElementById('effectifs-file');
+  var msg = document.getElementById('msg-effectifs');
+  if (!input.files || !input.files[0]) {
+    if (msg) { msg.textContent = '⚠️ Sélectionnez d\'abord un fichier Excel.'; msg.style.display = 'block'; }
+    return;
+  }
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb = XLSX.read(data, { type: 'array', cellDates: true });
+      var feuille = wb.Sheets[wb.SheetNames[0]];
+      var lignes = XLSX.utils.sheet_to_json(feuille, { header: 1, defval: '' });
+
+      // La ligne d'en-têtes n'est pas forcément la première (titre + ligne vide au-dessus dans ce fichier).
+      var idxEntete = -1;
+      for (var i = 0; i < Math.min(lignes.length, 15); i++) {
+        if (normaliserEntete(lignes[i][0]) === 'matricule') { idxEntete = i; break; }
+      }
+      if (idxEntete === -1) {
+        if (msg) { msg.textContent = "❌ Colonne « Matricule » introuvable dans les 15 premières lignes du fichier."; msg.style.display = 'block'; }
+        return;
+      }
+
+      var col = reperColonnesEffectifs(lignes[idxEntete]);
+      var liste = [];
+      for (var r = idxEntete + 1; r < lignes.length; r++) {
+        var ligne = lignes[r];
+        if (!ligne || col.mat === -1) continue;
+        var matBrut = ligne[col.mat];
+        if (matBrut === '' || matBrut === undefined || matBrut === null) continue;
+        var mat = String(matBrut).trim();
+        if (!mat) continue;
+        liste.push({
+          mat: mat,
+          unite: col.unite !== -1 ? String(ligne[col.unite] || '').trim() : '',
+          nom: col.nom !== -1 ? String(ligne[col.nom] || '').trim() : '',
+          prenom: col.prenom !== -1 ? String(ligne[col.prenom] || '').trim() : '',
+          dateNaissance: col.dateNaissance !== -1 ? formaterDateExcel(ligne[col.dateNaissance]) : '',
+          lieuNaissance: col.lieuNaissance !== -1 ? String(ligne[col.lieuNaissance] || '').trim() : '',
+          sexe: col.sexe !== -1 ? String(ligne[col.sexe] || '').trim() : '',
+          dateEntree: col.dateEntree !== -1 ? formaterDateExcel(ligne[col.dateEntree]) : '',
+          poste: col.poste !== -1 ? String(ligne[col.poste] || '').trim() : '',
+          typeEmploi: col.typeEmploi !== -1 ? String(ligne[col.typeEmploi] || '').trim() : '',
+          finContrat: col.finContrat !== -1 ? formaterDateExcel(ligne[col.finContrat]) : '',
+          categorie: col.categorie !== -1 ? String(ligne[col.categorie] || '').trim() : '',
+          grilleSalaires: col.grilleSalaires !== -1 ? String(ligne[col.grilleSalaires] || '').trim() : '',
+          salaireBase: col.salaireBase !== -1 ? ligne[col.salaireBase] : '',
+          direction: col.direction !== -1 ? String(ligne[col.direction] || '').trim() : '',
+          departement: col.departement !== -1 ? String(ligne[col.departement] || '').trim() : '',
+          service: col.service !== -1 ? String(ligne[col.service] || '').trim() : '',
+          diplome: col.diplome !== -1 ? String(ligne[col.diplome] || '').trim() : ''
+        });
+      }
+
+      if (!liste.length) {
+        if (msg) { msg.textContent = '⚠️ Aucune fiche exploitable trouvée dans le fichier.'; msg.style.display = 'block'; }
+        return;
+      }
+      if (msg) { msg.textContent = '⏳ Import de ' + liste.length + ' fiche(s) en cours…'; msg.style.display = 'block'; }
+
+      window.fbImportEffectifs(liste).then(function() {
+        if (msg) { msg.textContent = '✅ ' + liste.length + ' fiche(s) importée(s) avec succès dans Firebase.'; }
+        input.value = '';
+      }).catch(function(err) {
+        console.error(err);
+        if (msg) { msg.textContent = "❌ Échec de l'import : " + (err && err.message ? err.message : err); }
+      });
+    } catch (err) {
+      console.error(err);
+      if (msg) { msg.textContent = '❌ Fichier illisible : ' + (err && err.message ? err.message : err); msg.style.display = 'block'; }
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function supprimerTousLesEffectifs() {
+  var msg = document.getElementById('msg-effectifs');
+  window.fbDeleteAllEffectifs().then(function() {
+    if (msg) { msg.textContent = '🗑️ Base des effectifs vidée.'; msg.style.display = 'block'; }
+  }).catch(function(err) {
+    if (msg) { msg.textContent = '❌ Erreur : ' + (err && err.message ? err.message : err); msg.style.display = 'block'; }
+  });
+}
+
+function renderTableauEffectifs() {
+  var tbody = document.getElementById('tbody-effectifs');
+  if (!tbody) return;
+  var q = (document.getElementById('filter-search-effectifs') || {}).value || '';
+  q = q.toLowerCase().trim();
+  var liste = (effectifs || []).filter(function(e) {
+    if (!q) return true;
+    return [e.mat, e.nom, e.prenom, e.service, e.direction, e.departement].join(' ').toLowerCase().indexOf(q) !== -1;
+  });
+  tbody.innerHTML = liste.map(function(e) {
+    return '<tr><td>' + esc(e.mat) + '</td><td>' + esc(e.nom) + '</td><td>' + esc(e.prenom) + '</td><td>' +
+      esc(e.unite) + '</td><td>' + esc(e.direction) + '</td><td>' + esc(e.departement) + '</td><td>' +
+      esc(e.service) + '</td><td>' + esc(e.poste) + '</td></tr>';
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:#999;">Aucune fiche importée pour le moment.</td></tr>';
+}
+
+// ----- Pré-remplissage automatique des formulaires publics à partir du matricule -----
+// Dès que le travailleur quitte le champ Matricule, on cherche sa fiche dans
+// "effectifsPublic" (lecture publique, champs non sensibles uniquement) et on complète
+// automatiquement nom / prénom / service — uniquement si ces champs sont encore vides,
+// pour ne jamais écraser une saisie déjà faite par l'utilisateur.
+function autoRemplirDepuisMatricule(prefixe, champService) {
+  var matEl = document.getElementById(prefixe + '-matricule');
+  if (!matEl || typeof window.fbFindEffectifPublic !== 'function') return;
+  var mat = matEl.value.trim();
+  if (!mat) return;
+  window.fbFindEffectifPublic(mat).then(function(emp) {
+    if (!emp) return;
+    var nomEl = document.getElementById(prefixe + '-nom');
+    var prenomEl = document.getElementById(prefixe + '-prenom');
+    var servEl = document.getElementById(prefixe + '-' + (champService || 'service'));
+    if (nomEl && !nomEl.value.trim()) nomEl.value = emp.nom || '';
+    if (prenomEl && !prenomEl.value.trim()) prenomEl.value = emp.prenom || '';
+    if (servEl && !servEl.value.trim()) {
+      servEl.value = emp.service || [emp.direction, emp.departement].filter(Boolean).join(' — ');
+    }
+  }).catch(function(err) { console.warn('Recherche effectif impossible :', err); });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var champsMatricule = [
+    { id: 'f-matricule', prefixe: 'f' },
+    { id: 'fl-matricule', prefixe: 'fl' },
+    { id: 'fp-matricule', prefixe: 'fp', service: 'fonction' },
+    { id: 'fo-matricule', prefixe: 'fo' },
+    { id: 'fi-matricule', prefixe: 'fi' },
+    { id: 'fd-matricule', prefixe: 'fd' }
+  ];
+  champsMatricule.forEach(function(c) {
+    var el = document.getElementById(c.id);
+    if (el) el.addEventListener('blur', function() { autoRemplirDepuisMatricule(c.prefixe, c.service); });
+  });
+});
 
 // ===== CLÔTURE AUTOMATIQUE PAR ANNÉE =====
 // Archive et bloque (statut -> 'Clôturé') toutes les demandes encore "En attente"
@@ -2971,10 +3715,14 @@ function supprimerOmra(num) {
   if (!confirm("Voulez-vous vraiment supprimer définitivement l'inscription Omra " + num + ' (' + d.nom + ' ' + d.prenom + ') ? Cette action est irréversible.')) return;
   omra = omra.filter(function(x){ return x.num !== num; });
   retirerOmraLocal(num);
+  marquerOmraSupprime(num);
   renderTableauOmra(); renderStatsOmra();
   if (typeof window.fbDeleteOmra === 'function') {
     window.fbDeleteOmra(num, d.trackingCode || '')
-      .catch(function(err){ console.warn('Synchronisation Firebase échouée (omra) :', err); });
+      .catch(function(err){
+        console.warn('Synchronisation Firebase échouée (omra) :', err);
+        alert("L'inscription a bien été supprimée de votre affichage, mais la suppression n'a pas pu être synchronisée avec la base en ligne (règles Firebase manquantes ou insuffisantes pour le chemin 'omra'). Elle ne réapparaîtra plus ici, mais pensez à vérifier/ajouter les règles d'écriture pour ce chemin dans la console Firebase pour une suppression complète sur tous les appareils.");
+      });
   }
 }
 
@@ -3042,6 +3790,301 @@ function exporterExcelOmra() {
   XLSX.utils.book_append_sheet(wb, ws, 'Omra');
   var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
   XLSX.writeFile(wb, 'SCHB_Inscriptions_Omra_' + dateExp + '.xlsx');
+}
+
+// ===== ADMIN : BOÎTE À IDÉES =====
+function renderStatsIdees() {
+  var el = document.getElementById('idees-stats');
+  if (!el) return;
+  var total = idees.length;
+  var nouv = idees.filter(function(d){ return d.statut==='Nouveau'; }).length;
+  var lu = idees.filter(function(d){ return d.statut==='Lu'; }).length;
+  el.innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
+    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + nouv + '</div><div class="stat-lbl">Nouvelles</div></div>' +
+    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + lu + '</div><div class="stat-lbl">Lues</div></div>';
+}
+
+function renderTableauIdees() {
+  var searchEl = document.getElementById('filter-search-idees');
+  var statusEl = document.getElementById('filter-status-idees');
+  var tbody = document.getElementById('tbody-idees');
+  if (!searchEl || !statusEl || !tbody) return;
+  var q = (searchEl.value || '').toLowerCase();
+  var st = statusEl.value || '';
+  var filtered = idees.filter(function(d){
+    var matchQ = !q || ((d.nom||'')+(d.prenom||'')+(d.mat||'')+(d.service||'')).toLowerCase().indexOf(q) >= 0;
+    var matchSt = !st || d.statut === st;
+    return matchQ && matchSt;
+  }).sort(function(a,b){ return (b.dateObj||'').localeCompare(a.dateObj||''); });
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#7A6F58;padding:24px;">Aucune proposition trouvée</td></tr>'; return;
+  }
+  var rows = '';
+  filtered.forEach(function(d) {
+    var bc = d.statut === 'Lu' ? 'b-ok' : 'b-att';
+    var identite = d.anonyme ? '<em style="color:#7A6F58;">Anonyme</em>' : esc(d.nom) + ' ' + esc(d.prenom);
+    var apercu = esc((d.message||'').slice(0,60)) + ((d.message||'').length > 60 ? '…' : '');
+    rows += '<tr>';
+    rows += '<td><strong>' + esc(d.num) + '</strong></td>';
+    rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
+    rows += '<td>' + identite + '</td>';
+    rows += '<td>' + esc(d.service || '—') + '</td>';
+    rows += '<td>' + apercu + '</td>';
+    rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
+    rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+    rows += '<button class="btn-view-sm" onclick="voirDetailIdee(&quot;' + d.num + '&quot;)">👁 Voir</button>';
+    if (d.statut !== 'Lu') rows += '<button class="btn-success-sm" onclick="marquerLuIdee(&quot;' + d.num + '&quot;)">✅ Marquer lu</button>';
+    rows += '<button class="btn-del-sm" onclick="supprimerIdee(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
+    rows += '</div></td></tr>';
+  });
+  tbody.innerHTML = rows;
+}
+
+function voirDetailIdee(num) {
+  var d = idees.find(function(x){ return x.num === num; });
+  if (!d) return;
+  var bc = d.statut === 'Lu' ? 'b-ok' : 'b-att';
+  var identite = d.anonyme ? 'Anonyme' : (d.nom + ' ' + d.prenom);
+  var body = '<div class="detail-grid">';
+  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Auteur</div><div class="detail-val">' + esc(identite) + '</div></div>';
+  if (!d.anonyme) {
+    body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat || '—') + '</div></div>';
+    body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service || '—') + '</div></div>';
+  }
+  body += '</div>';
+  body += '<div class="detail-item" style="margin-bottom:14px;"><div class="detail-lbl">Idée / suggestion</div><div class="detail-val" style="margin-top:4px;white-space:pre-wrap;">' + esc(d.message) + '</div></div>';
+  body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
+  if (d.statut !== 'Lu') body += '<button class="btn btn-primary" onclick="marquerLuIdee(&quot;' + d.num + '&quot;);closeModal()">✅ Marquer comme lu</button>';
+  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerIdee(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer</button>';
+  body += '</div>';
+  document.getElementById('modal-title').textContent = 'Idée ' + d.num;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function marquerLuIdee(num) {
+  var d = idees.find(function(x){ return x.num === num; });
+  if (!d) return;
+  d.statut = 'Lu';
+  persistIdeeLocal(d);
+  renderTableauIdees(); renderStatsIdees();
+  if (typeof window.fbUpdateIdee === 'function') {
+    window.fbUpdateIdee(num, { statut: 'Lu' }).catch(function(err){ console.warn('Synchronisation Firebase échouée (idée) :', err); });
+  }
+}
+
+function supprimerIdee(num) {
+  var d = idees.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm('Voulez-vous vraiment supprimer définitivement la proposition ' + num + ' ? Cette action est irréversible.')) return;
+  idees = idees.filter(function(x){ return x.num !== num; });
+  retirerIdeeLocal(num);
+  marquerIdeeSupprimee(num);
+  renderTableauIdees(); renderStatsIdees();
+  if (typeof window.fbDeleteIdee === 'function') {
+    window.fbDeleteIdee(num).catch(function(err){ console.warn('Synchronisation Firebase échouée (idée) :', err); });
+  }
+}
+
+function exporterExcelIdees() {
+  if (!idees.length) { alert('Aucune proposition à exporter.'); return; }
+  var data = idees.map(function(d){
+    return {
+      'N°': d.num, 'Date': d.date, 'Statut': d.statut,
+      'Anonyme': d.anonyme ? 'Oui' : 'Non',
+      'Nom': d.anonyme ? '' : (d.nom || ''),
+      'Prénom': d.anonyme ? '' : (d.prenom || ''),
+      'Matricule': d.anonyme ? '' : (d.mat || ''),
+      'Service': d.anonyme ? '' : (d.service || ''),
+      'Idée / suggestion': d.message
+    };
+  });
+  var ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:16},{wch:18},{wch:11},{wch:10},{wch:14},{wch:14},{wch:12},{wch:16},{wch:60}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Boite a idees');
+  var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
+  XLSX.writeFile(wb, 'SCHB_Boite_A_Idees_' + dateExp + '.xlsx');
+}
+
+// ===== ADMIN : REGISTRE DE DOLÉANCES =====
+function renderStatsDoleances() {
+  var el = document.getElementById('doleances-stats');
+  if (!el) return;
+  var total = doleances.length;
+  var nouv = doleances.filter(function(d){ return d.statut==='Nouveau'; }).length;
+  var enc = doleances.filter(function(d){ return d.statut==='En cours'; }).length;
+  var trt = doleances.filter(function(d){ return d.statut==='Traité'; }).length;
+  el.innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
+    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + nouv + '</div><div class="stat-lbl">Nouvelles</div></div>' +
+    '<div class="stat-card" style="border-color:#2563EB;"><div class="stat-num" style="color:#2563EB;">' + enc + '</div><div class="stat-lbl">En cours</div></div>' +
+    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + trt + '</div><div class="stat-lbl">Traitées</div></div>';
+}
+
+function renderTableauDoleances() {
+  var searchEl = document.getElementById('filter-search-doleances');
+  var statusEl = document.getElementById('filter-status-doleances');
+  var tbody = document.getElementById('tbody-doleances');
+  if (!searchEl || !statusEl || !tbody) return;
+  var q = (searchEl.value || '').toLowerCase();
+  var st = statusEl.value || '';
+  var filtered = doleances.filter(function(d){
+    var matchQ = !q || ((d.nom||'')+(d.prenom||'')+(d.mat||'')+(d.service||'')+(d.objet||'')).toLowerCase().indexOf(q) >= 0;
+    var matchSt = !st || d.statut === st;
+    return matchQ && matchSt;
+  }).sort(function(a,b){ return (b.dateObj||'').localeCompare(a.dateObj||''); });
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#7A6F58;padding:24px;">Aucune doléance trouvée</td></tr>'; return;
+  }
+  var rows = '';
+  filtered.forEach(function(d) {
+    var bc = d.statut === 'Traité' ? 'b-ok' : d.statut === 'En cours' ? 'b-att' : 'b-rej';
+    var identite = d.anonyme ? '<em style="color:#7A6F58;">Anonyme</em>' : esc(d.nom) + ' ' + esc(d.prenom);
+    rows += '<tr>';
+    rows += '<td><strong>' + esc(d.num) + '</strong></td>';
+    rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
+    rows += '<td>' + identite + '</td>';
+    rows += '<td>' + esc(d.service || '—') + '</td>';
+    rows += '<td>' + esc(d.objet) + '</td>';
+    rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
+    rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+    rows += '<button class="btn-view-sm" onclick="voirDetailDoleance(&quot;' + d.num + '&quot;)">👁 Voir</button>';
+    rows += '<button class="btn-del-sm" onclick="supprimerDoleance(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
+    rows += '</div></td></tr>';
+  });
+  tbody.innerHTML = rows;
+}
+
+function voirDetailDoleance(num) {
+  var d = doleances.find(function(x){ return x.num === num; });
+  if (!d) return;
+  var bc = d.statut === 'Traité' ? 'b-ok' : d.statut === 'En cours' ? 'b-att' : 'b-rej';
+  var identite = d.anonyme ? 'Anonyme' : (d.nom + ' ' + d.prenom);
+  var body = '<div class="detail-grid">';
+  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Auteur</div><div class="detail-val">' + esc(identite) + '</div></div>';
+  if (!d.anonyme) {
+    body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat || '—') + '</div></div>';
+    body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service || '—') + '</div></div>';
+  }
+  body += '<div class="detail-item"><div class="detail-lbl">Objet</div><div class="detail-val">' + esc(d.objet) + '</div></div>';
+  body += '</div>';
+  body += '<div class="detail-item" style="margin-bottom:14px;"><div class="detail-lbl">Description</div><div class="detail-val" style="margin-top:4px;white-space:pre-wrap;">' + esc(d.description) + '</div></div>';
+  body += '<div class="grp" style="max-width:260px;"><label>Changer le statut</label><select id="doleance-statut-select" onchange="changerStatutDoleance(&quot;' + d.num + '&quot;, this.value)">' +
+    ['Nouveau','En cours','Traité'].map(function(s){ return '<option value="' + s + '"' + (s===d.statut?' selected':'') + '>' + s + '</option>'; }).join('') +
+    '</select></div>';
+  body += '<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">';
+  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerDoleance(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer</button>';
+  body += '</div>';
+  document.getElementById('modal-title').textContent = 'Doléance ' + d.num;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function changerStatutDoleance(num, statut) {
+  var d = doleances.find(function(x){ return x.num === num; });
+  if (!d) return;
+  d.statut = statut;
+  persistDoleanceLocal(d);
+  renderTableauDoleances(); renderStatsDoleances();
+  if (typeof window.fbUpdateDoleance === 'function') {
+    window.fbUpdateDoleance(num, { statut: statut }).catch(function(err){ console.warn('Synchronisation Firebase échouée (doléance) :', err); });
+  }
+}
+
+function supprimerDoleance(num) {
+  var d = doleances.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm('Voulez-vous vraiment supprimer définitivement la doléance ' + num + ' ? Cette action est irréversible.')) return;
+  doleances = doleances.filter(function(x){ return x.num !== num; });
+  retirerDoleanceLocal(num);
+  marquerDoleanceSupprimee(num);
+  renderTableauDoleances(); renderStatsDoleances();
+  if (typeof window.fbDeleteDoleance === 'function') {
+    window.fbDeleteDoleance(num).catch(function(err){ console.warn('Synchronisation Firebase échouée (doléance) :', err); });
+  }
+}
+
+function exporterExcelDoleances() {
+  if (!doleances.length) { alert('Aucune doléance à exporter.'); return; }
+  var data = doleances.map(function(d){
+    return {
+      'N°': d.num, 'Date': d.date, 'Statut': d.statut,
+      'Anonyme': d.anonyme ? 'Oui' : 'Non',
+      'Nom': d.anonyme ? '' : (d.nom || ''),
+      'Prénom': d.anonyme ? '' : (d.prenom || ''),
+      'Matricule': d.anonyme ? '' : (d.mat || ''),
+      'Service': d.anonyme ? '' : (d.service || ''),
+      'Objet': d.objet,
+      'Description': d.description
+    };
+  });
+  var ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:16},{wch:18},{wch:11},{wch:10},{wch:14},{wch:14},{wch:12},{wch:16},{wch:26},{wch:60}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Doleances');
+  var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
+  XLSX.writeFile(wb, 'SCHB_Registre_Doleances_' + dateExp + '.xlsx');
+}
+
+// ===== ADMIN : CHANGEMENT DE MOT DE PASSE =====
+function toggleChangePasswordPanel() {
+  var panel = document.getElementById('admin-changepwd-panel');
+  var opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'block' : 'none';
+  if (opening) {
+    ['pwd-current','pwd-new','pwd-confirm'].forEach(function(id){ document.getElementById(id).value = ''; });
+    document.getElementById('msg-changepwd').style.display = 'none';
+  }
+}
+
+async function changerMotDePasseAdmin() {
+  var current = document.getElementById('pwd-current').value;
+  var neuf = document.getElementById('pwd-new').value;
+  var confirmPwd = document.getElementById('pwd-confirm').value;
+  var msg = document.getElementById('msg-changepwd');
+  msg.className = 'msg';
+
+  if (!current || !neuf || !confirmPwd) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez remplir les trois champs.'; return;
+  }
+  if (neuf.length < 8) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Le nouveau mot de passe doit contenir au moins 8 caractères.'; return;
+  }
+  if (neuf !== confirmPwd) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Les deux mots de passe ne correspondent pas.'; return;
+  }
+  if (typeof window.fbAdminChangePassword !== 'function') {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '❌ Firebase Authentication est indisponible.'; return;
+  }
+
+  msg.className = 'msg info'; msg.style.display = 'flex';
+  msg.textContent = '⏳ Mise à jour du mot de passe…';
+  try {
+    await window.fbAdminChangePassword(current, neuf);
+    msg.className = 'msg ok'; msg.style.display = 'flex';
+    msg.textContent = '✅ Mot de passe mis à jour avec succès.';
+    ['pwd-current','pwd-new','pwd-confirm'].forEach(function(id){ document.getElementById(id).value = ''; });
+  } catch(err) {
+    console.error('Erreur changement mot de passe :', err);
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    if (err && err.code === 'auth/wrong-password') {
+      msg.textContent = '❌ Le mot de passe actuel est incorrect.';
+    } else if (err && err.code === 'auth/requires-recent-login') {
+      msg.textContent = '❌ Session trop ancienne : déconnectez-vous puis reconnectez-vous avant de changer le mot de passe.';
+    } else {
+      msg.textContent = '❌ Échec de la mise à jour (' + esc(err && err.message || 'erreur inconnue') + ').';
+    }
+  }
 }
 
 // ===== BON D'INSCRIPTION OMRA (PDF) =====
@@ -3704,6 +4747,8 @@ var I18N_AR = {
   'nav.livre': '📚 الكتاب المدرسي',
   'nav.pret': '💰 القرض الاجتماعي',
   'nav.omra': '🕋 العمرة',
+  'nav.idees': '📬 صندوق الأفكار',
+  'nav.doleances': '📝 سجل التظلمات',
   'nav.suivi': '🔍 المتابعة',
   'nav.admin': '🔐 الإدارة',
   'accueil.eyebrow': 'لجنة المشاركة',
@@ -3717,6 +4762,10 @@ var I18N_AR = {
   'accueil.card.pret.desc': 'تقديم طلب قرض اجتماعي لدى لجنة المشاركة.',
   'accueil.card.omra.title': 'العمرة',
   'accueil.card.omra.desc': 'التسجيل في برنامج العمرة السنوي.',
+  'accueil.card.idees.title': 'صندوق الأفكار',
+  'accueil.card.idees.desc': 'اقترح أفكارك لتحسين لجنة المشاركة.',
+  'accueil.card.doleances.title': 'سجل التظلمات',
+  'accueil.card.doleances.desc': 'أبلغ عن شكوى أو تظلم لدى لجنة المشاركة.',
   'accueil.card.suivi.title': 'متابعة الملف',
   'accueil.card.suivi.desc': 'تتبع حالة طلبكم باستخدام الرمز السري.',
   'accueil.card.admin.title': 'الإدارة',
@@ -3747,6 +4796,17 @@ var I18N_AR = {
   'omra.naissance': 'تاريخ الميلاد',
   'omra.passeport': 'رقم جواز السفر / بطاقة التعريف',
   'omra.adresse': 'العنوان',
+  'idees.eyebrow': 'استمارة إلكترونية',
+  'idees.title': '📬 صندوق الأفكار',
+  'idees.desc': 'اقترح أفكارك ومقترحاتك لتحسين سير عمل لجنة المشاركة. تُرسل مقترحاتكم مباشرة إلى اللجنة.',
+  'idees.anonyme': 'إرسال هذه الفكرة بشكل مجهول',
+  'idees.message': 'فكرتك / اقتراحك',
+  'doleances.eyebrow': 'استمارة إلكترونية',
+  'doleances.title': '📝 سجل التظلمات',
+  'doleances.desc': 'أبلغ عن شكوى أو صعوبة أو تظلم لدى لجنة المشاركة. سيتم تسجيله ومعالجته بسرية تامة.',
+  'doleances.anonyme': 'إرسال هذا التظلم بشكل مجهول',
+  'doleances.objet': 'موضوع التظلم',
+  'doleances.description': 'وصف تفصيلي',
   'suivi.eyebrow': 'تتبع طلبي',
   'suivi.title': 'حالة التكفل الخاص بك',
   'suivi.desc': 'أدخل رمز المتابعة السري الذي تم تسليمه عند تسجيل طلبك.',
@@ -3761,23 +4821,38 @@ var I18N_AR = {
   'btn.soumettre.livre': '✅ إرسال التسجيل',
   'btn.soumettre.pret': '✅ إرسال الطلب',
   'btn.soumettre.omra': '✅ إرسال التسجيل',
+  'btn.soumettre.idee': '✅ إرسال اقتراحي',
+  'btn.soumettre.doleance': '✅ إرسال تظلمي',
   'btn.exportExcel': '📊 تصدير Excel',
   'btn.genererRapport': '📥 إنشاء تقرير PowerPoint',
   'btn.cloturerMaintenant': '🔒 إغلاق السنة المنقضية يدويًا',
   'admin.login.btn': 'الدخول بشكل آمن',
   'admin.logout': '🔓 تسجيل الخروج',
+  'admin.changepwd.btn': '🔑 تغيير كلمة المرور',
+  'admin.changepwd.title': '🔑 تغيير كلمة مرور المسؤول',
+  'admin.changepwd.current': 'كلمة المرور الحالية',
+  'admin.changepwd.new': 'كلمة المرور الجديدة',
+  'admin.changepwd.confirm': 'تأكيد كلمة المرور الجديدة',
+  'admin.changepwd.submit': '✅ تحديث كلمة المرور',
   'admtab.demandes': '📋 الطلبات',
   'admtab.livres': '📚 الكتب المدرسية',
   'admtab.prets': '💰 القروض الاجتماعية',
   'admtab.omra': '🕋 العمرة',
+  'admtab.idees': '📬 صندوق الأفكار',
+  'admtab.doleances': '📝 التظلمات',
   'admtab.stats': '📊 إحصائيات حسب المؤسسة',
   'admtab.rapport': '📈 التقرير الشامل',
+  'admtab.effectifs': '🧑‍💼 القوى العاملة',
   'filter.tous': 'جميع الحالات',
   'filter.toutesAnnees': 'جميع السنوات',
   'statut.enattente': 'قيد الانتظار',
   'statut.valide': 'مقبول',
   'statut.refuse': 'مرفوض',
   'statut.cloture': 'مغلق',
+  'statut.nouveau': 'جديد',
+  'statut.lu': 'تمت القراءة',
+  'statut.encours': 'قيد المعالجة',
+  'statut.traite': 'تمت المعالجة',
   'th.date': 'التاريخ',
   'th.adherent': 'المنخرط',
   'th.matricule': 'رقم التسجيل',
@@ -3826,6 +4901,8 @@ function applyLang(lang) {
   if (document.getElementById('tbody-livres')) { try { renderTableauLivres(); } catch(e) {} }
   if (document.getElementById('tbody-prets')) { try { renderTableauPrets(); } catch(e) {} }
   if (document.getElementById('tbody-omra')) { try { renderTableauOmra(); } catch(e) {} }
+  if (document.getElementById('tbody-idees')) { try { renderTableauIdees(); } catch(e) {} }
+  if (document.getElementById('tbody-doleances')) { try { renderTableauDoleances(); } catch(e) {} }
 }
 
 function toggleLang() {
