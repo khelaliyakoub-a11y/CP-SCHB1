@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cp SCHB Activités</title>
+<title>CP- SCHB Activités</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -337,8 +337,11 @@ button{font-family:'Inter',sans-serif;cursor:pointer;border:none;}
 ::selection{background:var(--or-clair);}
 .bandeau{background:repeating-linear-gradient(45deg,var(--or) 0 10px,var(--bleu) 10px 20px);height:6px;}
 header{background:var(--bleu);color:var(--creme);padding:24px;position:relative;overflow:hidden;}
-header::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 85% 20%,rgba(242,169,59,.18),transparent 55%);pointer-events:none;}
-.hdr-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:20px;position:relative;z-index:1;flex-wrap:wrap;}
+.hdr-bg{position:absolute;inset:0;z-index:0;}
+.hdr-bg svg{width:100%;height:100%;display:block;}
+.hdr-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(100deg,rgba(6,17,26,.93) 0%,rgba(9,32,47,.88) 30%,rgba(14,58,83,.72) 60%,rgba(14,58,83,.5) 100%);pointer-events:none;}
+header::after{content:"";position:absolute;inset:0;z-index:2;background:radial-gradient(circle at 85% 20%,rgba(242,169,59,.22),transparent 55%);pointer-events:none;}
+.hdr-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:20px;position:relative;z-index:3;flex-wrap:wrap;}
 .hdr-logos{display:flex;align-items:center;gap:16px;}
 .hdr-logos img{height:56px;width:auto;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.3));}
 .steth-icon{height:56px;width:56px;object-fit:contain;border-radius:50%;background:rgba(255,255,255,.1);padding:6px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.3));}
@@ -362,6 +365,15 @@ main{max-width:1100px;margin:0 auto;padding:36px 24px 80px;}
 .grid-spec{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:32px;}
 .card-spec{background:white;border:1.5px solid var(--ligne);border-radius:14px;padding:20px;box-shadow:var(--ombre);display:flex;align-items:flex-start;gap:14px;transition:.2s;}
 .card-spec:hover{border-color:var(--or);transform:translateY(-2px);}
+.grid-activites{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-bottom:32px;}
+.card-activite{background:white;border:1.5px solid var(--ligne);border-radius:16px;padding:22px;box-shadow:var(--ombre);display:flex;align-items:center;gap:16px;cursor:pointer;transition:.2s;}
+.card-activite:hover{border-color:var(--or);transform:translateY(-3px);box-shadow:0 8px 26px rgba(14,58,83,.18);}
+.act-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.act-body{flex:1;min-width:0;}
+.act-title{font-weight:700;font-size:15.5px;color:var(--bleu);margin-bottom:4px;font-family:'Fraunces',serif;}
+.act-desc{font-size:12.5px;color:#7A6F58;line-height:1.5;}
+.act-arrow{font-size:20px;color:var(--or);flex-shrink:0;transition:.2s;}
+.card-activite:hover .act-arrow{transform:translateX(4px);}
 .spec-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
 .spec-icon.cl{background:#EAF1F5;}.spec-icon.ho{background:#E8F4EF;}
 .spec-icon.im{background:#FFF3E0;}.spec-icon.de{background:#FCE4EC;}.spec-icon.la{background:#F3E5F5;}
@@ -453,6 +465,8 @@ table.tab tr:hover td{background:#F7F3EA;}
 .annee-badge{display:inline-block;background:var(--creme2);color:var(--bleu);border:1px solid var(--ligne);border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:6px;}
 .btn-lang{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:var(--or-clair);border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.15s;}
 .btn-lang:hover{background:rgba(255,255,255,.22);}
+.hdr-lang-col{display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
+.hdr-credit{font-size:10.5px;color:#C7D9E3;opacity:.75;white-space:nowrap;letter-spacing:.02em;}
 .btn-report{background:#6B4FA0;color:white;border:none;padding:11px 20px;border-radius:9px;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;}
 .btn-report:hover{background:#5A4087;}
 .btn-cloture{background:transparent;color:#334155;border:1.5px solid #334155;padding:9px 16px;border-radius:9px;font-weight:700;font-size:12.5px;cursor:pointer;}
@@ -509,6 +523,106 @@ footer strong{color:var(--or-clair);}
 <body>
 <div class="bandeau"></div>
 <header>
+  <div class="hdr-bg" aria-hidden="true">
+    <svg viewBox="0 0 1600 260" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#081C2B"/>
+          <stop offset="42%" stop-color="#0E3A53"/>
+          <stop offset="76%" stop-color="#3F6478"/>
+          <stop offset="100%" stop-color="#F2A93B" stop-opacity=".38"/>
+        </linearGradient>
+        <linearGradient id="structGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#16303F"/>
+          <stop offset="55%" stop-color="#0A1E2C"/>
+          <stop offset="100%" stop-color="#04121C"/>
+        </linearGradient>
+        <radialGradient id="lightGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#FBD896" stop-opacity=".95"/>
+          <stop offset="100%" stop-color="#FBD896" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="smokeBlur" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="9"/>
+        </filter>
+        <filter id="filmGrain">
+          <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch" result="n"/>
+          <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .05 0"/>
+        </filter>
+      </defs>
+
+      <rect x="0" y="0" width="1600" height="260" fill="url(#skyGrad)"/>
+
+      <g fill="#FBD896" opacity=".55">
+        <circle cx="95" cy="24" r="1.3"/><circle cx="240" cy="46" r="1"/><circle cx="410" cy="18" r="1.2"/>
+        <circle cx="560" cy="34" r="1"/><circle cx="900" cy="20" r="1.3"/><circle cx="1030" cy="42" r="1"/>
+        <circle cx="1180" cy="16" r="1.2"/><circle cx="1480" cy="30" r="1"/><circle cx="1550" cy="14" r="1.2"/>
+      </g>
+
+      <rect x="0" y="150" width="1600" height="110" fill="#0E3A53" opacity=".22"/>
+      <rect x="0" y="236" width="1600" height="24" fill="#04121C"/>
+
+      <line x1="60" y1="150" x2="1520" y2="150" stroke="#04121C" stroke-width="4"/>
+      <g stroke="#04121C" stroke-width="3">
+        <line x1="115" y1="150" x2="115" y2="236"/>
+        <line x1="380" y1="150" x2="380" y2="236"/>
+        <line x1="620" y1="150" x2="620" y2="236"/>
+        <line x1="1000" y1="150" x2="1000" y2="236"/>
+        <line x1="1230" y1="150" x2="1230" y2="236"/>
+        <line x1="1470" y1="150" x2="1470" y2="236"/>
+      </g>
+
+      <g>
+        <ellipse cx="115" cy="118" rx="34" ry="9" fill="#0A1E2C"/>
+        <rect x="81" y="118" width="68" height="118" rx="6" fill="url(#structGrad)"/>
+        <ellipse cx="200" cy="150" rx="26" ry="7" fill="#0A1E2C"/>
+        <rect x="174" y="150" width="52" height="86" rx="5" fill="url(#structGrad)"/>
+        <ellipse cx="290" cy="95" rx="30" ry="8" fill="#0A1E2C"/>
+        <rect x="260" y="95" width="60" height="141" rx="6" fill="url(#structGrad)"/>
+      </g>
+
+      <g stroke="#04121C" stroke-width="3" fill="none">
+        <rect x="690" y="34" width="52" height="202" fill="url(#structGrad)" stroke="none"/>
+        <line x1="690" y1="58" x2="742" y2="90"/><line x1="742" y1="58" x2="690" y2="90"/>
+        <line x1="690" y1="112" x2="742" y2="144"/><line x1="742" y1="112" x2="690" y2="144"/>
+        <line x1="690" y1="166" x2="742" y2="198"/><line x1="742" y1="166" x2="690" y2="198"/>
+      </g>
+      <rect x="742" y="175" width="120" height="26" fill="url(#structGrad)"/>
+      <circle cx="862" cy="188" r="16" fill="#0A1E2C"/>
+
+      <g>
+        <ellipse cx="960" cy="130" rx="28" ry="7" fill="#0A1E2C"/>
+        <rect x="932" y="130" width="56" height="106" rx="5" fill="url(#structGrad)"/>
+        <ellipse cx="1045" cy="108" rx="32" ry="8" fill="#0A1E2C"/>
+        <rect x="1013" y="108" width="64" height="128" rx="6" fill="url(#structGrad)"/>
+      </g>
+
+      <g>
+        <ellipse cx="1313" cy="58" rx="15" ry="5" fill="#0A1E2C"/>
+        <rect x="1298" y="58" width="30" height="178" fill="url(#structGrad)"/>
+      </g>
+      <g filter="url(#smokeBlur)" fill="#C7D9E3" opacity=".32">
+        <ellipse cx="1330" cy="38" rx="28" ry="13"/>
+        <ellipse cx="1364" cy="18" rx="42" ry="17"/>
+        <ellipse cx="1412" cy="4" rx="58" ry="19"/>
+      </g>
+
+      <g>
+        <ellipse cx="1180" cy="140" rx="24" ry="6" fill="#0A1E2C"/>
+        <rect x="1156" y="140" width="48" height="96" rx="5" fill="url(#structGrad)"/>
+      </g>
+
+      <g fill="url(#lightGlow)">
+        <circle cx="115" cy="185" r="5.5"/><circle cx="115" cy="210" r="5.5"/>
+        <circle cx="716" cy="150" r="5"/><circle cx="716" cy="185" r="5"/>
+        <circle cx="960" cy="165" r="5"/><circle cx="1045" cy="150" r="5"/>
+        <circle cx="1313" cy="150" r="4.5"/><circle cx="1313" cy="200" r="4.5"/>
+        <circle cx="1180" cy="180" r="4.5"/>
+      </g>
+
+      <rect x="0" y="0" width="1600" height="260" filter="url(#filmGrain)"/>
+    </svg>
+  </div>
+  <div class="hdr-overlay" aria-hidden="true"></div>
   <div class="hdr-inner">
     <div class="hdr-logos">
       <img src="data:image/jpeg;base64,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" alt="GICA">
@@ -517,16 +631,19 @@ footer strong{color:var(--or-clair);}
     </div>
     <div class="hdr-text">
       <div class="hdr-eyebrow">GICA — Groupe Industriel des Ciments d'Algérie</div>
-      <h1 class="hdr-title">Cp SCHB <span style="color:var(--or)">Activités</span></h1>
+      <h1 class="hdr-title">CP- SCHB <span style="color:var(--or)">Activités</span></h1>
       <div class="hdr-sub">Société des Ciments de Hamma Bouziane &nbsp;·&nbsp; Comité de Participation</div>
     </div>
     <div class="hdr-badge" data-i18n="hdr.badge">Comité de Participation</div>
-    <button class="btn-lang" id="btn-lang" onclick="toggleLang()" type="button">🌐 العربية</button>
+    <div class="hdr-lang-col">
+      <button class="btn-lang" id="btn-lang" onclick="toggleLang()" type="button">🌐 العربية</button>
+      <div class="hdr-credit" data-i18n="hdr.credit">Réalisé par M. KHELALI YAKOUB</div>
+    </div>
   </div>
 </header>
 
 <nav>
-  <button class="actif" onclick="showVue('accueil',this)" data-i18n="nav.accueil">🏥 Spécialités</button>
+  <button class="actif" onclick="showVue('accueil',this)" data-i18n="nav.accueil">🏠 Accueil</button>
   <button onclick="showVue('demande',this)" data-i18n="nav.demande">📋 Prise en charge médicale</button>
   <button onclick="showVue('livre',this)" data-i18n="nav.livre">📚 Livre scolaire</button>
   <button onclick="showVue('pret',this)" data-i18n="nav.pret">💰 Prêt social</button>
@@ -540,9 +657,74 @@ footer strong{color:var(--or-clair);}
 <!-- ===== ACCUEIL ===== -->
 <div id="vue-accueil" class="vue active">
   <div class="sec-hdr">
-    <span class="eyebrow" data-i18n="accueil.eyebrow">Établissements conventionnés</span>
-    <h2 class="sec-title" data-i18n="accueil.title">Spécialités médicales agréées</h2>
-    <p class="sec-desc" data-i18n="accueil.desc">Les prises en charge couvrent les soins dans les établissements ci-dessous. Les consultations simples et soins dentaires courants ne sont pas éligibles. Une ordonnance médicale est obligatoire.</p>
+    <span class="eyebrow" data-i18n="accueil.eyebrow">Comité de Participation</span>
+    <h2 class="sec-title" data-i18n="accueil.title">Vos activités &amp; prestations</h2>
+    <p class="sec-desc" data-i18n="accueil.desc">Accédez rapidement à l'ensemble des services proposés par le Comité de Participation aux travailleurs de la SCHB et à leurs familles.</p>
+  </div>
+  <div class="grid-activites">
+    <div class="card-activite" onclick="goVue('demande')">
+      <div class="act-icon" style="background:#EAF1F5;">🏥</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.demande.title">Prise en charge médicale</div>
+        <div class="act-desc" data-i18n="accueil.card.demande.desc">Spécialités médicales conventionnées et demande de prise en charge en ligne.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('livre')">
+      <div class="act-icon" style="background:#FFF3E0;">📚</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.livre.title">Livre scolaire</div>
+        <div class="act-desc" data-i18n="accueil.card.livre.desc">Inscription annuelle de vos enfants scolarisés au livre scolaire.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('pret')">
+      <div class="act-icon" style="background:#E8F4EF;">💰</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.pret.title">Prêt social</div>
+        <div class="act-desc" data-i18n="accueil.card.pret.desc">Demande de prêt social auprès du Comité de Participation.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('omra')">
+      <div class="act-icon" style="background:#F3E5F5;">🕋</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.omra.title">Omra</div>
+        <div class="act-desc" data-i18n="accueil.card.omra.desc">Inscription au programme annuel de l'Omra.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('suivi')">
+      <div class="act-icon" style="background:#FCE4EC;">🔍</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.suivi.title">Suivi de dossier</div>
+        <div class="act-desc" data-i18n="accueil.card.suivi.desc">Consultez l'état de votre demande avec votre code confidentiel.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('admin')">
+      <div class="act-icon" style="background:#EAF1F5;">🔐</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.admin.title">Administration</div>
+        <div class="act-desc" data-i18n="accueil.card.admin.desc">Espace réservé au Comité de Participation pour la gestion des dossiers.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DEMANDE ===== -->
+<div id="vue-demande" class="vue">
+  <div class="sec-hdr">
+    <span class="eyebrow" data-i18n="demande.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="demande.title">Nouvelle demande de prise en charge</h2>
+    <p class="sec-desc" data-i18n="demande.desc">Remplissez le formulaire et joignez l'ordonnance médicale. Votre demande sera traitée par le Comité de Participation.</p>
+  </div>
+
+  <div class="sec-hdr" style="margin-bottom:16px;">
+    <span class="eyebrow" data-i18n="demande.spec.eyebrow">Établissements conventionnés</span>
+    <h3 class="serif" style="color:var(--bleu);font-size:19px;margin-bottom:6px;" data-i18n="demande.spec.title">Spécialités médicales agréées</h3>
+    <p class="sec-desc" data-i18n="demande.spec.desc">Les prises en charge couvrent les soins dans les établissements ci-dessous. Les consultations simples et soins dentaires courants ne sont pas éligibles. Une ordonnance médicale est obligatoire.</p>
   </div>
   <div class="grid-spec">
     <div class="card-spec"><div class="spec-icon cl">🏥</div><div><div class="spec-name">Clinique Boukerrou</div><div class="spec-addr">Zouaghi Slimane, Constantine</div><div class="spec-type">Chirurgie · Hospitalisation</div></div></div>
@@ -557,21 +739,12 @@ footer strong{color:var(--or-clair);}
     <div class="card-spec"><div class="spec-icon cl">🏥</div><div><div class="spec-name">Clinique El Anouar</div><div class="spec-addr">El Mansoura, Constantine</div><div class="spec-type">Médecine · Chirurgie</div></div></div>
     <div class="card-spec"><div class="spec-icon de">👓</div><div><div class="spec-name">Zohra Optique</div><div class="spec-addr">El Khroub, Constantine</div><div class="spec-type">Opticien</div></div></div>
   </div>
-  <div class="panneau" style="background:linear-gradient(135deg,var(--bleu),var(--bleu2));color:white;border:none;">
+  <div class="panneau" style="background:linear-gradient(135deg,var(--bleu),var(--bleu2));color:white;border:none;margin-bottom:32px;">
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
       <div style="font-size:38px;">ℹ️</div>
       <div><div style="font-weight:700;font-size:15px;margin-bottom:4px;">Note importante</div>
       <div style="font-size:13.5px;opacity:.9;line-height:1.6;">Aucun paiement des 30% des œuvres sociales ne se fera sans la présentation d'une prescription médicale.</div></div>
     </div>
-  </div>
-</div>
-
-<!-- ===== DEMANDE ===== -->
-<div id="vue-demande" class="vue">
-  <div class="sec-hdr">
-    <span class="eyebrow" data-i18n="demande.eyebrow">Formulaire en ligne</span>
-    <h2 class="sec-title" data-i18n="demande.title">Nouvelle demande de prise en charge</h2>
-    <p class="sec-desc" data-i18n="demande.desc">Remplissez le formulaire et joignez l'ordonnance médicale. Votre demande sera traitée par le Comité de Participation.</p>
   </div>
 
   <div class="panneau">
@@ -1329,6 +1502,16 @@ function showVue(id, btn) {
   document.getElementById('vue-' + id).classList.add('active');
   document.querySelectorAll('nav button').forEach(function(b){ b.classList.remove('actif'); });
   if (btn) btn.classList.add('actif');
+}
+
+// Navigate from the home dashboard cards, keeping the nav bar in sync
+function goVue(id) {
+  var btn = null;
+  document.querySelectorAll('nav button').forEach(function(b){
+    if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf("'" + id + "'") !== -1) btn = b;
+  });
+  showVue(id, btn);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ===== RADIO BENEFICIAIRE =====
@@ -3515,16 +3698,32 @@ async function genererRapportPPTX() {
 var I18N_FR_CAPTURE = {};
 var I18N_AR = {
   'hdr.badge': 'لجنة المشاركة',
-  'nav.accueil': '🏥 التخصصات',
+  'hdr.credit': 'من إنجاز السيد خلالي يعقوب',
+  'nav.accueil': '🏠 الرئيسية',
   'nav.demande': '📋 التكفل الطبي',
   'nav.livre': '📚 الكتاب المدرسي',
   'nav.pret': '💰 القرض الاجتماعي',
   'nav.omra': '🕋 العمرة',
   'nav.suivi': '🔍 المتابعة',
   'nav.admin': '🔐 الإدارة',
-  'accueil.eyebrow': 'المؤسسات المتعاقدة',
-  'accueil.title': 'التخصصات الطبية المعتمدة',
-  'accueil.desc': 'يغطي التكفل العلاجات في المؤسسات المذكورة أدناه. الاستشارات البسيطة وعلاجات الأسنان العادية غير مؤهلة. الوصفة الطبية إلزامية.',
+  'accueil.eyebrow': 'لجنة المشاركة',
+  'accueil.title': 'أنشطتكم وخدماتكم',
+  'accueil.desc': 'الوصول السريع إلى جميع الخدمات التي تقدمها لجنة المشاركة لعمال شركة SCHB وعائلاتهم.',
+  'accueil.card.demande.title': 'التكفل الطبي',
+  'accueil.card.demande.desc': 'التخصصات الطبية المعتمدة وتقديم طلب التكفل عبر الإنترنت.',
+  'accueil.card.livre.title': 'الكتاب المدرسي',
+  'accueil.card.livre.desc': 'التسجيل السنوي لأبنائكم المتمدرسين للاستفادة من الكتاب المدرسي.',
+  'accueil.card.pret.title': 'القرض الاجتماعي',
+  'accueil.card.pret.desc': 'تقديم طلب قرض اجتماعي لدى لجنة المشاركة.',
+  'accueil.card.omra.title': 'العمرة',
+  'accueil.card.omra.desc': 'التسجيل في برنامج العمرة السنوي.',
+  'accueil.card.suivi.title': 'متابعة الملف',
+  'accueil.card.suivi.desc': 'تتبع حالة طلبكم باستخدام الرمز السري.',
+  'accueil.card.admin.title': 'الإدارة',
+  'accueil.card.admin.desc': 'فضاء مخصص للجنة المشاركة لتسيير الملفات.',
+  'demande.spec.eyebrow': 'المؤسسات المتعاقدة',
+  'demande.spec.title': 'التخصصات الطبية المعتمدة',
+  'demande.spec.desc': 'يغطي التكفل العلاجات في المؤسسات المذكورة أدناه. الاستشارات البسيطة وعلاجات الأسنان العادية غير مؤهلة. الوصفة الطبية إلزامية.',
   'demande.eyebrow': 'استمارة إلكترونية',
   'demande.title': 'طلب تكفل طبي جديد',
   'demande.desc': 'املأ الاستمارة وأرفق الوصفة الطبية. سيتم معالجة طلبك من طرف لجنة المشاركة.',
