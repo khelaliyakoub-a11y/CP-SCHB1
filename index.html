@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <!--
   Firebase SDK v8 — namespaced API, works with classic non-module scripts.
@@ -255,6 +256,63 @@
         return _fbDb.ref().update(updates);
       };
 
+      // ===== OMRA (inscriptions par année) =====
+      var _adminRefOmra = null;
+      var _adminValueHandlerOmra = null;
+
+      window.fbCreateOmra = function(d, suiviPublic) {
+        var updates = {};
+        updates['omra/' + d.num] = d;
+        updates['suiviOmra/' + d.trackingCode] = suiviPublic;
+        return _fbDb.ref().update(updates);
+      };
+
+      window.fbReadSuiviOmra = function(code) {
+        return _fbDb.ref('suiviOmra/' + code).once('value').then(function(snapshot) {
+          return snapshot.val();
+        });
+      };
+
+      window.fbListenAdminOmra = function(callback, errorCallback) {
+        if (_adminRefOmra && _adminValueHandlerOmra) _adminRefOmra.off('value', _adminValueHandlerOmra);
+        _adminRefOmra = _fbDb.ref('omra');
+        _adminValueHandlerOmra = function(snapshot) {
+          var data = snapshot.val();
+          callback(data ? Object.values(data) : []);
+        };
+        _adminRefOmra.on('value', _adminValueHandlerOmra, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopAdminListenOmra = function() {
+        if (_adminRefOmra && _adminValueHandlerOmra) _adminRefOmra.off('value', _adminValueHandlerOmra);
+        _adminRefOmra = null; _adminValueHandlerOmra = null;
+      };
+
+      window.fbUpdateOmra = function(num, patch, trackingCode) {
+        var updates = {};
+        Object.keys(patch).forEach(function(k){ updates['omra/' + num + '/' + k] = patch[k]; });
+        if (trackingCode) {
+          ['statut','dateValidation'].forEach(function(k){
+            if (Object.prototype.hasOwnProperty.call(patch, k)) updates['suiviOmra/' + trackingCode + '/' + k] = patch[k];
+          });
+        }
+        return _fbDb.ref().update(updates);
+      };
+
+      window.fbDeleteOmra = function(num, trackingCode) {
+        var updates = {};
+        updates['omra/' + num] = null;
+        if (trackingCode) updates['suiviOmra/' + trackingCode] = null;
+        return _fbDb.ref().update(updates);
+      };
+
+      // ===== META (clôture automatique par année) =====
+      window.fbSetMetaCloture = function(annee) {
+        return _fbDb.ref('meta/derniereClotureAnnee').set(annee);
+      };
+      window.fbGetMetaCloture = function() {
+        return _fbDb.ref('meta/derniereClotureAnnee').once('value').then(function(snap){ return snap.val(); });
+      };
+
       window.dispatchEvent(new Event('firebase-sdk-ready'));
     } catch (e) {
       console.error("Erreur d'initialisation Firebase :", e);
@@ -391,6 +449,21 @@ table.tab tr:hover td{background:#F7F3EA;}
 .b-att{background:#FEF3C7;color:#92400E;}
 .b-ok{background:#D1FAE5;color:#065F46;}
 .b-rej{background:#FEE2E2;color:#991B1B;}
+.b-clo{background:#E2E8F0;color:#334155;}
+.annee-badge{display:inline-block;background:var(--creme2);color:var(--bleu);border:1px solid var(--ligne);border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:6px;}
+.btn-lang{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:var(--or-clair);border-radius:20px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.15s;}
+.btn-lang:hover{background:rgba(255,255,255,.22);}
+.btn-report{background:#6B4FA0;color:white;border:none;padding:11px 20px;border-radius:9px;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;}
+.btn-report:hover{background:#5A4087;}
+.btn-cloture{background:transparent;color:#334155;border:1.5px solid #334155;padding:9px 16px;border-radius:9px;font-weight:700;font-size:12.5px;cursor:pointer;}
+.btn-cloture:hover{background:#E2E8F0;}
+html[dir="rtl"] body{direction:rtl;}
+html[dir="rtl"] .ticket-hdr,html[dir="rtl"] .stats-toolbar,html[dir="rtl"] .enfant-row-hdr,html[dir="rtl"] .hdr-inner,html[dir="rtl"] .tl-item{flex-direction:row-reverse;}
+html[dir="rtl"] .chart-bar-label{text-align:left;}
+html[dir="rtl"] .chart-bar-total{text-align:right;}
+html[dir="rtl"] .req{margin-right:2px;}
+html[dir="rtl"] table.tab{direction:rtl;}
+html[dir="rtl"] .tableau-wrap{direction:rtl;}
 .filter-bar{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;align-items:center;}
 .filter-bar input,.filter-bar select{padding:9px 12px;border:1.5px solid var(--ligne);border-radius:8px;font-size:13px;background:white;font-family:'Inter',sans-serif;}
 .overlay{position:fixed;inset:0;background:rgba(14,58,83,.55);z-index:100;display:none;align-items:center;justify-content:center;padding:16px;}
@@ -447,17 +520,19 @@ footer strong{color:var(--or-clair);}
       <h1 class="hdr-title">Cp SCHB <span style="color:var(--or)">Activités</span></h1>
       <div class="hdr-sub">Société des Ciments de Hamma Bouziane &nbsp;·&nbsp; Comité de Participation</div>
     </div>
-    <div class="hdr-badge">Comité de Participation</div>
+    <div class="hdr-badge" data-i18n="hdr.badge">Comité de Participation</div>
+    <button class="btn-lang" id="btn-lang" onclick="toggleLang()" type="button">🌐 العربية</button>
   </div>
 </header>
 
 <nav>
-  <button class="actif" onclick="showVue('accueil',this)">🏥 Spécialités</button>
-  <button onclick="showVue('demande',this)">📋 Prise en charge médicale</button>
-  <button onclick="showVue('livre',this)">📚 Livre scolaire</button>
-  <button onclick="showVue('pret',this)">💰 Prêt social</button>
-  <button onclick="showVue('suivi',this)">🔍 Suivi</button>
-  <button onclick="showVue('admin',this)">🔐 Administration</button>
+  <button class="actif" onclick="showVue('accueil',this)" data-i18n="nav.accueil">🏥 Spécialités</button>
+  <button onclick="showVue('demande',this)" data-i18n="nav.demande">📋 Prise en charge médicale</button>
+  <button onclick="showVue('livre',this)" data-i18n="nav.livre">📚 Livre scolaire</button>
+  <button onclick="showVue('pret',this)" data-i18n="nav.pret">💰 Prêt social</button>
+  <button onclick="showVue('omra',this)" data-i18n="nav.omra">🕋 Omra</button>
+  <button onclick="showVue('suivi',this)" data-i18n="nav.suivi">🔍 Suivi</button>
+  <button onclick="showVue('admin',this)" data-i18n="nav.admin">🔐 Administration</button>
 </nav>
 
 <main>
@@ -465,9 +540,9 @@ footer strong{color:var(--or-clair);}
 <!-- ===== ACCUEIL ===== -->
 <div id="vue-accueil" class="vue active">
   <div class="sec-hdr">
-    <span class="eyebrow">Établissements conventionnés</span>
-    <h2 class="sec-title">Spécialités médicales agréées</h2>
-    <p class="sec-desc">Les prises en charge couvrent les soins dans les établissements ci-dessous. Les consultations simples et soins dentaires courants ne sont pas éligibles. Une ordonnance médicale est obligatoire.</p>
+    <span class="eyebrow" data-i18n="accueil.eyebrow">Établissements conventionnés</span>
+    <h2 class="sec-title" data-i18n="accueil.title">Spécialités médicales agréées</h2>
+    <p class="sec-desc" data-i18n="accueil.desc">Les prises en charge couvrent les soins dans les établissements ci-dessous. Les consultations simples et soins dentaires courants ne sont pas éligibles. Une ordonnance médicale est obligatoire.</p>
   </div>
   <div class="grid-spec">
     <div class="card-spec"><div class="spec-icon cl">🏥</div><div><div class="spec-name">Clinique Boukerrou</div><div class="spec-addr">Zouaghi Slimane, Constantine</div><div class="spec-type">Chirurgie · Hospitalisation</div></div></div>
@@ -494,9 +569,9 @@ footer strong{color:var(--or-clair);}
 <!-- ===== DEMANDE ===== -->
 <div id="vue-demande" class="vue">
   <div class="sec-hdr">
-    <span class="eyebrow">Formulaire en ligne</span>
-    <h2 class="sec-title">Nouvelle demande de prise en charge</h2>
-    <p class="sec-desc">Remplissez le formulaire et joignez l'ordonnance médicale. Votre demande sera traitée par le Comité de Participation.</p>
+    <span class="eyebrow" data-i18n="demande.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="demande.title">Nouvelle demande de prise en charge</h2>
+    <p class="sec-desc" data-i18n="demande.desc">Remplissez le formulaire et joignez l'ordonnance médicale. Votre demande sera traitée par le Comité de Participation.</p>
   </div>
 
   <div class="panneau">
@@ -584,8 +659,8 @@ footer strong{color:var(--or-clair);}
   </div>
 
   <div class="bar-actions">
-    <button class="btn btn-primary" onclick="soumettreDemande()">✅ Soumettre la demande</button>
-    <button class="btn btn-outline" onclick="resetForm()">🔄 Réinitialiser</button>
+    <button class="btn btn-primary" onclick="soumettreDemande()" data-i18n="btn.soumettre.demande">✅ Soumettre la demande</button>
+    <button class="btn btn-outline" onclick="resetForm()" data-i18n="btn.reset">🔄 Réinitialiser</button>
   </div>
   <div class="msg" id="msg-demande"></div>
 
@@ -613,9 +688,9 @@ footer strong{color:var(--or-clair);}
 <!-- ===== LIVRE SCOLAIRE ===== -->
 <div id="vue-livre" class="vue">
   <div class="sec-hdr">
-    <span class="eyebrow">Formulaire en ligne</span>
-    <h2 class="sec-title">Inscription — Livre scolaire</h2>
-    <p class="sec-desc">Inscrivez vos enfants scolarisés pour bénéficier du livre scolaire attribué chaque année par le Comité de Participation. Vous pouvez ajouter tous les enfants concernés dans la même inscription.</p>
+    <span class="eyebrow" data-i18n="livre.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="livre.title">Inscription — Livre scolaire</h2>
+    <p class="sec-desc" data-i18n="livre.desc">Inscrivez vos enfants scolarisés pour bénéficier du livre scolaire attribué chaque année par le Comité de Participation. Vous pouvez ajouter tous les enfants concernés dans la même inscription.</p>
   </div>
 
   <div class="panneau">
@@ -639,8 +714,8 @@ footer strong{color:var(--or-clair);}
   </div>
 
   <div class="bar-actions">
-    <button class="btn btn-primary" onclick="soumettreLivre()">✅ Soumettre l'inscription</button>
-    <button class="btn btn-outline" onclick="resetFormLivre()">🔄 Réinitialiser</button>
+    <button class="btn btn-primary" onclick="soumettreLivre()" data-i18n="btn.soumettre.livre">✅ Soumettre l'inscription</button>
+    <button class="btn btn-outline" onclick="resetFormLivre()" data-i18n="btn.reset">🔄 Réinitialiser</button>
   </div>
   <div class="msg" id="msg-livre"></div>
 
@@ -667,9 +742,9 @@ footer strong{color:var(--or-clair);}
 <!-- ===== PRET SOCIAL ===== -->
 <div id="vue-pret" class="vue">
   <div class="sec-hdr">
-    <span class="eyebrow">Formulaire en ligne</span>
-    <h2 class="sec-title">Demande de prêt social</h2>
-    <p class="sec-desc">Demande adressée à Monsieur le Président du Comité de Participation. Le montant du prêt est plafonné à 100 000 DA. Un justificatif est obligatoire pour toute demande au montant maximal.</p>
+    <span class="eyebrow" data-i18n="pret.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="pret.title">Demande de prêt social</h2>
+    <p class="sec-desc" data-i18n="pret.desc">Demande adressée à Monsieur le Président du Comité de Participation. Le montant du prêt est plafonné à 100 000 DA. Un justificatif est obligatoire pour toute demande au montant maximal.</p>
   </div>
 
   <div class="panneau">
@@ -715,8 +790,8 @@ footer strong{color:var(--or-clair);}
   </div>
 
   <div class="bar-actions">
-    <button class="btn btn-primary" onclick="soumettrePret()">✅ Soumettre la demande</button>
-    <button class="btn btn-outline" onclick="resetFormPret()">🔄 Réinitialiser</button>
+    <button class="btn btn-primary" onclick="soumettrePret()" data-i18n="btn.soumettre.pret">✅ Soumettre la demande</button>
+    <button class="btn btn-outline" onclick="resetFormPret()" data-i18n="btn.reset">🔄 Réinitialiser</button>
   </div>
   <div class="msg" id="msg-pret"></div>
 
@@ -740,16 +815,83 @@ footer strong{color:var(--or-clair);}
   </div>
 </div>
 
+<!-- ===== OMRA ===== -->
+<div id="vue-omra" class="vue">
+  <div class="sec-hdr">
+    <span class="eyebrow" data-i18n="omra.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="omra.title">Inscription — Omra</h2>
+    <p class="sec-desc" data-i18n="omra.desc">Inscrivez-vous au programme annuel d'Omra organisé par le Comité de Participation de la SCHB. Les inscriptions sont classées par année et clôturées automatiquement à la fin de chaque campagne.</p>
+  </div>
+
+  <div class="panneau">
+    <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="omra.h.adherent">👤 Informations de l'adhérent</h3>
+    <div class="cols2">
+      <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="fo-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+      <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="fo-prenom" type="text" placeholder="Prénom"></div>
+    </div>
+    <div class="cols2">
+      <div class="grp"><label data-i18n="f.matricule">Matricule <span class="req">*</span></label><input id="fo-matricule" type="text" placeholder="N° matricule"></div>
+      <div class="grp"><label data-i18n="f.tel">Téléphone <span class="req">*</span></label><input id="fo-tel" type="tel" placeholder="05/06/07 xx xx xx xx"></div>
+    </div>
+    <div class="cols2">
+      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="fo-service" type="text" placeholder="Ex: Direction Commerciale..."></div>
+      <div class="grp"><label data-i18n="omra.annee">Année d'inscription Omra <span class="req">*</span></label>
+        <select id="fo-annee"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panneau">
+    <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="omra.h.pelerin">🕋 Informations du pèlerin</h3>
+    <p style="font-size:13px;color:#5C5142;margin-bottom:14px;" data-i18n="omra.h.pelerin.desc">Si le pèlerin est l'adhérent lui-même, reprenez les mêmes informations ci-dessous.</p>
+    <div class="cols2">
+      <div class="grp"><label data-i18n="omra.pelerin.nom">Nom du pèlerin <span class="req">*</span></label><input id="fo-pnom" type="text" placeholder="NOM DE FAMILLE"></div>
+      <div class="grp"><label data-i18n="omra.pelerin.prenom">Prénom du pèlerin <span class="req">*</span></label><input id="fo-pprenom" type="text" placeholder="Prénom"></div>
+    </div>
+    <div class="cols2">
+      <div class="grp"><label data-i18n="omra.naissance">Date de naissance <span class="req">*</span></label><input id="fo-naissance" type="date"></div>
+      <div class="grp"><label data-i18n="omra.passeport">N° passeport / CIN <span class="req">*</span></label><input id="fo-passeport" type="text" placeholder="Ex : 123456789"></div>
+    </div>
+    <div class="grp"><label data-i18n="omra.adresse">Adresse</label><input id="fo-adresse" type="text" placeholder="Adresse complète"></div>
+  </div>
+
+  <div class="bar-actions">
+    <button class="btn btn-primary" onclick="soumettreOmra()" data-i18n="btn.soumettre.omra">✅ Soumettre l'inscription</button>
+    <button class="btn btn-outline" onclick="resetFormOmra()" data-i18n="btn.reset">🔄 Réinitialiser</button>
+  </div>
+  <div class="msg" id="msg-omra"></div>
+
+  <div class="ticket" id="ticket-confirm-omra">
+    <div class="ticket-hdr">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7A6F58;margin-bottom:4px;" data-i18n="ticket.omra.saved">Inscription enregistrée</div>
+        <div class="ticket-num" id="tko-num">OM-0001</div>
+      </div>
+      <div class="badge-att" data-i18n="ticket.enattente">En attente de validation</div>
+    </div>
+    <div class="ticket-rows">
+      <div class="trow"><div class="trow-lbl" data-i18n="ticket.adherent">Adhérent</div><div class="trow-val" id="tko-adh"></div></div>
+      <div class="trow"><div class="trow-lbl" data-i18n="omra.pelerin">Pèlerin</div><div class="trow-val" id="tko-pelerin"></div></div>
+      <div class="trow"><div class="trow-lbl" data-i18n="omra.annee.short">Année</div><div class="trow-val" id="tko-annee"></div></div>
+      <div class="trow"><div class="trow-lbl" data-i18n="ticket.date">Date</div><div class="trow-val" id="tko-date"></div></div>
+      <div class="trow" style="grid-column:1/-1;border:1.5px solid var(--or);"><div class="trow-lbl" data-i18n="ticket.code">Code de suivi confidentiel</div><div class="trow-val" id="tko-code" style="font-family:monospace;font-size:16px;letter-spacing:.04em;color:var(--bleu);"></div></div>
+    </div>
+    <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;" data-i18n="ticket.conserverCode">
+      🔐 <strong>Conservez votre code de suivi confidentiel.</strong> Il permet de consulter l'état de votre inscription depuis l'onglet Suivi.
+    </div>
+  </div>
+</div>
+
 <!-- ===== SUIVI ===== -->
 <div id="vue-suivi" class="vue">
   <div class="sec-hdr">
-    <span class="eyebrow">Suivre ma demande</span>
-    <h2 class="sec-title">État de votre prise en charge</h2>
-    <p class="sec-desc">Saisissez le code de suivi confidentiel remis lors de l'enregistrement de votre demande.</p>
+    <span class="eyebrow" data-i18n="suivi.eyebrow">Suivre ma demande</span>
+    <h2 class="sec-title" data-i18n="suivi.title">État de votre prise en charge</h2>
+    <p class="sec-desc" data-i18n="suivi.desc">Saisissez le code de suivi confidentiel remis lors de l'enregistrement de votre demande.</p>
   </div>
   <div class="panneau" style="max-width:500px;margin-bottom:24px;">
     <div class="grp"><label>Code de suivi confidentiel</label><input id="suivi-q" type="text" autocomplete="off" placeholder="SCHB-XXXXXXXXXXXX"></div>
-    <button class="btn btn-primary" onclick="rechercherSuivi()">🔍 Rechercher</button>
+    <button class="btn btn-primary" onclick="rechercherSuivi()" data-i18n="btn.rechercher">🔍 Rechercher</button>
   </div>
   <div id="suivi-result"></div>
 </div>
@@ -765,7 +907,7 @@ footer strong{color:var(--or-clair);}
       </div>
       <div class="grp"><label>Adresse e-mail</label><input id="admin-email" type="email" autocomplete="username" placeholder="votre@email.dz"></div>
       <div class="grp"><label>Mot de passe</label><input id="admin-pwd" type="password" autocomplete="current-password" placeholder="••••••••"></div>
-      <button id="btn-admin-login" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="loginAdmin()">Accéder de façon sécurisée</button>
+      <button id="btn-admin-login" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="loginAdmin()" data-i18n="admin.login.btn">Accéder de façon sécurisée</button>
       <div class="msg" id="msg-login"></div>
     </div>
   </div>
@@ -777,32 +919,36 @@ footer strong{color:var(--or-clair);}
         <h2 class="sec-title" style="margin-bottom:0;">Tableau de bord</h2>
         <div id="admin-user-email" style="font-size:12px;color:#7A6F58;margin-top:3px;"></div>
       </div>
-      <button class="btn btn-outline" onclick="logoutAdmin()" style="color:var(--rouge);border-color:var(--rouge);">🔓 Déconnexion</button>
+      <button class="btn btn-outline" onclick="logoutAdmin()" style="color:var(--rouge);border-color:var(--rouge);" data-i18n="admin.logout">🔓 Déconnexion</button>
     </div>
     <div class="admin-stats" id="admin-stats"></div>
 
     <div style="display:flex;gap:10px;margin-bottom:18px;border-bottom:1.5px solid var(--ligne);">
-      <button class="btn-admin-tab actif" id="tab-btn-demandes" onclick="showAdminTab('demandes')">📋 Demandes</button>
-      <button class="btn-admin-tab" id="tab-btn-livres" onclick="showAdminTab('livres')">📚 Livres scolaires</button>
-      <button class="btn-admin-tab" id="tab-btn-prets" onclick="showAdminTab('prets')">💰 Prêts sociaux</button>
-      <button class="btn-admin-tab" id="tab-btn-stats" onclick="showAdminTab('stats')">📊 Statistiques par établissement</button>
+      <button class="btn-admin-tab actif" id="tab-btn-demandes" onclick="showAdminTab('demandes')" data-i18n="admtab.demandes">📋 Demandes</button>
+      <button class="btn-admin-tab" id="tab-btn-livres" onclick="showAdminTab('livres')" data-i18n="admtab.livres">📚 Livres scolaires</button>
+      <button class="btn-admin-tab" id="tab-btn-prets" onclick="showAdminTab('prets')" data-i18n="admtab.prets">💰 Prêts sociaux</button>
+      <button class="btn-admin-tab" id="tab-btn-omra" onclick="showAdminTab('omra')" data-i18n="admtab.omra">🕋 Omra</button>
+      <button class="btn-admin-tab" id="tab-btn-stats" onclick="showAdminTab('stats')" data-i18n="admtab.stats">📊 Statistiques par établissement</button>
+      <button class="btn-admin-tab" id="tab-btn-rapport" onclick="showAdminTab('rapport')" data-i18n="admtab.rapport">📈 Rapport global</button>
     </div>
 
     <div id="admin-tab-demandes">
       <div class="panneau">
         <div class="filter-bar">
           <input id="filter-search" type="text" placeholder="🔍 Rechercher nom, matricule…" oninput="renderTableau()" style="flex:1;min-width:200px;">
+          <select id="filter-annee" onchange="renderTableau()"></select>
           <select id="filter-status" onchange="renderTableau()">
-            <option value="">Tous les statuts</option>
-            <option value="En attente">En attente</option>
-            <option value="Validé">Validé</option>
-            <option value="Refusé">Refusé</option>
+            <option value="" data-i18n="filter.tous">Tous les statuts</option>
+            <option value="En attente" data-i18n="statut.enattente">En attente</option>
+            <option value="Validé" data-i18n="statut.valide">Validé</option>
+            <option value="Refusé" data-i18n="statut.refuse">Refusé</option>
+            <option value="Clôturé" data-i18n="statut.cloture">Clôturé</option>
           </select>
-          <button class="btn-excel" onclick="exporterExcel()">📊 Exporter Excel</button>
+          <button class="btn-excel" onclick="exporterExcel()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
         </div>
         <div class="tableau-wrap">
           <table class="tab">
-            <thead><tr><th>N°</th><th>Date</th><th>Adhérent</th><th>Matricule</th><th>Bénéficiaire</th><th>Établissement</th><th>Statut</th><th>Actions</th></tr></thead>
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th data-i18n="th.beneficiaire">Bénéficiaire</th><th data-i18n="th.etablissement">Établissement</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
             <tbody id="tbody-demandes"></tbody>
           </table>
         </div>
@@ -813,17 +959,19 @@ footer strong{color:var(--or-clair);}
       <div class="panneau">
         <div class="filter-bar">
           <input id="filter-search-livre" type="text" placeholder="🔍 Rechercher nom, matricule, enfant…" oninput="renderTableauLivres()" style="flex:1;min-width:200px;">
+          <select id="filter-annee-livre" onchange="renderTableauLivres()"></select>
           <select id="filter-status-livre" onchange="renderTableauLivres()">
-            <option value="">Tous les statuts</option>
-            <option value="En attente">En attente</option>
-            <option value="Validé">Validé</option>
-            <option value="Refusé">Refusé</option>
+            <option value="" data-i18n="filter.tous">Tous les statuts</option>
+            <option value="En attente" data-i18n="statut.enattente">En attente</option>
+            <option value="Validé" data-i18n="statut.valide">Validé</option>
+            <option value="Refusé" data-i18n="statut.refuse">Refusé</option>
+            <option value="Clôturé" data-i18n="statut.cloture">Clôturé</option>
           </select>
-          <button class="btn-excel" onclick="exporterExcelLivres()">📊 Exporter Excel</button>
+          <button class="btn-excel" onclick="exporterExcelLivres()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
         </div>
         <div class="tableau-wrap">
           <table class="tab">
-            <thead><tr><th>N°</th><th>Date</th><th>Adhérent</th><th>Matricule</th><th>Enfants</th><th>Statut</th><th>Actions</th></tr></thead>
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th data-i18n="th.enfants">Enfants</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
             <tbody id="tbody-livres"></tbody>
           </table>
         </div>
@@ -835,19 +983,60 @@ footer strong{color:var(--or-clair);}
       <div class="panneau">
         <div class="filter-bar">
           <input id="filter-search-pret" type="text" placeholder="🔍 Rechercher nom, matricule, fonction…" oninput="renderTableauPrets()" style="flex:1;min-width:200px;">
+          <select id="filter-annee-pret" onchange="renderTableauPrets()"></select>
           <select id="filter-status-pret" onchange="renderTableauPrets()">
-            <option value="">Tous les statuts</option>
-            <option value="En attente">En attente</option>
-            <option value="Validé">Validé</option>
-            <option value="Refusé">Refusé</option>
+            <option value="" data-i18n="filter.tous">Tous les statuts</option>
+            <option value="En attente" data-i18n="statut.enattente">En attente</option>
+            <option value="Validé" data-i18n="statut.valide">Validé</option>
+            <option value="Refusé" data-i18n="statut.refuse">Refusé</option>
+            <option value="Clôturé" data-i18n="statut.cloture">Clôturé</option>
           </select>
-          <button class="btn-excel" onclick="exporterExcelPrets()">📊 Exporter Excel</button>
+          <button class="btn-excel" onclick="exporterExcelPrets()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
         </div>
         <div class="tableau-wrap">
           <table class="tab">
-            <thead><tr><th>N°</th><th>Date</th><th>Travailleur</th><th>Matricule</th><th>Montant</th><th>Statut</th><th>Actions</th></tr></thead>
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.travailleur">Travailleur</th><th data-i18n="th.matricule">Matricule</th><th data-i18n="th.montant">Montant</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
             <tbody id="tbody-prets"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-tab-omra" style="display:none;">
+      <div class="admin-stats" id="omra-stats"></div>
+      <div class="panneau">
+        <div class="filter-bar">
+          <input id="filter-search-omra" type="text" placeholder="🔍 Rechercher nom, matricule, pèlerin…" oninput="renderTableauOmra()" style="flex:1;min-width:200px;">
+          <select id="filter-annee-omra" onchange="renderTableauOmra()"></select>
+          <select id="filter-status-omra" onchange="renderTableauOmra()">
+            <option value="" data-i18n="filter.tous">Tous les statuts</option>
+            <option value="En attente" data-i18n="statut.enattente">En attente</option>
+            <option value="Validé" data-i18n="statut.valide">Validé</option>
+            <option value="Refusé" data-i18n="statut.refuse">Refusé</option>
+            <option value="Clôturé" data-i18n="statut.cloture">Clôturé</option>
+          </select>
+          <button class="btn-excel" onclick="exporterExcelOmra()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
+        </div>
+        <div class="tableau-wrap">
+          <table class="tab">
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th data-i18n="omra.pelerin">Pèlerin</th><th data-i18n="omra.annee.short">Année</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
+            <tbody id="tbody-omra"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-tab-rapport" style="display:none;">
+      <div class="panneau">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:18px;" data-i18n="rapport.h1">📈 Rapport global des activités</h3>
+        <p style="font-size:13.5px;color:#5C5142;margin-bottom:18px;line-height:1.6;" data-i18n="rapport.desc">Générez un rapport de synthèse (toutes activités confondues) au format PowerPoint, prêt à être présenté à l'employeur ou aux travailleurs.</p>
+        <div class="admin-stats" id="rapport-stats"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;">
+          <button class="btn-report" onclick="genererRapportPPTX()" data-i18n="btn.genererRapport">📥 Générer le rapport PowerPoint</button>
+          <button class="btn-cloture" onclick="cloturerAnneesPassees(true)" data-i18n="btn.cloturerMaintenant">🔒 Clôturer manuellement l'année écoulée</button>
+        </div>
+        <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:12.5px;color:#5C5142;margin-top:16px;line-height:1.6;" data-i18n="rapport.note">
+          ℹ️ La clôture automatique archive et bloque, au changement d'année civile, toutes les demandes encore « En attente » de l'année précédente (Prise en charge, Livre scolaire, Prêt social, Omra). Les dossiers déjà validés ou refusés restent consultables normalement.
         </div>
       </div>
     </div>
@@ -1000,6 +1189,53 @@ function mergePrets(fbArr) {
   return Object.values(map);
 }
 
+// ===== OMRA (local) =====
+function loadOmraLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_omra') || '[]'); } catch(e) { return []; }
+}
+function saveOmraLocal(arr) {
+  try { localStorage.setItem('schb_omra', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (omra):', e); }
+}
+function persistOmraLocal(d) {
+  var arr = loadOmraLocal();
+  var idx = arr.findIndex(function(x){ return x.num === d.num; });
+  if (idx >= 0) arr[idx] = d; else arr.push(d);
+  saveOmraLocal(arr);
+}
+function retirerOmraLocal(num) {
+  var arr = loadOmraLocal().filter(function(x){ return x.num !== num; });
+  saveOmraLocal(arr);
+}
+function mergeOmra(fbArr) {
+  var map = {};
+  loadOmraLocal().forEach(function(d){ map[d.num] = d; });
+  (fbArr||[]).forEach(function(d){ map[d.num] = d; });
+  return Object.values(map);
+}
+
+// ===== ANNÉE (clôture automatique) =====
+function getAnnee(d) {
+  if (d.annee) return d.annee;
+  if (d.dateObj) { var y = new Date(d.dateObj).getFullYear(); if (!isNaN(y)) return y; }
+  return new Date().getFullYear();
+}
+function anneesDisponibles(arr) {
+  var set = {}; arr.forEach(function(d){ set[getAnnee(d)] = true; });
+  var years = Object.keys(set).map(Number);
+  var cy = new Date().getFullYear();
+  if (years.indexOf(cy) === -1) years.push(cy);
+  return years.sort(function(a,b){ return b-a; });
+}
+function remplirSelectAnnees(selectId, arr) {
+  var el = document.getElementById(selectId);
+  if (!el) return;
+  var cur = el.value;
+  var years = anneesDisponibles(arr);
+  el.innerHTML = '<option value="" data-i18n="filter.toutesAnnees">' + t('filter.toutesAnnees') + '</option>' +
+    years.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
+  if (cur && years.indexOf(Number(cur)) !== -1) el.value = cur;
+}
+
 // ===== STATE =====
 var demandes = [];
 var suiviCache = {};
@@ -1007,6 +1243,8 @@ var livres = loadLivresLocal();
 var suiviCacheLivre = {};
 var prets = loadPretsLocal();
 var suiviCachePret = {};
+var omra = loadOmraLocal();
+var suiviCacheOmra = {};
 var adminAuthReady = false;
 
 function esc(v) {
@@ -1166,7 +1404,7 @@ async function soumettreDemande() {
     num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
     benefVal: benefVal, benefLabel: benefLabel, benefName: benefName,
     etab: etab, acte: acte, ordo: ordoBase64, ordoType: ordoType,
-    date: dateStr, statut: 'En attente', dateObj: now.toISOString(),
+    date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: now.getFullYear(),
     bnNom: (benefVal !== 'l_adherent') ? bnNom : '',
     bnPrenom: (benefVal !== 'l_adherent') ? bnPrenom : ''
   };
@@ -1267,7 +1505,7 @@ async function soumettrePret() {
   var d = {
     num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, fonction: fonction, mat: mat, tel: tel,
     montant: montant, raison: raison, justif: justifBase64, justifType: justifType,
-    date: dateStr, statut: 'En attente', dateObj: now.toISOString()
+    date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: now.getFullYear()
   };
 
   // Enregistrement local : fonctionne toujours, indépendamment de Firebase
@@ -1427,7 +1665,7 @@ async function soumettreLivre() {
 
   var d = {
     num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
-    enfants: enfants, date: dateStr, statut: 'En attente', dateObj: now.toISOString()
+    enfants: enfants, date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: now.getFullYear()
   };
 
   // Enregistrement local : fonctionne toujours, indépendamment de Firebase
@@ -1465,6 +1703,97 @@ function resetFormLivre() {
 // Un premier enfant est pré-affiché à l'ouverture du formulaire
 ajouterEnfantRow();
 
+// ===== OMRA =====
+function newOmraNumber(now) {
+  var y = String(now.getFullYear()).slice(-2);
+  var m = String(now.getMonth()+1).padStart(2,'0');
+  var d = String(now.getDate()).padStart(2,'0');
+  return 'OM-' + y + m + d + '-' + randomSecret(6);
+}
+function newTrackingCodeOmra() { return 'SCHB-OM-' + randomSecret(20); }
+
+function makeSuiviPublicOmra(d) {
+  return {
+    code: d.trackingCode, num: d.num, statut: d.statut, date: d.date, dateObj: d.dateObj, annee: d.annee,
+    nom: d.nom, prenom: d.prenom, mat: d.mat, tel: d.tel, service: d.service || '',
+    pnom: d.pnom, pprenom: d.pprenom, dateValidation: d.dateValidation || ''
+  };
+}
+
+function remplirAnneesOmraForm() {
+  var el = document.getElementById('fo-annee');
+  if (!el) return;
+  var cy = new Date().getFullYear();
+  var opts = [cy, cy+1];
+  el.innerHTML = opts.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
+}
+remplirAnneesOmraForm();
+
+async function soumettreOmra() {
+  var nom = document.getElementById('fo-nom').value.trim().toUpperCase();
+  var prenom = document.getElementById('fo-prenom').value.trim();
+  var mat = document.getElementById('fo-matricule').value.trim();
+  var tel = document.getElementById('fo-tel').value.trim();
+  var service = document.getElementById('fo-service').value.trim();
+  var anneeInscription = Number(document.getElementById('fo-annee').value);
+  var pnom = document.getElementById('fo-pnom').value.trim().toUpperCase();
+  var pprenom = document.getElementById('fo-pprenom').value.trim();
+  var naissance = document.getElementById('fo-naissance').value;
+  var passeport = document.getElementById('fo-passeport').value.trim();
+  var adresse = document.getElementById('fo-adresse').value.trim();
+  var msg = document.getElementById('msg-omra');
+  msg.className = 'msg';
+
+  if (!nom || !prenom || !mat || !tel || !anneeInscription) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = "⚠️ Veuillez remplir tous les champs obligatoires de l'adhérent."; return;
+  }
+  if (!pnom || !pprenom || !naissance || !passeport) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez renseigner toutes les informations obligatoires du pèlerin.'; return;
+  }
+
+  var now = new Date();
+  var num = newOmraNumber(now);
+  var trackingCode = newTrackingCodeOmra();
+  var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
+
+  var d = {
+    num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
+    pnom: pnom, pprenom: pprenom, naissance: naissance, passeport: passeport, adresse: adresse,
+    date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: anneeInscription
+  };
+
+  persistOmraLocal(d);
+
+  document.getElementById('tko-num').textContent = num;
+  document.getElementById('tko-adh').textContent = nom + ' ' + prenom + ' (' + mat + ')';
+  document.getElementById('tko-pelerin').textContent = pnom + ' ' + pprenom;
+  document.getElementById('tko-annee').textContent = anneeInscription;
+  document.getElementById('tko-date').textContent = dateStr;
+  document.getElementById('tko-code').textContent = trackingCode;
+  document.getElementById('ticket-confirm-omra').classList.add('visible');
+  msg.className = 'msg ok'; msg.style.display = 'flex';
+  msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
+
+  if (typeof window.fbCreateOmra === 'function') {
+    window.fbCreateOmra(d, makeSuiviPublicOmra(d)).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (omra, enregistrée localement) :', err);
+      msg.className = 'msg err'; msg.style.display = 'flex';
+      msg.innerHTML = "⚠️ Inscription <strong>" + esc(num) + "</strong> enregistrée sur cet appareil uniquement : la synchronisation avec le serveur a échoué (" + esc(err && err.message || 'erreur inconnue') + ").";
+    });
+  }
+}
+
+function resetFormOmra() {
+  ['fo-nom','fo-prenom','fo-matricule','fo-tel','fo-service','fo-pnom','fo-pprenom','fo-naissance','fo-passeport','fo-adresse'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  remplirAnneesOmraForm();
+  document.getElementById('ticket-confirm-omra').classList.remove('visible');
+  document.getElementById('msg-omra').style.display = 'none';
+}
+
 // ===== SUIVI =====
 async function rechercherSuivi() {
   var code = document.getElementById('suivi-q').value.trim().toUpperCase();
@@ -1477,8 +1806,10 @@ async function rechercherSuivi() {
   if (matchLocal) { res.innerHTML = renderSuiviLivre(matchLocal); return; }
   var matchLocalPret = loadPretsLocal().find(function(x){ return x.trackingCode === code; });
   if (matchLocalPret) { res.innerHTML = renderSuiviPret(matchLocalPret); return; }
+  var matchLocalOmra = loadOmraLocal().find(function(x){ return x.trackingCode === code; });
+  if (matchLocalOmra) { res.innerHTML = renderSuiviOmra(matchLocalOmra); return; }
 
-  // 2) Firebase (demandes médicales + livres + prêts distants), si disponible
+  // 2) Firebase (demandes médicales + livres + prêts + omra distants), si disponible
   if (typeof window.fbReadSuivi !== 'function') {
     res.innerHTML = '<div class="msg info" style="display:flex">ℹ️ Aucun dossier trouvé avec ce code. Vérifiez le code reçu lors du dépôt.</div>'; return;
   }
@@ -1493,6 +1824,10 @@ async function rechercherSuivi() {
       var dp = await window.fbReadSuiviPret(code);
       if (dp) { suiviCachePret[code] = dp; res.innerHTML = renderSuiviPret(dp); return; }
     }
+    if (typeof window.fbReadSuiviOmra === 'function') {
+      var do_ = await window.fbReadSuiviOmra(code);
+      if (do_) { suiviCacheOmra[code] = do_; res.innerHTML = renderSuiviOmra(do_); return; }
+    }
     res.innerHTML = '<div class="msg info" style="display:flex">ℹ️ Aucun dossier trouvé avec ce code. Vérifiez le code reçu lors du dépôt.</div>';
   } catch(err) {
     console.error('Suivi read error:', err);
@@ -1501,7 +1836,7 @@ async function rechercherSuivi() {
 }
 
 function renderSuiviMedical(d, code) {
-  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
   var html = '<div class="suivi-card">';
   html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">';
   html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7A6F58;">Demande</div>';
@@ -1530,7 +1865,7 @@ function renderSuiviMedical(d, code) {
 }
 
 function renderSuiviLivre(d) {
-  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
   var html = '<div class="suivi-card">';
   html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">';
   html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7A6F58;">Inscription livre scolaire</div>';
@@ -1563,7 +1898,7 @@ function renderSuiviLivre(d) {
 }
 
 function renderSuiviPret(d) {
-  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
   var html = '<div class="suivi-card">';
   html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">';
   html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7A6F58;">Demande de prêt social</div>';
@@ -1583,6 +1918,31 @@ function renderSuiviPret(d) {
   var icon3 = d.statut === 'Validé' ? '✓' : d.statut === 'Refusé' ? '✗' : '○';
   var txt3 = d.statut === 'Validé' ? 'Prêt validé' : d.statut === 'Refusé' ? 'Demande refusée' : 'Décision finale';
   html += '<div class="tl-item"><div class="tl-dot ' + dot3 + '">' + icon3 + '</div><div class="tl-text"><div class="tl-title">' + txt3 + '</div><div class="tl-sub">' + (d.statut === 'Validé' ? 'Votre prêt social est validé' : d.statut === 'Refusé' ? 'Contactez le Comité de Participation' : 'En attente') + '</div></div></div>';
+  html += '</div></div>';
+  return html;
+}
+
+function renderSuiviOmra(d) {
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+  var html = '<div class="suivi-card">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">';
+  html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7A6F58;">Inscription Omra — ' + esc(d.annee) + '</div>';
+  html += '<div class="serif" style="font-size:22px;font-weight:700;color:var(--bleu);">' + esc(d.num) + '</div></div>';
+  html += '<span class="badge ' + bc + '">' + esc(d.statut) + '</span></div>';
+  html += '<div class="detail-grid">';
+  html += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Pèlerin</div><div class="detail-val">' + esc(d.pnom) + ' ' + esc(d.pprenom) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  html += '</div><div class="tl">';
+  html += '<div class="tl-item"><div class="tl-dot tl-done">✓</div><div class="tl-text"><div class="tl-title">Inscription soumise</div><div class="tl-sub">' + esc(d.date) + '</div></div></div>';
+  var dot2 = d.statut !== 'En attente' ? 'tl-done' : 'tl-pend';
+  var icon2 = d.statut !== 'En attente' ? '✓' : '⏳';
+  html += '<div class="tl-item"><div class="tl-dot ' + dot2 + '">' + icon2 + '</div><div class="tl-text"><div class="tl-title">Examen par le Comité</div><div class="tl-sub">' + (d.statut === 'En attente' ? 'En cours de traitement' : 'Traité') + '</div></div></div>';
+  var dot3 = d.statut === 'Validé' ? 'tl-done' : 'tl-empty';
+  var icon3 = d.statut === 'Validé' ? '✓' : d.statut === 'Refusé' ? '✗' : d.statut === 'Clôturé' ? '🔒' : '○';
+  var txt3 = d.statut === 'Validé' ? 'Inscription validée' : d.statut === 'Refusé' ? 'Inscription refusée' : d.statut === 'Clôturé' ? 'Campagne clôturée' : 'Décision finale';
+  html += '<div class="tl-item"><div class="tl-dot ' + dot3 + '">' + icon3 + '</div><div class="tl-text"><div class="tl-title">' + txt3 + '</div><div class="tl-sub">' + (d.statut === 'Validé' ? 'Votre inscription Omra est confirmée' : d.statut === 'Refusé' ? 'Contactez le Comité de Participation' : d.statut === 'Clôturé' ? "La campagne de l'année " + esc(d.annee) + ' est close' : 'En attente') + '</div></div></div>';
   html += '</div></div>';
   return html;
 }
@@ -1631,7 +1991,7 @@ function applyAdminAuthState(user) {
     if (typeof window.fbListenAdmin === 'function') {
       window.fbListenAdmin(function(arr) {
         demandes = arr;
-        renderStats(); renderTableau(); renderStatsChart();
+        renderStats(); renderTableau(); renderStatsChart(); renderRapportStats();
       }, function(err) {
         console.error('Admin database read error:', err);
         alert("Connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture. Appliquez les règles sécurisées fournies.");
@@ -1644,7 +2004,7 @@ function applyAdminAuthState(user) {
     if (typeof window.fbListenAdminLivre === 'function') {
       window.fbListenAdminLivre(function(arr) {
         livres = mergeLivres(arr);
-        renderTableauLivres();
+        renderTableauLivres(); renderRapportStats();
       }, function(err) {
         console.error('Admin database read error (livres):', err);
         alert("Livre scolaire : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'livres'. Ajoutez les règles pour ce chemin dans la console Firebase.");
@@ -1656,17 +2016,33 @@ function applyAdminAuthState(user) {
     if (typeof window.fbListenAdminPret === 'function') {
       window.fbListenAdminPret(function(arr) {
         prets = mergePrets(arr);
-        renderTableauPrets(); renderStatsPret();
+        renderTableauPrets(); renderStatsPret(); renderRapportStats();
       }, function(err) {
         console.error('Admin database read error (prêts):', err);
         alert("Prêt social : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'prets'. Ajoutez les règles pour ce chemin dans la console Firebase.");
       });
     }
+    // Idem pour les inscriptions Omra.
+    omra = loadOmraLocal();
+    renderTableauOmra(); renderStatsOmra();
+    if (typeof window.fbListenAdminOmra === 'function') {
+      window.fbListenAdminOmra(function(arr) {
+        omra = mergeOmra(arr);
+        renderTableauOmra(); renderStatsOmra(); renderRapportStats();
+      }, function(err) {
+        console.error('Admin database read error (omra):', err);
+        alert("Omra : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'omra'. Ajoutez les règles pour ce chemin dans la console Firebase.");
+      });
+    }
     showAdminTab('demandes');
+    renderRapportStats();
+    // Clôture automatique par année : vérifie une fois par session si une nouvelle année a commencé.
+    setTimeout(function(){ cloturerAnneesPassees(false); }, 1500);
   } else {
     if (typeof window.fbStopAdminListen === 'function') window.fbStopAdminListen();
     if (typeof window.fbStopAdminListenLivre === 'function') window.fbStopAdminListenLivre();
     if (typeof window.fbStopAdminListenPret === 'function') window.fbStopAdminListenPret();
+    if (typeof window.fbStopAdminListenOmra === 'function') window.fbStopAdminListenOmra();
     demandes = [];
     try { localStorage.removeItem('pcm_demandes'); } catch(e) {}
     wrap.style.display = 'block'; board.style.display = 'none';
@@ -1678,14 +2054,67 @@ function showAdminTab(id) {
   document.getElementById('admin-tab-demandes').style.display = (id === 'demandes') ? 'block' : 'none';
   document.getElementById('admin-tab-livres').style.display = (id === 'livres') ? 'block' : 'none';
   document.getElementById('admin-tab-prets').style.display = (id === 'prets') ? 'block' : 'none';
+  document.getElementById('admin-tab-omra').style.display = (id === 'omra') ? 'block' : 'none';
   document.getElementById('admin-tab-stats').style.display = (id === 'stats') ? 'block' : 'none';
+  document.getElementById('admin-tab-rapport').style.display = (id === 'rapport') ? 'block' : 'none';
   document.getElementById('tab-btn-demandes').classList.toggle('actif', id === 'demandes');
   document.getElementById('tab-btn-livres').classList.toggle('actif', id === 'livres');
   document.getElementById('tab-btn-prets').classList.toggle('actif', id === 'prets');
+  document.getElementById('tab-btn-omra').classList.toggle('actif', id === 'omra');
   document.getElementById('tab-btn-stats').classList.toggle('actif', id === 'stats');
+  document.getElementById('tab-btn-rapport').classList.toggle('actif', id === 'rapport');
   if (id === 'stats') renderStatsChart();
   if (id === 'livres') renderTableauLivres();
   if (id === 'prets') { renderTableauPrets(); renderStatsPret(); }
+  if (id === 'omra') { renderTableauOmra(); renderStatsOmra(); }
+  if (id === 'rapport') renderRapportStats();
+}
+
+// ===== CLÔTURE AUTOMATIQUE PAR ANNÉE =====
+// Archive et bloque (statut -> 'Clôturé') toutes les demandes encore "En attente"
+// des années passées, pour les 4 activités. Ne touche jamais aux dossiers déjà
+// validés ou refusés, qui restent consultables normalement.
+function cloturerAnneesPassees(manuel) {
+  var cy = new Date().getFullYear();
+  var derniere = 0;
+  try { derniere = Number(localStorage.getItem('schb_derniere_cloture_annee') || 0); } catch(e) {}
+  if (!manuel && derniere >= cy) return; // déjà vérifié cette année civile
+
+  var jeux = [
+    { arr: function(){ return demandes; }, upd: window.fbUpdateDemande ? function(num,patch,tc){ return window.fbUpdateDemande(num,patch,tc); } : null, persist: null, label: 'Prise en charge médicale' },
+    { arr: function(){ return livres; }, upd: window.fbUpdateLivre, persist: persistLivreLocal, label: 'Livre scolaire' },
+    { arr: function(){ return prets; }, upd: window.fbUpdatePret, persist: persistPretLocal, label: 'Prêt social' },
+    { arr: function(){ return omra; }, upd: window.fbUpdateOmra, persist: persistOmraLocal, label: 'Omra' }
+  ];
+
+  var totalClotures = 0;
+  jeux.forEach(function(jeu){
+    (jeu.arr() || []).forEach(function(d){
+      var a = getAnnee(d);
+      if (a < cy && d.statut === 'En attente') {
+        d.statut = 'Clôturé';
+        d.dateCloture = new Date().toLocaleDateString('fr-DZ');
+        if (jeu.persist) jeu.persist(d);
+        if (typeof jeu.upd === 'function') {
+          jeu.upd(d.num, { statut: 'Clôturé', dateCloture: d.dateCloture }, d.trackingCode || '')
+            .catch(function(err){ console.warn('Clôture Firebase échouée :', err); });
+        }
+        totalClotures++;
+      }
+    });
+  });
+
+  try { localStorage.setItem('schb_derniere_cloture_annee', String(cy)); } catch(e) {}
+  if (typeof window.fbSetMetaCloture === 'function') window.fbSetMetaCloture(cy).catch(function(){});
+
+  renderTableau(); renderTableauLivres(); renderTableauPrets(); renderTableauOmra();
+  renderStats(); renderStatsPret(); renderStatsOmra(); renderRapportStats();
+
+  if (manuel) {
+    alert(totalClotures > 0
+      ? '🔒 ' + totalClotures + " demande(s) en attente d'une année précédente ont été clôturées et archivées."
+      : "Aucune demande en attente d'une année précédente à clôturer.");
+  }
 }
 
 function renderStats() {
@@ -1774,12 +2203,15 @@ function renderStatsChart() {
 }
 
 function renderTableau() {
+  remplirSelectAnnees('filter-annee', demandes);
   var q = (document.getElementById('filter-search').value || '').toLowerCase();
   var st = document.getElementById('filter-status').value || '';
+  var an = document.getElementById('filter-annee').value || '';
   var filtered = demandes.filter(function(d){
     var matchQ = !q || (d.nom+d.prenom+d.mat+d.etab).toLowerCase().indexOf(q) >= 0;
     var matchSt = !st || d.statut === st;
-    return matchQ && matchSt;
+    var matchAn = !an || String(getAnnee(d)) === an;
+    return matchQ && matchSt && matchAn;
   });
   var tbody = document.getElementById('tbody-demandes');
   if (!filtered.length) {
@@ -1787,7 +2219,7 @@ function renderTableau() {
   }
   var rows = '';
   filtered.forEach(function(d) {
-    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
+    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
     rows += '<tr>';
     rows += '<td><strong>' + esc(d.num) + '</strong></td>';
     rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
@@ -1843,7 +2275,7 @@ function refuserDemande(num) {
 function voirDetail(num) {
   var d = demandes.find(function(x){ return x.num === num; });
   if (!d) return;
-  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
   var body = '<div class="detail-grid">';
   body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
@@ -1944,24 +2376,28 @@ function exporterExcel() {
 
 // ===== ADMIN : LIVRES SCOLAIRES =====
 function renderTableauLivres() {
+  remplirSelectAnnees('filter-annee-livre', livres);
   var searchEl = document.getElementById('filter-search-livre');
   var statusEl = document.getElementById('filter-status-livre');
+  var anneeEl = document.getElementById('filter-annee-livre');
   var tbody = document.getElementById('tbody-livres');
   if (!searchEl || !statusEl || !tbody) return;
   var q = (searchEl.value || '').toLowerCase();
   var st = statusEl.value || '';
+  var an = (anneeEl && anneeEl.value) || '';
   var filtered = livres.filter(function(d){
     var enfantsStr = (d.enfants||[]).map(function(e){ return e.nom + e.prenom; }).join('');
     var matchQ = !q || (d.nom+d.prenom+d.mat+enfantsStr).toLowerCase().indexOf(q) >= 0;
     var matchSt = !st || d.statut === st;
-    return matchQ && matchSt;
+    var matchAn = !an || String(getAnnee(d)) === an;
+    return matchQ && matchSt && matchAn;
   });
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#7A6F58;padding:24px;">Aucune inscription trouvée</td></tr>'; return;
   }
   var rows = '';
   filtered.forEach(function(d) {
-    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
+    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
     var nbEnf = (d.enfants||[]).length;
     rows += '<tr>';
     rows += '<td><strong>' + esc(d.num) + '</strong></td>';
@@ -2025,7 +2461,7 @@ function supprimerLivre(num) {
 function voirDetailLivre(num) {
   var d = livres.find(function(x){ return x.num === num; });
   if (!d) return;
-  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
   var body = '<div class="detail-grid">';
   body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
@@ -2100,23 +2536,27 @@ function renderStatsPret() {
 }
 
 function renderTableauPrets() {
+  remplirSelectAnnees('filter-annee-pret', prets);
   var searchEl = document.getElementById('filter-search-pret');
   var statusEl = document.getElementById('filter-status-pret');
+  var anneeEl = document.getElementById('filter-annee-pret');
   var tbody = document.getElementById('tbody-prets');
   if (!searchEl || !statusEl || !tbody) return;
   var q = (searchEl.value || '').toLowerCase();
   var st = statusEl.value || '';
+  var an = (anneeEl && anneeEl.value) || '';
   var filtered = prets.filter(function(d){
     var matchQ = !q || (d.nom+d.prenom+d.mat+d.fonction).toLowerCase().indexOf(q) >= 0;
     var matchSt = !st || d.statut === st;
-    return matchQ && matchSt;
+    var matchAn = !an || String(getAnnee(d)) === an;
+    return matchQ && matchSt && matchAn;
   });
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#7A6F58;padding:24px;">Aucune demande trouvée</td></tr>'; return;
   }
   var rows = '';
   filtered.forEach(function(d) {
-    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
+    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
     rows += '<tr>';
     rows += '<td><strong>' + esc(d.num) + '</strong></td>';
     rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
@@ -2180,7 +2620,7 @@ function supprimerPret(num) {
 function voirDetailPret(num) {
   var d = prets.find(function(x){ return x.num === num; });
   if (!d) return;
-  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : 'b-att';
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
   var body = '<div class="detail-grid">';
   body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
@@ -2236,6 +2676,164 @@ function exporterExcelPrets() {
   XLSX.utils.book_append_sheet(wb, ws, 'Prêts sociaux');
   var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
   XLSX.writeFile(wb, 'SCHB_Demandes_PretSocial_' + dateExp + '.xlsx');
+}
+
+// ===== ADMIN : OMRA =====
+function renderStatsOmra() {
+  var el = document.getElementById('omra-stats');
+  if (!el) return;
+  var total = omra.length;
+  var att = omra.filter(function(d){ return d.statut==='En attente'; }).length;
+  var val = omra.filter(function(d){ return d.statut==='Validé'; }).length;
+  var ref = omra.filter(function(d){ return d.statut==='Refusé'; }).length;
+  var clo = omra.filter(function(d){ return d.statut==='Clôturé'; }).length;
+  el.innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
+    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + att + '</div><div class="stat-lbl">En attente</div></div>' +
+    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + val + '</div><div class="stat-lbl">Validées</div></div>' +
+    '<div class="stat-card" style="border-color:var(--rouge);"><div class="stat-num" style="color:var(--rouge);">' + ref + '</div><div class="stat-lbl">Refusées</div></div>' +
+    '<div class="stat-card" style="border-color:#334155;"><div class="stat-num" style="color:#334155;">' + clo + '</div><div class="stat-lbl">Clôturées</div></div>';
+}
+
+function renderTableauOmra() {
+  remplirSelectAnnees('filter-annee-omra', omra);
+  var searchEl = document.getElementById('filter-search-omra');
+  var statusEl = document.getElementById('filter-status-omra');
+  var anneeEl = document.getElementById('filter-annee-omra');
+  var tbody = document.getElementById('tbody-omra');
+  if (!searchEl || !statusEl || !tbody) return;
+  var q = (searchEl.value || '').toLowerCase();
+  var st = statusEl.value || '';
+  var an = (anneeEl && anneeEl.value) || '';
+  var filtered = omra.filter(function(d){
+    var matchQ = !q || (d.nom+d.prenom+d.mat+(d.pnom||'')+(d.pprenom||'')).toLowerCase().indexOf(q) >= 0;
+    var matchSt = !st || d.statut === st;
+    var matchAn = !an || String(getAnnee(d)) === an;
+    return matchQ && matchSt && matchAn;
+  });
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#7A6F58;padding:24px;">Aucune inscription trouvée</td></tr>'; return;
+  }
+  var rows = '';
+  filtered.forEach(function(d) {
+    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+    rows += '<tr>';
+    rows += '<td><strong>' + esc(d.num) + '</strong></td>';
+    rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
+    rows += '<td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td>';
+    rows += '<td>' + esc(d.mat) + '</td>';
+    rows += '<td>' + esc(d.pnom) + ' ' + esc(d.pprenom) + '</td>';
+    rows += '<td>' + esc(getAnnee(d)) + '</td>';
+    rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
+    rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+    rows += '<button class="btn-view-sm" onclick="voirDetailOmra(&quot;' + d.num + '&quot;)">👁 Voir</button>';
+    if (d.statut === 'En attente') {
+      rows += '<button class="btn-success-sm" onclick="validerOmra(&quot;' + d.num + '&quot;)">✅ Valider</button>';
+      rows += '<button class="btn-danger-sm" onclick="refuserOmra(&quot;' + d.num + '&quot;)">❌ Refuser</button>';
+    }
+    rows += '<button class="btn-del-sm" onclick="supprimerOmra(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
+    rows += '</div></td></tr>';
+  });
+  tbody.innerHTML = rows;
+}
+
+function validerOmra(num) {
+  var d = omra.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Valider l'inscription Omra " + num + ' ?')) return;
+  d.statut = 'Validé';
+  d.dateValidation = new Date().toLocaleDateString('fr-DZ');
+  persistOmraLocal(d);
+  renderTableauOmra(); renderStatsOmra();
+  if (typeof window.fbUpdateOmra === 'function') {
+    window.fbUpdateOmra(num, { statut: d.statut, dateValidation: d.dateValidation }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (omra) :', err); });
+  }
+}
+
+function refuserOmra(num) {
+  var d = omra.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Refuser l'inscription Omra " + num + ' ?')) return;
+  d.statut = 'Refusé';
+  persistOmraLocal(d);
+  renderTableauOmra(); renderStatsOmra();
+  if (typeof window.fbUpdateOmra === 'function') {
+    window.fbUpdateOmra(num, { statut: 'Refusé' }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (omra) :', err); });
+  }
+}
+
+function supprimerOmra(num) {
+  var d = omra.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Voulez-vous vraiment supprimer définitivement l'inscription Omra " + num + ' (' + d.nom + ' ' + d.prenom + ') ? Cette action est irréversible.')) return;
+  omra = omra.filter(function(x){ return x.num !== num; });
+  retirerOmraLocal(num);
+  renderTableauOmra(); renderStatsOmra();
+  if (typeof window.fbDeleteOmra === 'function') {
+    window.fbDeleteOmra(num, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (omra) :', err); });
+  }
+}
+
+function voirDetailOmra(num) {
+  var d = omra.find(function(x){ return x.num === num; });
+  if (!d) return;
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+  var body = '<div class="detail-grid">';
+  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Année</div><div class="detail-val">' + esc(getAnnee(d)) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Téléphone</div><div class="detail-val">' + esc(d.tel) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Pèlerin</div><div class="detail-val">' + esc(d.pnom) + ' ' + esc(d.pprenom) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date de naissance</div><div class="detail-val">' + esc(d.naissance||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">N° passeport / CIN</div><div class="detail-val">' + esc(d.passeport||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Adresse</div><div class="detail-val">' + esc(d.adresse||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Code de suivi</div><div class="detail-val" style="font-family:monospace;">' + esc(d.trackingCode || '—') + '</div></div>';
+  body += '</div>';
+  body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
+  if (d.statut === 'En attente') {
+    body += '<button class="btn btn-primary" onclick="validerOmra(&quot;' + d.num + '&quot;);closeModal()">✅ Valider</button>';
+    body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="refuserOmra(&quot;' + d.num + '&quot;);closeModal()">❌ Refuser</button>';
+  }
+  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerOmra(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer l\'inscription</button>';
+  body += '</div>';
+  document.getElementById('modal-title').textContent = 'Inscription Omra ' + d.num;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function exporterExcelOmra() {
+  if (!omra.length) { alert('Aucune inscription à exporter.'); return; }
+  var data = omra.map(function(d){
+    return {
+      'N° Inscription': d.num,
+      'Année': getAnnee(d),
+      'Date': d.date,
+      'Statut': d.statut,
+      'Nom adhérent': d.nom,
+      'Prénom adhérent': d.prenom,
+      'Matricule': d.mat,
+      'Téléphone': d.tel,
+      'Service': d.service || '',
+      'Nom pèlerin': d.pnom || '',
+      'Prénom pèlerin': d.pprenom || '',
+      'Date de naissance': d.naissance || '',
+      'N° passeport / CIN': d.passeport || '',
+      'Adresse': d.adresse || '',
+      'Date validation': d.dateValidation || ''
+    };
+  });
+  var ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:16},{wch:26},{wch:16}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Omra');
+  var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
+  XLSX.writeFile(wb, 'SCHB_Inscriptions_Omra_' + dateExp + '.xlsx');
 }
 
 function genererPDFPret(num) {
@@ -2546,6 +3144,229 @@ function genererPDF(num, dataOverride) {
 
   doc.save('PriseEnCharge_' + d.num + '_' + d.nom + '.pdf');
 }
+
+// ===== RAPPORT GLOBAL (toutes activités) =====
+function calculerRapportGlobal() {
+  function statsOf(arr) {
+    return {
+      total: arr.length,
+      attente: arr.filter(function(d){ return d.statut==='En attente'; }).length,
+      valide: arr.filter(function(d){ return d.statut==='Validé'; }).length,
+      refuse: arr.filter(function(d){ return d.statut==='Refusé'; }).length,
+      cloture: arr.filter(function(d){ return d.statut==='Clôturé'; }).length
+    };
+  }
+  var pc = statsOf(demandes), ls = statsOf(livres), ps = statsOf(prets), om = statsOf(omra);
+  var montantPretValide = prets.filter(function(d){ return d.statut==='Validé'; }).reduce(function(s,d){ return s+(d.montant||0); }, 0);
+  return { pc: pc, ls: ls, ps: ps, om: om, montantPretValide: montantPretValide,
+    totalGlobal: pc.total + ls.total + ps.total + om.total };
+}
+
+function renderRapportStats() {
+  var el = document.getElementById('rapport-stats');
+  if (!el) return;
+  var r = calculerRapportGlobal();
+  el.innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + r.totalGlobal + '</div><div class="stat-lbl">Total toutes activités</div></div>' +
+    '<div class="stat-card"><div class="stat-num">' + r.pc.total + '</div><div class="stat-lbl">Prise en charge</div></div>' +
+    '<div class="stat-card"><div class="stat-num">' + r.ls.total + '</div><div class="stat-lbl">Livre scolaire</div></div>' +
+    '<div class="stat-card"><div class="stat-num">' + r.ps.total + '</div><div class="stat-lbl">Prêt social</div></div>' +
+    '<div class="stat-card"><div class="stat-num">' + r.om.total + '</div><div class="stat-lbl">Omra</div></div>';
+}
+
+async function genererRapportPPTX() {
+  if (typeof PptxGenJS === 'undefined') { alert("La bibliothèque de génération PowerPoint n'a pas pu être chargée. Vérifiez votre connexion internet et réessayez."); return; }
+  var r = calculerRapportGlobal();
+  var pptx = new PptxGenJS();
+  pptx.defineLayout({ name: 'SCHB', width: 10, height: 5.63 });
+  pptx.layout = 'SCHB';
+  var BLEU = '0E3A53', OR = 'F2A93B', VERT = '1F7A5C', ROUGE = 'C0392B', GRIS = '64748B';
+  var dateGen = new Date().toLocaleDateString('fr-DZ');
+
+  // Slide 1 : Titre
+  var s1 = pptx.addSlide();
+  s1.background = { color: BLEU };
+  s1.addShape('rect', { x:0, y:2.55, w:10, h:0.06, fill:{ color: OR } });
+  s1.addText('GICA — Groupe Industriel des Ciments d\'Algérie', { x:0.5, y:0.5, w:9, h:0.4, fontSize:14, color:'C7D9E3', bold:true });
+  s1.addText('Comité de Participation — SCHB', { x:0.5, y:0.9, w:9, h:0.4, fontSize:12, color:OR });
+  s1.addText('Rapport global des activités sociales', { x:0.5, y:2.0, w:9, h:0.8, fontSize:30, color:'FFFFFF', bold:true });
+  s1.addText('Prise en charge médicale · Livre scolaire · Prêt social · Omra', { x:0.5, y:2.75, w:9, h:0.4, fontSize:14, color:'C7D9E3' });
+  s1.addText('Généré le ' + dateGen, { x:0.5, y:5.0, w:9, h:0.4, fontSize:11, color:'C7D9E3' });
+
+  // Slide 2 : Résumé global (tableau)
+  var s2 = pptx.addSlide();
+  s2.addText('Résumé global des activités', { x:0.4, y:0.3, w:9.2, h:0.5, fontSize:22, color:BLEU, bold:true });
+  var rows2 = [
+    [ { text:'Activité', options:{ bold:true, color:'FFFFFF', fill:{color:BLEU} } },
+      { text:'Total', options:{ bold:true, color:'FFFFFF', fill:{color:BLEU} } },
+      { text:'Validées', options:{ bold:true, color:'FFFFFF', fill:{color:BLEU} } },
+      { text:'En attente', options:{ bold:true, color:'FFFFFF', fill:{color:BLEU} } },
+      { text:'Refusées', options:{ bold:true, color:'FFFFFF', fill:{color:BLEU} } },
+      { text:'Clôturées', options:{ bold:true, color:'FFFFFF', fill:{color:BLEU} } } ]
+  ];
+  [['Prise en charge médicale', r.pc], ['Livre scolaire', r.ls], ['Prêt social', r.ps], ['Omra', r.om]].forEach(function(row){
+    var label = row[0], s = row[1];
+    rows2.push([ String(label), String(s.total), String(s.valide), String(s.attente), String(s.refuse), String(s.cloture) ]);
+  });
+  rows2.push([ { text:'TOTAL', options:{ bold:true } }, { text:String(r.totalGlobal), options:{ bold:true } },
+    { text:String(r.pc.valide+r.ls.valide+r.ps.valide+r.om.valide), options:{ bold:true } },
+    { text:String(r.pc.attente+r.ls.attente+r.ps.attente+r.om.attente), options:{ bold:true } },
+    { text:String(r.pc.refuse+r.ls.refuse+r.ps.refuse+r.om.refuse), options:{ bold:true } },
+    { text:String(r.pc.cloture+r.ls.cloture+r.ps.cloture+r.om.cloture), options:{ bold:true } } ]);
+  s2.addTable(rows2, { x:0.4, y:1.0, w:9.2, fontSize:12, border:{type:'solid', color:'D9D2C4', pt:1}, autoPage:false });
+  s2.addText('Montant total des prêts sociaux validés : ' + r.montantPretValide.toLocaleString('fr-DZ') + ' DA', { x:0.4, y:4.7, w:9.2, h:0.4, fontSize:13, color:VERT, bold:true });
+
+  // Slide 3 : Graphique par activité (total)
+  var s3 = pptx.addSlide();
+  s3.addText('Répartition du volume par activité', { x:0.4, y:0.3, w:9.2, h:0.5, fontSize:22, color:BLEU, bold:true });
+  s3.addChart('bar', [
+    { name: 'Total', labels: ['Prise en charge','Livre scolaire','Prêt social','Omra'],
+      values: [r.pc.total, r.ls.total, r.ps.total, r.om.total] }
+  ], { x:0.6, y:1.0, w:8.8, h:3.8, barColor:BLEU, showLegend:false, showValue:true, chartColors:[BLEU,OR,VERT,GRIS] });
+
+  // Slide 4 : Statuts globaux (camembert)
+  var s4 = pptx.addSlide();
+  s4.addText('Statuts des demandes — toutes activités', { x:0.4, y:0.3, w:9.2, h:0.5, fontSize:22, color:BLEU, bold:true });
+  var totVal = r.pc.valide+r.ls.valide+r.ps.valide+r.om.valide;
+  var totAtt = r.pc.attente+r.ls.attente+r.ps.attente+r.om.attente;
+  var totRef = r.pc.refuse+r.ls.refuse+r.ps.refuse+r.om.refuse;
+  var totClo = r.pc.cloture+r.ls.cloture+r.ps.cloture+r.om.cloture;
+  s4.addChart('pie', [
+    { name:'Statuts', labels:['Validées','En attente','Refusées','Clôturées'], values:[totVal, totAtt, totRef, totClo] }
+  ], { x:1.7, y:0.9, w:6.6, h:4.0, chartColors:[VERT,OR,ROUGE,GRIS], showLegend:true, legendPos:'r', showValue:true });
+
+  var dateFile = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
+  pptx.writeFile({ fileName: 'SCHB_Rapport_Global_' + dateFile + '.pptx' });
+}
+
+// ===== TRADUCTION ARABE (version bilingue FR / AR) =====
+var I18N_FR_CAPTURE = {};
+var I18N_AR = {
+  'hdr.badge': 'لجنة المشاركة',
+  'nav.accueil': '🏥 التخصصات',
+  'nav.demande': '📋 التكفل الطبي',
+  'nav.livre': '📚 الكتاب المدرسي',
+  'nav.pret': '💰 القرض الاجتماعي',
+  'nav.omra': '🕋 العمرة',
+  'nav.suivi': '🔍 المتابعة',
+  'nav.admin': '🔐 الإدارة',
+  'accueil.eyebrow': 'المؤسسات المتعاقدة',
+  'accueil.title': 'التخصصات الطبية المعتمدة',
+  'accueil.desc': 'يغطي التكفل العلاجات في المؤسسات المذكورة أدناه. الاستشارات البسيطة وعلاجات الأسنان العادية غير مؤهلة. الوصفة الطبية إلزامية.',
+  'demande.eyebrow': 'استمارة إلكترونية',
+  'demande.title': 'طلب تكفل طبي جديد',
+  'demande.desc': 'املأ الاستمارة وأرفق الوصفة الطبية. سيتم معالجة طلبك من طرف لجنة المشاركة.',
+  'livre.eyebrow': 'استمارة إلكترونية',
+  'livre.title': 'تسجيل — الكتاب المدرسي',
+  'livre.desc': 'سجّل أبناءك المتمدرسين للاستفادة من الكتاب المدرسي الممنوح سنويًا من طرف لجنة المشاركة. يمكنك إضافة جميع الأبناء المعنيين في نفس التسجيل.',
+  'pret.eyebrow': 'استمارة إلكترونية',
+  'pret.title': 'طلب قرض اجتماعي',
+  'pret.desc': 'طلب موجه إلى السيد رئيس لجنة المشاركة. مبلغ القرض محدد بسقف 100.000 دج. الإثبات إلزامي لكل طلب بالمبلغ الأقصى.',
+  'omra.eyebrow': 'استمارة إلكترونية',
+  'omra.title': 'تسجيل — العمرة',
+  'omra.desc': 'سجّل في برنامج العمرة السنوي الذي تنظمه لجنة المشاركة لشركة SCHB. تُصنّف التسجيلات حسب السنة وتُغلق تلقائيًا في نهاية كل حملة.',
+  'omra.h.adherent': '👤 معلومات المنخرط',
+  'omra.h.pelerin': '🕋 معلومات المعتمر',
+  'omra.h.pelerin.desc': 'إذا كان المعتمر هو المنخرط نفسه، أعد إدخال نفس المعلومات أدناه.',
+  'omra.annee': 'سنة التسجيل للعمرة',
+  'omra.annee.short': 'السنة',
+  'omra.pelerin': 'المعتمر',
+  'omra.pelerin.nom': 'اسم المعتمر',
+  'omra.pelerin.prenom': 'الاسم الشخصي للمعتمر',
+  'omra.naissance': 'تاريخ الميلاد',
+  'omra.passeport': 'رقم جواز السفر / بطاقة التعريف',
+  'omra.adresse': 'العنوان',
+  'suivi.eyebrow': 'تتبع طلبي',
+  'suivi.title': 'حالة التكفل الخاص بك',
+  'suivi.desc': 'أدخل رمز المتابعة السري الذي تم تسليمه عند تسجيل طلبك.',
+  'f.nom': 'اللقب',
+  'f.prenom': 'الاسم',
+  'f.matricule': 'رقم التسجيل',
+  'f.tel': 'الهاتف',
+  'f.service': 'المصلحة / المديرية',
+  'btn.reset': '🔄 إعادة تعيين',
+  'btn.rechercher': '🔍 بحث',
+  'btn.soumettre.demande': '✅ إرسال الطلب',
+  'btn.soumettre.livre': '✅ إرسال التسجيل',
+  'btn.soumettre.pret': '✅ إرسال الطلب',
+  'btn.soumettre.omra': '✅ إرسال التسجيل',
+  'btn.exportExcel': '📊 تصدير Excel',
+  'btn.genererRapport': '📥 إنشاء تقرير PowerPoint',
+  'btn.cloturerMaintenant': '🔒 إغلاق السنة المنقضية يدويًا',
+  'admin.login.btn': 'الدخول بشكل آمن',
+  'admin.logout': '🔓 تسجيل الخروج',
+  'admtab.demandes': '📋 الطلبات',
+  'admtab.livres': '📚 الكتب المدرسية',
+  'admtab.prets': '💰 القروض الاجتماعية',
+  'admtab.omra': '🕋 العمرة',
+  'admtab.stats': '📊 إحصائيات حسب المؤسسة',
+  'admtab.rapport': '📈 التقرير الشامل',
+  'filter.tous': 'جميع الحالات',
+  'filter.toutesAnnees': 'جميع السنوات',
+  'statut.enattente': 'قيد الانتظار',
+  'statut.valide': 'مقبول',
+  'statut.refuse': 'مرفوض',
+  'statut.cloture': 'مغلق',
+  'th.date': 'التاريخ',
+  'th.adherent': 'المنخرط',
+  'th.matricule': 'رقم التسجيل',
+  'th.beneficiaire': 'المستفيد',
+  'th.etablissement': 'المؤسسة',
+  'th.statut': 'الحالة',
+  'th.actions': 'الإجراءات',
+  'th.enfants': 'الأبناء',
+  'th.travailleur': 'العامل',
+  'th.montant': 'المبلغ',
+  'ticket.adherent': 'المنخرط',
+  'ticket.date': 'التاريخ',
+  'ticket.code': 'رمز المتابعة السري',
+  'ticket.enattente': 'قيد انتظار المصادقة',
+  'ticket.omra.saved': 'تم تسجيل الطلب',
+  'ticket.conserverCode': '🔐 احتفظ برمز المتابعة السري الخاص بك. يتيح لك تتبع حالة تسجيلك من قسم المتابعة.',
+  'rapport.h1': '📈 التقرير الشامل للأنشطة',
+  'rapport.desc': 'أنشئ تقريرًا تلخيصيًا (لجميع الأنشطة) بصيغة PowerPoint، جاهزًا لتقديمه لصاحب العمل أو للعمال.',
+  'rapport.note': 'ℹ️ يقوم الإغلاق التلقائي، عند تغيّر السنة الميلادية، بأرشفة وإغلاق جميع الطلبات التي ما زالت «قيد الانتظار» من السنة السابقة (التكفل الطبي، الكتاب المدرسي، القرض الاجتماعي، العمرة). الملفات المقبولة أو المرفوضة مسبقًا تبقى قابلة للاطلاع عليها بشكل طبيعي.'
+};
+
+function t(key) {
+  if (LANG_STATE.current === 'ar' && I18N_AR[key]) return I18N_AR[key];
+  if (I18N_FR_CAPTURE[key] !== undefined) return I18N_FR_CAPTURE[key];
+  return key;
+}
+
+var LANG_STATE = { current: (function(){ try { return localStorage.getItem('schb_lang') || 'fr'; } catch(e){ return 'fr'; } })() };
+
+function applyLang(lang) {
+  LANG_STATE.current = lang;
+  try { localStorage.setItem('schb_lang', lang); } catch(e) {}
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var key = el.getAttribute('data-i18n');
+    if (I18N_FR_CAPTURE[key] === undefined) I18N_FR_CAPTURE[key] = el.innerHTML;
+    if (lang === 'ar' && I18N_AR[key]) el.innerHTML = I18N_AR[key];
+    else el.innerHTML = I18N_FR_CAPTURE[key];
+  });
+  var html = document.documentElement;
+  if (lang === 'ar') { html.setAttribute('dir','rtl'); html.setAttribute('lang','ar'); }
+  else { html.setAttribute('dir','ltr'); html.setAttribute('lang','fr'); }
+  var btn = document.getElementById('btn-lang');
+  if (btn) btn.textContent = lang === 'ar' ? '🌐 Français' : '🌐 العربية';
+  // Re-rend les tableaux / statistiques dynamiques pour appliquer les libellés traduits (filtres, sélecteurs d'année).
+  if (document.getElementById('tbody-demandes')) { try { renderTableau(); } catch(e) {} }
+  if (document.getElementById('tbody-livres')) { try { renderTableauLivres(); } catch(e) {} }
+  if (document.getElementById('tbody-prets')) { try { renderTableauPrets(); } catch(e) {} }
+  if (document.getElementById('tbody-omra')) { try { renderTableauOmra(); } catch(e) {} }
+}
+
+function toggleLang() {
+  applyLang(LANG_STATE.current === 'ar' ? 'fr' : 'ar');
+}
+
+// Capture des textes français d'origine puis application de la langue mémorisée (par défaut : français)
+document.querySelectorAll('[data-i18n]').forEach(function(el){
+  var key = el.getAttribute('data-i18n');
+  if (I18N_FR_CAPTURE[key] === undefined) I18N_FR_CAPTURE[key] = el.innerHTML;
+});
+applyLang(LANG_STATE.current);
 
 // ===== SAVE =====
 function saveData() {
