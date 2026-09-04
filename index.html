@@ -1004,6 +1004,17 @@ footer strong{color:var(--or-clair);}
 
     <div id="admin-tab-omra" style="display:none;">
       <div class="admin-stats" id="omra-stats"></div>
+      <div class="panneau" style="margin-bottom:16px;">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:16px;">🎲 Tirage au sort — places limitées</h3>
+        <p style="font-size:13px;color:#5C5142;margin-bottom:14px;">Le tirage sélectionne aléatoirement les places parmi les inscriptions <strong>Validées</strong> de l'année choisie qui n'ont pas encore de résultat.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;">
+          <div class="grp" style="margin-bottom:0;"><label>Année de la campagne</label><select id="tirage-annee" style="min-width:140px;"></select></div>
+          <div class="grp" style="margin-bottom:0;"><label>Nombre de places</label><input id="tirage-places" type="number" min="1" value="10" style="width:110px;"></div>
+          <button class="btn btn-primary" onclick="lancerTirage()">🎲 Lancer le tirage au sort</button>
+          <button class="btn-cloture" onclick="reinitialiserTirage()">↺ Réinitialiser le tirage de cette année</button>
+        </div>
+        <div id="tirage-resultat" style="margin-top:14px;"></div>
+      </div>
       <div class="panneau">
         <div class="filter-bar">
           <input id="filter-search-omra" type="text" placeholder="🔍 Rechercher nom, matricule, pèlerin…" oninput="renderTableauOmra()" style="flex:1;min-width:200px;">
@@ -1016,10 +1027,11 @@ footer strong{color:var(--or-clair);}
             <option value="Clôturé" data-i18n="statut.cloture">Clôturé</option>
           </select>
           <button class="btn-excel" onclick="exporterExcelOmra()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
+          <button class="btn-pdf-sm" style="padding:9px 16px;" onclick="genererPDFOmraLot()">🖨 Imprimer les bons (sélection filtrée)</button>
         </div>
         <div class="tableau-wrap">
           <table class="tab">
-            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th data-i18n="omra.pelerin">Pèlerin</th><th data-i18n="omra.annee.short">Année</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th data-i18n="omra.pelerin">Pèlerin</th><th data-i18n="omra.annee.short">Année</th><th data-i18n="th.statut">Statut</th><th>Tirage</th><th data-i18n="th.actions">Actions</th></tr></thead>
             <tbody id="tbody-omra"></tbody>
           </table>
         </div>
@@ -2697,6 +2709,7 @@ function renderStatsOmra() {
 
 function renderTableauOmra() {
   remplirSelectAnnees('filter-annee-omra', omra);
+  remplirAnneesTirage();
   var searchEl = document.getElementById('filter-search-omra');
   var statusEl = document.getElementById('filter-status-omra');
   var anneeEl = document.getElementById('filter-annee-omra');
@@ -2712,11 +2725,14 @@ function renderTableauOmra() {
     return matchQ && matchSt && matchAn;
   });
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#7A6F58;padding:24px;">Aucune inscription trouvée</td></tr>'; return;
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#7A6F58;padding:24px;">Aucune inscription trouvée</td></tr>'; return;
   }
   var rows = '';
   filtered.forEach(function(d) {
     var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+    var tirBadge = !d.resultatTirage ? '<span style="color:#B0A78C;font-size:12px;">—</span>'
+      : d.resultatTirage === 'Retenu' ? '<span class="badge b-ok">🎉 Retenu</span>'
+      : '<span class="badge b-clo">Non retenu</span>';
     rows += '<tr>';
     rows += '<td><strong>' + esc(d.num) + '</strong></td>';
     rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
@@ -2725,12 +2741,14 @@ function renderTableauOmra() {
     rows += '<td>' + esc(d.pnom) + ' ' + esc(d.pprenom) + '</td>';
     rows += '<td>' + esc(getAnnee(d)) + '</td>';
     rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
+    rows += '<td>' + tirBadge + '</td>';
     rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
     rows += '<button class="btn-view-sm" onclick="voirDetailOmra(&quot;' + d.num + '&quot;)">👁 Voir</button>';
     if (d.statut === 'En attente') {
       rows += '<button class="btn-success-sm" onclick="validerOmra(&quot;' + d.num + '&quot;)">✅ Valider</button>';
       rows += '<button class="btn-danger-sm" onclick="refuserOmra(&quot;' + d.num + '&quot;)">❌ Refuser</button>';
     }
+    rows += '<button class="btn-pdf-sm" onclick="genererPDFOmra(&quot;' + d.num + '&quot;)">🖨 Imprimer</button>';
     rows += '<button class="btn-del-sm" onclick="supprimerOmra(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
     rows += '</div></td></tr>';
   });
@@ -2794,12 +2812,17 @@ function voirDetailOmra(num) {
   body += '<div class="detail-item"><div class="detail-lbl">N° passeport / CIN</div><div class="detail-val">' + esc(d.passeport||'—') + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Adresse</div><div class="detail-val">' + esc(d.adresse||'—') + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Code de suivi</div><div class="detail-val" style="font-family:monospace;">' + esc(d.trackingCode || '—') + '</div></div>';
+  if (d.resultatTirage) {
+    body += '<div class="detail-item"><div class="detail-lbl">Résultat tirage</div><div class="detail-val"><span class="badge ' + (d.resultatTirage === 'Retenu' ? 'b-ok' : 'b-clo') + '">' + (d.resultatTirage === 'Retenu' ? '🎉 ' : '') + esc(d.resultatTirage) + '</span></div></div>';
+    body += '<div class="detail-item"><div class="detail-lbl">Date du tirage</div><div class="detail-val">' + esc(d.dateTirage || '—') + '</div></div>';
+  }
   body += '</div>';
   body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
   if (d.statut === 'En attente') {
     body += '<button class="btn btn-primary" onclick="validerOmra(&quot;' + d.num + '&quot;);closeModal()">✅ Valider</button>';
     body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="refuserOmra(&quot;' + d.num + '&quot;);closeModal()">❌ Refuser</button>';
   }
+  body += '<button class="btn btn-outline" onclick="genererPDFOmra(&quot;' + d.num + '&quot;)">🖨 Imprimer le bon</button>';
   body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerOmra(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer l\'inscription</button>';
   body += '</div>';
   document.getElementById('modal-title').textContent = 'Inscription Omra ' + d.num;
@@ -2825,15 +2848,264 @@ function exporterExcelOmra() {
       'Date de naissance': d.naissance || '',
       'N° passeport / CIN': d.passeport || '',
       'Adresse': d.adresse || '',
-      'Date validation': d.dateValidation || ''
+      'Date validation': d.dateValidation || '',
+      'Résultat tirage': d.resultatTirage || '',
+      'Date tirage': d.dateTirage || ''
     };
   });
   var ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:16},{wch:26},{wch:16}];
+  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:16},{wch:26},{wch:16},{wch:14},{wch:14}];
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Omra');
   var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
   XLSX.writeFile(wb, 'SCHB_Inscriptions_Omra_' + dateExp + '.xlsx');
+}
+
+// ===== BON D'INSCRIPTION OMRA (PDF) =====
+function dessinerBonOmra(doc, d, W, M) {
+  doc.setFillColor(255,255,255);
+  doc.rect(0,0,W,297,'F');
+  doc.setFillColor(242,169,59);
+  doc.rect(0,0,W,3,'F');
+
+  try { doc.addImage(GICA_B64,'JPEG',M,6,36,17); } catch(e) {}
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(14,58,83);
+  doc.text("GROUPE INDUSTRIEL DES CIMENTS D'ALGERIE", W/2+10, 12, {align:'center'});
+  doc.setFontSize(9.5);
+  doc.text('SOCIETE DES CIMENTS DE HAMMA BOUZIANE', W/2+10, 18, {align:'center'});
+  doc.setFontSize(9);
+  doc.text('« S.C.H.B. »', W/2+10, 23, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(80,80,80);
+  doc.text('SPA au capital social de: 2.200.000.000 DA', W/2+10, 28, {align:'center'});
+
+  doc.setDrawColor(14,58,83); doc.setLineWidth(0.5);
+  doc.line(M, 32, W-M, 32);
+
+  doc.setFillColor(14,58,83);
+  doc.roundedRect(M, 40, W-2*M, 22, 2, 2, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bolditalic'); doc.setFontSize(9.5);
+  doc.text('Comité de participation de la SCHB', W/2, 47, {align:'center'});
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text("BON D'INSCRIPTION — OMRA " + esc(getAnnee(d)), W/2, 55, {align:'center'});
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(220,200,100);
+  doc.text('N° ' + d.num, W-M-2, 46, {align:'right'});
+
+  doc.setDrawColor(14,58,83); doc.line(M,68,W-M,68);
+
+  var y = 78;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(14,58,83);
+  doc.text('ADHÉRENT', M, y);
+  doc.setDrawColor(220,200,100); doc.line(M, y+1.5, M+28, y+1.5);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Nom et prénom :', M, y);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
+  doc.text((d.nom + ' ' + d.prenom).toUpperCase(), M+45, y);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Matricule :', M, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+  doc.text(d.mat || '—', M+45, y);
+  doc.setFont('helvetica','bold'); doc.setTextColor(14,58,83);
+  doc.text('Téléphone :', M+95, y);
+  doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
+  doc.text(d.tel || '—', M+130, y);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Service / Direction :', M, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+  doc.text(d.service || '—', M+45, y);
+
+  y += 16;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(14,58,83);
+  doc.text('PÈLERIN', M, y);
+  doc.setDrawColor(220,200,100); doc.line(M, y+1.5, M+22, y+1.5);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Nom et prénom :', M, y);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
+  doc.text((d.pnom + ' ' + d.pprenom).toUpperCase(), M+45, y);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Date de naissance :', M, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+  doc.text(d.naissance || '—', M+45, y);
+  doc.setFont('helvetica','bold'); doc.setTextColor(14,58,83);
+  doc.text('N° passeport / CIN :', M+95, y);
+  doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
+  doc.text(d.passeport || '—', M+140, y);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Adresse :', M, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(0,0,0);
+  var adrLines = doc.splitTextToSize(d.adresse || '—', W-2*M-48);
+  doc.text(adrLines, M+45, y);
+  y += Math.max(adrLines.length * 5, 6) + 10;
+
+  if (d.resultatTirage) {
+    var couleurTir = d.resultatTirage === 'Retenu' ? [31,122,92] : [100,116,139];
+    doc.setFillColor(couleurTir[0], couleurTir[1], couleurTir[2]);
+    doc.roundedRect(M, y, 80, 9, 1.5, 1.5, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255,255,255);
+    doc.text('Tirage au sort ' + esc(getAnnee(d)) + ' : ' + d.resultatTirage.toUpperCase(), M+40, y+6, {align:'center'});
+    y += 15;
+  }
+
+  doc.setDrawColor(14,58,83); doc.line(M,y,W-M,y);
+  y += 6;
+
+  var mid = W/2;
+  doc.setFillColor(14,58,83);
+  doc.rect(M, y, W-2*M, 8, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+  doc.text('SIGNATURE DE L\'ADHÉRENT', (M+mid)/2, y+5.5, {align:'center'});
+  doc.text('VISA COMITÉ DE PARTICIPATION', (mid+W-M)/2, y+5.5, {align:'center'});
+  doc.setDrawColor(255,255,255); doc.setLineWidth(0.3);
+  doc.line(mid, y, mid, y+8);
+
+  y += 8;
+  doc.setDrawColor(14,58,83); doc.setLineWidth(0.5);
+  doc.rect(M, y, W-2*M, 44);
+  doc.line(mid, y, mid, y+44);
+
+  doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(170,170,170);
+  doc.text("(Signature de l'adhérent)", (M+mid)/2, y+30, {align:'center'});
+
+  var cx = (mid+W-M)/2;
+  if (d.statut === 'Validé') {
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(14,58,83);
+    doc.text('KHELALI Yakoub', cx, y+9, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text('Président du Comité de Participation', cx, y+13.5, {align:'center'});
+    var stampW = 30, stampH = 25;
+    var stampX = cx - stampW/2 - 6, stampY = y + 15;
+    try { doc.addImage(STAMP_B64, 'PNG', stampX, stampY, stampW, stampH); } catch(e) {}
+    var sigW = 34, sigH = 20.8;
+    var sigX = cx + 4, sigY = y + 17;
+    try { doc.addImage(SIG_B64, 'PNG', sigX, sigY, sigW, sigH); } catch(e) {}
+  } else {
+    doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(170,170,170);
+    doc.text('(Visa du Comité de Participation)', cx, y+30, {align:'center'});
+  }
+
+  y += 52;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(14,58,83);
+  doc.text('Statut de la demande : ' + d.statut, W/2, y+5, {align:'center'});
+
+  doc.setFillColor(242,169,59);
+  doc.rect(0,294,W,3,'F');
+}
+
+function genererPDFOmra(num) {
+  var d = omra.find(function(x){ return x.num === num; });
+  if (!d) return;
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  dessinerBonOmra(doc, d, 210, 14);
+  doc.save('Omra_' + d.num + '_' + d.nom + '.pdf');
+}
+
+function genererPDFOmraLot() {
+  var searchEl = document.getElementById('filter-search-omra');
+  var statusEl = document.getElementById('filter-status-omra');
+  var anneeEl = document.getElementById('filter-annee-omra');
+  var q = (searchEl && searchEl.value || '').toLowerCase();
+  var st = (statusEl && statusEl.value) || '';
+  var an = (anneeEl && anneeEl.value) || '';
+  var filtered = omra.filter(function(d){
+    var matchQ = !q || (d.nom+d.prenom+d.mat+(d.pnom||'')+(d.pprenom||'')).toLowerCase().indexOf(q) >= 0;
+    var matchSt = !st || d.statut === st;
+    var matchAn = !an || String(getAnnee(d)) === an;
+    return matchQ && matchSt && matchAn;
+  });
+  if (!filtered.length) { alert('Aucun bon à imprimer pour la sélection actuelle.'); return; }
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  filtered.forEach(function(d, i){
+    if (i > 0) doc.addPage();
+    dessinerBonOmra(doc, d, 210, 14);
+  });
+  var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
+  doc.save('SCHB_Bons_Omra_' + (an || 'toutes-annees') + '_' + dateExp + '.pdf');
+}
+
+// ===== TIRAGE AU SORT (OMRA) =====
+function remplirAnneesTirage() {
+  remplirSelectAnnees('tirage-annee', omra);
+}
+
+function lancerTirage() {
+  var anneeEl = document.getElementById('tirage-annee');
+  var placesEl = document.getElementById('tirage-places');
+  var resDiv = document.getElementById('tirage-resultat');
+  var annee = Number(anneeEl && anneeEl.value);
+  var nbPlaces = Number(placesEl && placesEl.value);
+  if (!annee) { alert('Veuillez choisir une année de campagne.'); return; }
+  if (!nbPlaces || nbPlaces < 1) { alert('Veuillez indiquer un nombre de places valide.'); return; }
+
+  var pool = omra.filter(function(d){ return getAnnee(d) === annee && d.statut === 'Validé' && !d.resultatTirage; });
+  if (!pool.length) {
+    alert("Aucun candidat éligible (statut « Validé », sans résultat de tirage) trouvé pour l'année " + annee + '.');
+    return;
+  }
+  if (!confirm('Lancer le tirage au sort pour ' + annee + ' parmi ' + pool.length + ' candidat(s) validé(s), pour ' + nbPlaces + ' place(s) ? Cette action est irréversible (sauf réinitialisation).')) return;
+
+  // Mélange aléatoire (Fisher-Yates)
+  var shuffled = pool.slice();
+  for (var i = shuffled.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
+  }
+  var dateT = new Date().toLocaleDateString('fr-DZ');
+  var retenus = [], nonRetenus = [];
+  shuffled.forEach(function(d, idx){
+    d.resultatTirage = (idx < nbPlaces) ? 'Retenu' : 'Non retenu';
+    d.dateTirage = dateT;
+    persistOmraLocal(d);
+    if (typeof window.fbUpdateOmra === 'function') {
+      window.fbUpdateOmra(d.num, { resultatTirage: d.resultatTirage, dateTirage: dateT }, d.trackingCode || '')
+        .catch(function(err){ console.warn('Synchronisation Firebase échouée (tirage omra) :', err); });
+    }
+    (idx < nbPlaces ? retenus : nonRetenus).push(d);
+  });
+
+  renderTableauOmra(); renderStatsOmra();
+
+  var html = '<div class="panneau" style="background:var(--creme2);margin-top:6px;">';
+  html += '<h4 style="color:var(--vert);margin-bottom:10px;">🎉 ' + retenus.length + ' candidat(s) retenu(s) sur ' + shuffled.length + ' — Campagne ' + annee + '</h4>';
+  html += '<ol style="padding-left:20px;font-size:13.5px;line-height:1.9;">';
+  retenus.forEach(function(d){ html += '<li><strong>' + esc(d.nom) + ' ' + esc(d.prenom) + '</strong> (' + esc(d.mat) + ') — pèlerin : ' + esc(d.pnom) + ' ' + esc(d.pprenom) + '</li>'; });
+  html += '</ol></div>';
+  resDiv.innerHTML = html;
+}
+
+function reinitialiserTirage() {
+  var anneeEl = document.getElementById('tirage-annee');
+  var annee = Number(anneeEl && anneeEl.value);
+  if (!annee) { alert('Veuillez choisir une année de campagne à réinitialiser.'); return; }
+  var concernes = omra.filter(function(d){ return getAnnee(d) === annee && d.resultatTirage; });
+  if (!concernes.length) { alert("Aucun tirage enregistré pour l'année " + annee + '.'); return; }
+  if (!confirm('Réinitialiser le tirage au sort de ' + annee + ' pour ' + concernes.length + ' dossier(s) ? Le résultat sera effacé et un nouveau tirage pourra être relancé.')) return;
+  concernes.forEach(function(d){
+    delete d.resultatTirage; delete d.dateTirage;
+    persistOmraLocal(d);
+    if (typeof window.fbUpdateOmra === 'function') {
+      window.fbUpdateOmra(d.num, { resultatTirage: null, dateTirage: null }, d.trackingCode || '')
+        .catch(function(err){ console.warn('Synchronisation Firebase échouée (réinitialisation tirage) :', err); });
+    }
+  });
+  renderTableauOmra(); renderStatsOmra();
+  document.getElementById('tirage-resultat').innerHTML = '';
+  alert('Tirage de ' + annee + ' réinitialisé.');
 }
 
 function genererPDFPret(num) {
