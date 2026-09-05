@@ -371,6 +371,36 @@
         return _fbDb.ref().update(updates);
       };
 
+      // ===== ANNONCES DU COMITÉ DE PARTICIPATION (gérées par l'admin, affichées aux travailleurs sous forme d'images) =====
+      // Lecture publique (aucune connexion requise) afin que les travailleurs voient les annonces sur la page d'accueil.
+      // Écriture réservée à l'administrateur connecté (à restreindre côté règles Firebase, comme pour "effectifsPublic").
+      var _annoncesRef = null;
+      var _annoncesValueHandler = null;
+
+      window.fbListenAnnonces = function(callback, errorCallback) {
+        if (_annoncesRef && _annoncesValueHandler) _annoncesRef.off('value', _annoncesValueHandler);
+        _annoncesRef = _fbDb.ref('annonces');
+        _annoncesValueHandler = function(snapshot) {
+          var data = snapshot.val();
+          callback(data ? Object.values(data) : []);
+        };
+        _annoncesRef.on('value', _annoncesValueHandler, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopListenAnnonces = function() {
+        if (_annoncesRef && _annoncesValueHandler) _annoncesRef.off('value', _annoncesValueHandler);
+        _annoncesRef = null; _annoncesValueHandler = null;
+      };
+      window.fbAddAnnonce = function(d) {
+        var updates = {};
+        updates['annonces/' + d.id] = d;
+        return _fbDb.ref().update(updates);
+      };
+      window.fbDeleteAnnonce = function(id) {
+        var updates = {};
+        updates['annonces/' + id] = null;
+        return _fbDb.ref().update(updates);
+      };
+
       // ===== ADMIN : CHANGEMENT DE MOT DE PASSE =====
       // Ré-authentifie l'admin avec son mot de passe actuel avant de définir le nouveau
       // (obligatoire côté Firebase pour cette opération sensible).
@@ -505,6 +535,19 @@ main{max-width:1100px;margin:0 auto;padding:36px 24px 80px;}
 .act-desc{font-size:12.5px;color:#7A6F58;line-height:1.5;}
 .act-arrow{font-size:20px;color:var(--or);flex-shrink:0;transition:.2s;}
 .card-activite:hover .act-arrow{transform:translateX(4px);}
+.grid-annonces{display:grid;grid-template-columns:1fr;gap:26px;margin-bottom:28px;max-width:760px;}
+.card-annonce{background:white;border:1.5px solid var(--ligne);border-radius:16px;overflow:hidden;box-shadow:var(--ombre);transition:.2s;position:relative;}
+.card-annonce:hover{border-color:var(--or);transform:translateY(-3px);box-shadow:0 8px 26px rgba(14,58,83,.18);}
+.card-annonce img{width:100%;height:auto;max-height:820px;object-fit:contain;display:block;cursor:zoom-in;background:var(--creme);}
+.card-annonce-body{padding:16px 18px;}
+.card-annonce-title{font-weight:700;font-size:15px;color:var(--bleu);margin-bottom:4px;font-family:'Fraunces',serif;}
+.card-annonce-desc{font-size:12.5px;color:#7A6F58;line-height:1.5;margin-bottom:6px;}
+.card-annonce-date{font-size:11px;color:#A69C86;font-weight:600;}
+.btn-del-annonce{position:absolute;top:10px;right:10px;background:rgba(200,40,40,.92);color:#fff;border:none;border-radius:8px;width:32px;height:32px;font-size:15px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);z-index:2;}
+.btn-del-annonce:hover{background:var(--rouge);}
+.annonce-lightbox{position:fixed;inset:0;background:rgba(15,25,35,.88);display:none;align-items:center;justify-content:center;z-index:9999;padding:24px;cursor:zoom-out;}
+.annonce-lightbox.active{display:flex;}
+.annonce-lightbox img{max-width:92vw;max-height:88vh;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
 .spec-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
 .spec-icon.cl{background:#EAF1F5;}.spec-icon.ho{background:#E8F4EF;}
 .spec-icon.im{background:#FFF3E0;}.spec-icon.de{background:#FCE4EC;}.spec-icon.la{background:#F3E5F5;}
@@ -781,6 +824,7 @@ footer strong{color:var(--or-clair);}
   <button onclick="showVue('omra',this)" data-i18n="nav.omra">🕋 Omra</button>
   <button onclick="showVue('idees',this)" data-i18n="nav.idees">📬 Boîte à idées</button>
   <button onclick="showVue('doleances',this)" data-i18n="nav.doleances">📝 Registre de doléances</button>
+  <button onclick="showVue('annonces',this)" data-i18n="nav.annonces">📢 Annonces</button>
   <button onclick="showVue('suivi',this)" data-i18n="nav.suivi">🔍 Suivi</button>
   <button onclick="showVue('admin',this)" data-i18n="nav.admin">🔐 Administration</button>
 </nav>
@@ -840,6 +884,14 @@ footer strong{color:var(--or-clair);}
       <div class="act-body">
         <div class="act-title" data-i18n="accueil.card.doleances.title">Registre de doléances</div>
         <div class="act-desc" data-i18n="accueil.card.doleances.desc">Signalez une réclamation ou une doléance auprès du Comité de Participation.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('annonces')">
+      <div class="act-icon" style="background:#FFF8E1;">📢</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.annonces.title">Annonces</div>
+        <div class="act-desc" data-i18n="accueil.card.annonces.desc">Consultez les dernières annonces publiées par le Comité de Participation.</div>
       </div>
       <div class="act-arrow">→</div>
     </div>
@@ -1263,6 +1315,17 @@ footer strong{color:var(--or-clair);}
   <div class="msg" id="msg-doleances"></div>
 </div>
 
+<!-- ===== ANNONCES ===== -->
+<div id="vue-annonces" class="vue">
+  <div class="sec-hdr">
+    <span class="eyebrow" data-i18n="annonces.eyebrow">Comité de Participation</span>
+    <h2 class="sec-title" data-i18n="annonces.title">📢 Annonces</h2>
+    <p class="sec-desc" data-i18n="annonces.desc">Retrouvez ici les annonces publiées par le Comité de Participation à l'attention des travailleurs.</p>
+  </div>
+  <div id="annonces-grid" class="grid-annonces"></div>
+  <div id="annonces-empty" style="display:none;text-align:center;color:#7A6F58;padding:40px 10px;" data-i18n="annonces.vide">Aucune annonce publiée pour le moment.</div>
+</div>
+
 <!-- ===== SUIVI ===== -->
 <div id="vue-suivi" class="vue">
   <div class="sec-hdr">
@@ -1326,6 +1389,7 @@ footer strong{color:var(--or-clair);}
       <button class="btn-admin-tab" id="tab-btn-omra" onclick="showAdminTab('omra')" data-i18n="admtab.omra">🕋 Omra</button>
       <button class="btn-admin-tab" id="tab-btn-idees" onclick="showAdminTab('idees')" data-i18n="admtab.idees">📬 Boîte à idées</button>
       <button class="btn-admin-tab" id="tab-btn-doleances" onclick="showAdminTab('doleances')" data-i18n="admtab.doleances">📝 Doléances</button>
+      <button class="btn-admin-tab" id="tab-btn-annonces" onclick="showAdminTab('annonces')" data-i18n="admtab.annonces">📢 Annonces</button>
       <button class="btn-admin-tab" id="tab-btn-stats" onclick="showAdminTab('stats')" data-i18n="admtab.stats">📊 Statistiques par établissement</button>
       <button class="btn-admin-tab" id="tab-btn-rapport" onclick="showAdminTab('rapport')" data-i18n="admtab.rapport">📈 Rapport global</button>
       <button class="btn-admin-tab" id="tab-btn-effectifs" onclick="showAdminTab('effectifs')" data-i18n="admtab.effectifs">🧑‍💼 Effectifs</button>
@@ -1480,6 +1544,32 @@ footer strong{color:var(--or-clair);}
       </div>
     </div>
 
+    <div id="admin-tab-annonces" style="display:none;">
+      <div class="panneau">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:17px;" data-i18n="annonces.admin.form.title">📢 Publier une nouvelle annonce</h3>
+        <div class="grp"><label data-i18n="annonces.form.titre">Titre de l'annonce <span class="req">*</span></label><input id="an-titre" type="text" placeholder="Ex : Programme Omra 2027"></div>
+        <div class="grp"><label data-i18n="annonces.form.description">Description (facultatif)</label><textarea id="an-description" rows="3" placeholder="Précisions complémentaires…"></textarea></div>
+        <div class="upload-zone" id="an-upload-zone" onclick="document.getElementById('an-image').click()">
+          <input type="file" id="an-image" accept="image/*" style="display:none" onchange="previewFileAnnonce(this)">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-label" data-i18n="annonces.form.image">Cliquez pour joindre l'image de l'annonce</div>
+          <div class="upload-hint" data-i18n="annonces.form.imageHint">JPG · PNG — 3 Mo max</div>
+          <img id="an-preview" class="preview-img">
+        </div>
+        <div id="an-image-name" style="margin-top:10px;font-size:13px;color:var(--vert);font-weight:600;display:none;"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+          <button class="btn btn-primary" onclick="publierAnnonce()" data-i18n="btn.publier.annonce">✅ Publier l'annonce</button>
+          <button class="btn btn-outline" onclick="resetFormAnnonce()" data-i18n="btn.reset">🔄 Réinitialiser</button>
+        </div>
+        <div class="msg" id="msg-annonces"></div>
+      </div>
+      <div class="panneau">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:14px;font-size:16px;" data-i18n="annonces.admin.list.title">📋 Annonces publiées</h3>
+        <div id="admin-annonces-grid" class="grid-annonces"></div>
+        <div id="admin-annonces-empty" style="display:none;text-align:center;color:#7A6F58;padding:20px;" data-i18n="annonces.vide">Aucune annonce publiée pour le moment.</div>
+      </div>
+    </div>
+
     <div id="admin-tab-rapport" style="display:none;">
       <div class="panneau">
         <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:18px;" data-i18n="rapport.h1">📈 Rapport global des activités</h3>
@@ -1550,6 +1640,10 @@ footer strong{color:var(--or-clair);}
       </div>
     </div>
   </div>
+</div>
+
+<div class="annonce-lightbox" id="annonce-lightbox" onclick="fermerLightboxAnnonce()">
+  <img id="annonce-lightbox-img" src="" alt="">
 </div>
 
 </main>
@@ -1779,6 +1873,39 @@ function mergeDoleances(fbArr) {
   return Object.values(map);
 }
 
+// ===== ANNONCES DU COMITÉ DE PARTICIPATION (local) =====
+function loadAnnoncesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_annonces') || '[]'); } catch(e) { return []; }
+}
+function saveAnnoncesLocal(arr) {
+  try { localStorage.setItem('schb_annonces', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (annonces):', e); }
+}
+function persistAnnonceLocal(d) {
+  var arr = loadAnnoncesLocal();
+  var idx = arr.findIndex(function(x){ return x.id === d.id; });
+  if (idx >= 0) arr[idx] = d; else arr.push(d);
+  saveAnnoncesLocal(arr);
+}
+function loadAnnoncesSupprimesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_annonces_supprimes') || '[]'); } catch(e) { return []; }
+}
+function saveAnnoncesSupprimesLocal(arr) {
+  try { localStorage.setItem('schb_annonces_supprimes', JSON.stringify(arr)); } catch(e) {}
+}
+function retirerAnnonceLocal(id) {
+  var arr = loadAnnoncesLocal().filter(function(x){ return x.id !== id; });
+  saveAnnoncesLocal(arr);
+  var sup = loadAnnoncesSupprimesLocal();
+  if (sup.indexOf(id) === -1) { sup.push(id); saveAnnoncesSupprimesLocal(sup); }
+}
+function mergeAnnonces(fbArr) {
+  var map = {};
+  loadAnnoncesLocal().forEach(function(d){ map[d.id] = d; });
+  (fbArr||[]).forEach(function(d){ map[d.id] = d; });
+  loadAnnoncesSupprimesLocal().forEach(function(id){ delete map[id]; });
+  return Object.values(map);
+}
+
 // ===== ANNÉE (clôture automatique) =====
 function getAnnee(d) {
   if (d.annee) return d.annee;
@@ -1814,6 +1941,8 @@ var suiviCacheOmra = {};
 var idees = loadIdeesLocal();
 var doleances = loadDoleancesLocal();
 var effectifs = []; // fiches importées depuis le fichier Excel "État des effectifs" (voir onglet admin dédié)
+var annonces = loadAnnoncesLocal();
+var annonceBase64 = null;
 var adminAuthReady = false;
 
 function esc(v) {
@@ -2492,6 +2621,186 @@ function resetFormDoleance() {
   toggleAnonymeDoleance();
 }
 
+// ===== ANNONCES DU COMITÉ DE PARTICIPATION =====
+// Redimensionne/compresse l'image via un <canvas> avant de la convertir en base64.
+// Ceci évite les images « corrompues » à l'affichage : les photos prises directement avec un
+// téléphone peuvent peser plusieurs Mo, ce qui dépasse les limites de taille de Firebase/localStorage
+// et provoque un rendu brouillé. Le passage par un canvas garantit une image ré-encodée valide et légère.
+function previewFileAnnonce(inp) {
+  var file = inp.files[0];
+  if (!file) return;
+  // Certains appareils (notamment mobiles) ne renseignent pas toujours file.type ;
+  // dans ce cas on se base sur l'extension du fichier plutôt que de bloquer l'aperçu.
+  var isImage = file.type ? file.type.indexOf('image/') === 0 : /\.(jpe?g|png|gif|webp|bmp|heic|heif)$/i.test(file.name);
+  if (!isImage) {
+    alert("⚠️ Veuillez sélectionner un fichier image (JPG, PNG…).");
+    inp.value = '';
+    return;
+  }
+  var nameEl = document.getElementById('an-image-name');
+  var img = document.getElementById('an-preview');
+  img.style.display = 'none';
+  if (nameEl) { nameEl.style.display = 'none'; }
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var tempImg = new Image();
+    tempImg.onload = function() {
+      var MAX_DIM = 1400;
+      var w = tempImg.naturalWidth || tempImg.width;
+      var h = tempImg.naturalHeight || tempImg.height;
+      if (!w || !h) {
+        // Impossible de lire les dimensions (format non décodable par le navigateur) : on abandonne le recadrage
+        // et on tente d'utiliser le fichier tel quel, en dernier recours.
+        annonceBase64 = e.target.result;
+      } else {
+        if (w > MAX_DIM || h > MAX_DIM) {
+          if (w > h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+          else { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(tempImg, 0, 0, w, h);
+        var quality = 0.78;
+        var dataUrl = canvas.toDataURL('image/jpeg', quality);
+        // Réduit encore la qualité si le résultat reste volumineux (sécurité pour Firebase/localStorage).
+        var essais = 0;
+        while (dataUrl.length > 900000 && quality > 0.35 && essais < 6) {
+          quality -= 0.12; essais++;
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+        annonceBase64 = dataUrl;
+      }
+      if (nameEl) {
+        nameEl.textContent = '✅ Image jointe : ' + file.name;
+        nameEl.style.display = 'block';
+      }
+      img.onerror = function() {
+        img.style.display = 'none';
+        alert("⚠️ Cette image ne peut pas être prévisualisée par le navigateur (format non pris en charge, ex. HEIC). Essayez de la convertir en JPG ou PNG avant de l'importer.");
+      };
+      img.onload = function() { img.style.display = 'block'; };
+      img.src = annonceBase64;
+    };
+    tempImg.onerror = function() {
+      alert("⚠️ Cette image ne peut pas être lue par le navigateur (format non pris en charge, ex. HEIC). Essayez de la convertir en JPG ou PNG avant de l'importer, ou choisissez une autre photo.");
+    };
+    tempImg.src = e.target.result;
+  };
+  reader.onerror = function() {
+    alert("❌ Impossible de lire ce fichier. Veuillez réessayer avec une autre image.");
+  };
+  reader.readAsDataURL(file);
+}
+
+async function publierAnnonce() {
+  var msg = document.getElementById('msg-annonces');
+  msg.className = 'msg'; msg.style.display = 'none';
+  var titre = document.getElementById('an-titre').value.trim();
+  var description = document.getElementById('an-description').value.trim();
+
+  if (!titre) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = "⚠️ Veuillez indiquer un titre pour l'annonce."; return;
+  }
+  if (!annonceBase64) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = "⚠️ Veuillez joindre une image pour l'annonce."; return;
+  }
+
+  var now = new Date();
+  var id = 'AN-' + now.getTime();
+  var d = {
+    id: id, titre: titre, description: description, image: annonceBase64,
+    date: now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'}),
+    dateObj: now.toISOString()
+  };
+
+  persistAnnonceLocal(d);
+  annonces = loadAnnoncesLocal();
+  renderAnnonces(); renderAdminAnnonces();
+  resetFormAnnonce();
+  msg.className = 'msg ok'; msg.style.display = 'flex';
+  msg.textContent = "✅ Annonce publiée avec succès. Elle est désormais visible par les travailleurs.";
+
+  if (typeof window.fbAddAnnonce === 'function') {
+    window.fbAddAnnonce(d).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (annonce, enregistrée localement) :', err);
+    });
+  }
+}
+
+function resetFormAnnonce() {
+  ['an-titre','an-description'].forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
+  var fileInp = document.getElementById('an-image'); if (fileInp) fileInp.value = '';
+  var img = document.getElementById('an-preview'); if (img) { img.style.display = 'none'; img.src = ''; }
+  var nameEl = document.getElementById('an-image-name'); if (nameEl) nameEl.style.display = 'none';
+  annonceBase64 = null;
+}
+
+function supprimerAnnonce(id) {
+  if (!confirm('Supprimer définitivement cette annonce ?')) return;
+  retirerAnnonceLocal(id);
+  annonces = loadAnnoncesLocal();
+  renderAnnonces(); renderAdminAnnonces();
+  if (typeof window.fbDeleteAnnonce === 'function') {
+    window.fbDeleteAnnonce(id).catch(function(err){ console.warn('Synchronisation Firebase échouée (suppression annonce) :', err); });
+  }
+}
+
+function trierAnnonces(liste) {
+  return (liste || []).slice().sort(function(a,b){ return (b.dateObj||'').localeCompare(a.dateObj||''); });
+}
+
+function renderAnnonces() {
+  var grid = document.getElementById('annonces-grid');
+  if (!grid) return;
+  var empty = document.getElementById('annonces-empty');
+  var liste = trierAnnonces(annonces);
+  if (!liste.length) { grid.innerHTML = ''; if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
+  grid.innerHTML = liste.map(function(a){
+    return '<div class="card-annonce">' +
+      '<img src="' + esc(a.image) + '" alt="' + esc(a.titre) + '" onclick="ouvrirLightboxAnnonce(this.src)" onerror="this.style.display=\'none\'">' +
+      '<div class="card-annonce-body">' +
+        '<div class="card-annonce-title">' + esc(a.titre) + '</div>' +
+        (a.description ? '<div class="card-annonce-desc">' + esc(a.description) + '</div>' : '') +
+        '<div class="card-annonce-date">' + esc(a.date) + '</div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function renderAdminAnnonces() {
+  var grid = document.getElementById('admin-annonces-grid');
+  if (!grid) return;
+  var empty = document.getElementById('admin-annonces-empty');
+  var liste = trierAnnonces(annonces);
+  if (!liste.length) { grid.innerHTML = ''; if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
+  grid.innerHTML = liste.map(function(a){
+    return '<div class="card-annonce">' +
+      '<button class="btn-del-annonce" onclick="supprimerAnnonce(\'' + a.id + '\')" title="Supprimer">🗑️</button>' +
+      '<img src="' + esc(a.image) + '" alt="' + esc(a.titre) + '" onclick="ouvrirLightboxAnnonce(this.src)" onerror="this.style.display=\'none\'">' +
+      '<div class="card-annonce-body">' +
+        '<div class="card-annonce-title">' + esc(a.titre) + '</div>' +
+        (a.description ? '<div class="card-annonce-desc">' + esc(a.description) + '</div>' : '') +
+        '<div class="card-annonce-date">' + esc(a.date) + '</div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function ouvrirLightboxAnnonce(src) {
+  var lb = document.getElementById('annonce-lightbox');
+  if (!lb) return;
+  document.getElementById('annonce-lightbox-img').src = src;
+  lb.classList.add('active');
+}
+function fermerLightboxAnnonce() {
+  var lb = document.getElementById('annonce-lightbox');
+  if (lb) lb.classList.remove('active');
+}
+
 // ===== SUIVI =====
 async function rechercherSuivi() {
   var code = document.getElementById('suivi-q').value.trim().toUpperCase();
@@ -2794,6 +3103,7 @@ function showAdminTab(id) {
   document.getElementById('admin-tab-omra').style.display = (id === 'omra') ? 'block' : 'none';
   document.getElementById('admin-tab-idees').style.display = (id === 'idees') ? 'block' : 'none';
   document.getElementById('admin-tab-doleances').style.display = (id === 'doleances') ? 'block' : 'none';
+  document.getElementById('admin-tab-annonces').style.display = (id === 'annonces') ? 'block' : 'none';
   document.getElementById('admin-tab-stats').style.display = (id === 'stats') ? 'block' : 'none';
   document.getElementById('admin-tab-rapport').style.display = (id === 'rapport') ? 'block' : 'none';
   document.getElementById('admin-tab-effectifs').style.display = (id === 'effectifs') ? 'block' : 'none';
@@ -2804,6 +3114,7 @@ function showAdminTab(id) {
   document.getElementById('tab-btn-omra').classList.toggle('actif', id === 'omra');
   document.getElementById('tab-btn-idees').classList.toggle('actif', id === 'idees');
   document.getElementById('tab-btn-doleances').classList.toggle('actif', id === 'doleances');
+  document.getElementById('tab-btn-annonces').classList.toggle('actif', id === 'annonces');
   document.getElementById('tab-btn-stats').classList.toggle('actif', id === 'stats');
   document.getElementById('tab-btn-rapport').classList.toggle('actif', id === 'rapport');
   if (id === 'stats') renderStatsChart();
@@ -2812,6 +3123,7 @@ function showAdminTab(id) {
   if (id === 'omra') { renderTableauOmra(); renderStatsOmra(); }
   if (id === 'idees') { renderTableauIdees(); renderStatsIdees(); }
   if (id === 'doleances') { renderTableauDoleances(); renderStatsDoleances(); }
+  if (id === 'annonces') renderAdminAnnonces();
   if (id === 'rapport') renderRapportStats();
   if (id === 'effectifs') renderTableauEffectifs();
 }
@@ -4770,6 +5082,21 @@ var I18N_AR = {
   'accueil.card.suivi.desc': 'تتبع حالة طلبكم باستخدام الرمز السري.',
   'accueil.card.admin.title': 'الإدارة',
   'accueil.card.admin.desc': 'فضاء مخصص للجنة المشاركة لتسيير الملفات.',
+  'accueil.card.annonces.title': 'الإعلانات',
+  'accueil.card.annonces.desc': 'اطلع على آخر الإعلانات الصادرة عن لجنة المشاركة.',
+  'nav.annonces': '📢 الإعلانات',
+  'annonces.eyebrow': 'لجنة المشاركة',
+  'annonces.title': '📢 الإعلانات',
+  'annonces.desc': 'تجدون هنا الإعلانات الصادرة عن لجنة المشاركة والموجهة للعمال.',
+  'annonces.vide': 'لا توجد إعلانات منشورة حاليًا.',
+  'annonces.form.titre': 'عنوان الإعلان',
+  'annonces.form.description': 'وصف (اختياري)',
+  'annonces.form.image': 'انقر لإرفاق صورة الإعلان',
+  'annonces.form.imageHint': 'JPG · PNG — الحد الأقصى 3 ميغا بايت',
+  'annonces.admin.form.title': '📢 نشر إعلان جديد',
+  'annonces.admin.list.title': '📋 الإعلانات المنشورة',
+  'btn.publier.annonce': '✅ نشر الإعلان',
+  'admtab.annonces': '📢 الإعلانات',
   'demande.spec.eyebrow': 'المؤسسات المتعاقدة',
   'demande.spec.title': 'التخصصات الطبية المعتمدة',
   'demande.spec.desc': 'يغطي التكفل العلاجات في المؤسسات المذكورة أدناه. الاستشارات البسيطة وعلاجات الأسنان العادية غير مؤهلة. الوصفة الطبية إلزامية.',
@@ -4933,6 +5260,23 @@ function saveData() {
   } else {
     console.error('Firebase Authentication indisponible après 25s.');
     applyAdminAuthState(null);
+  }
+})();
+
+// ===== ANNONCES : lecture publique, visible par tous les travailleurs sans connexion =====
+renderAnnonces();
+(function waitForFirebaseAnnonces(attempt) {
+  attempt = attempt || 0;
+  if (typeof window.fbListenAnnonces === 'function') {
+    window.fbListenAnnonces(function(arr) {
+      annonces = mergeAnnonces(arr);
+      renderAnnonces();
+      renderAdminAnnonces();
+    }, function(err) {
+      console.warn('Lecture des annonces indisponible pour le moment (Firebase) :', err);
+    });
+  } else if (attempt < 125) {
+    setTimeout(function(){ waitForFirebaseAnnonces(attempt + 1); }, 200);
   }
 })();
 </script>
