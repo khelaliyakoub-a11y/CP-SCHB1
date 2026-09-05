@@ -1264,10 +1264,6 @@ footer strong{color:var(--or-clair);}
     <p class="sec-desc" data-i18n="idees.desc">Proposez vos idées et suggestions pour améliorer le fonctionnement du Comité de Participation. Vos propositions sont transmises directement au Comité.</p>
   </div>
   <div class="panneau">
-    <div class="grp" style="display:flex;align-items:center;gap:8px;flex-direction:row;">
-      <input id="fi-anonyme" type="checkbox" style="width:auto;" onchange="toggleAnonymeIdee()">
-      <label for="fi-anonyme" style="margin:0;" data-i18n="idees.anonyme">Soumettre cette idée de façon anonyme</label>
-    </div>
     <div id="fi-identite-wrap" class="cols2">
       <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="fi-nom" type="text" placeholder="NOM DE FAMILLE"></div>
       <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="fi-prenom" type="text" placeholder="Prénom"></div>
@@ -1293,10 +1289,6 @@ footer strong{color:var(--or-clair);}
     <p class="sec-desc" data-i18n="doleances.desc">Signalez une réclamation, une difficulté ou une doléance auprès du Comité de Participation. Elle sera enregistrée et traitée en toute confidentialité.</p>
   </div>
   <div class="panneau">
-    <div class="grp" style="display:flex;align-items:center;gap:8px;flex-direction:row;">
-      <input id="fd-anonyme" type="checkbox" style="width:auto;" onchange="toggleAnonymeDoleance()">
-      <label for="fd-anonyme" style="margin:0;" data-i18n="doleances.anonyme">Soumettre cette doléance de façon anonyme</label>
-    </div>
     <div id="fd-identite-wrap" class="cols2">
       <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="fd-nom" type="text" placeholder="NOM DE FAMILLE"></div>
       <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="fd-prenom" type="text" placeholder="Prénom"></div>
@@ -2509,28 +2501,22 @@ function newIdeeNumber(now) {
   var d = String(now.getDate()).padStart(2,'0');
   return 'IDE-' + y + m + d + '-' + randomSecret(6);
 }
-function toggleAnonymeIdee() {
-  var anonyme = document.getElementById('fi-anonyme').checked;
-  document.getElementById('fi-identite-wrap').style.display = anonyme ? 'none' : '';
-  document.getElementById('fi-identite-wrap2').style.display = anonyme ? 'none' : '';
-}
 async function soumettreIdee() {
   var msg = document.getElementById('msg-idees');
   msg.className = 'msg';
-  var anonyme = document.getElementById('fi-anonyme').checked;
-  var nom = anonyme ? '' : document.getElementById('fi-nom').value.trim().toUpperCase();
-  var prenom = anonyme ? '' : document.getElementById('fi-prenom').value.trim();
-  var mat = anonyme ? '' : document.getElementById('fi-matricule').value.trim();
-  var service = anonyme ? '' : document.getElementById('fi-service').value.trim();
+  var nom = document.getElementById('fi-nom').value.trim().toUpperCase();
+  var prenom = document.getElementById('fi-prenom').value.trim();
+  var mat = document.getElementById('fi-matricule').value.trim();
+  var service = document.getElementById('fi-service').value.trim();
   var message = document.getElementById('fi-message').value.trim();
 
   if (!message) {
     msg.className = 'msg err'; msg.style.display = 'flex';
     msg.textContent = '⚠️ Veuillez décrire votre idée avant de l\'envoyer.'; return;
   }
-  if (!anonyme && (!nom || !prenom)) {
+  if (!nom || !prenom) {
     msg.className = 'msg err'; msg.style.display = 'flex';
-    msg.textContent = '⚠️ Veuillez renseigner votre nom et prénom, ou cocher « anonyme ».'; return;
+    msg.textContent = '⚠️ Veuillez renseigner votre nom et prénom.'; return;
   }
 
   var now = new Date();
@@ -2538,14 +2524,14 @@ async function soumettreIdee() {
   var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
 
   var d = {
-    num: num, anonyme: anonyme, nom: nom, prenom: prenom, mat: mat, service: service,
+    num: num, nom: nom, prenom: prenom, mat: mat, service: service,
     message: message, date: dateStr, dateObj: now.toISOString(), statut: 'Nouveau'
   };
 
   persistIdeeLocal(d);
   resetFormIdee();
   msg.className = 'msg ok'; msg.style.display = 'flex';
-  msg.innerHTML = '✅ Merci ! Votre proposition a bien été enregistrée' + (anonyme ? ' de façon anonyme' : '') + '.';
+  msg.innerHTML = '✅ Merci ! Votre proposition a bien été enregistrée.';
 
   if (typeof window.fbCreateIdee === 'function') {
     window.fbCreateIdee(d).catch(function(err){
@@ -2557,8 +2543,6 @@ function resetFormIdee() {
   ['fi-nom','fi-prenom','fi-matricule','fi-service','fi-message'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
-  document.getElementById('fi-anonyme').checked = false;
-  toggleAnonymeIdee();
 }
 
 // ===== REGISTRE DE DOLÉANCES =====
@@ -2568,19 +2552,13 @@ function newDoleanceNumber(now) {
   var d = String(now.getDate()).padStart(2,'0');
   return 'DOL-' + y + m + d + '-' + randomSecret(6);
 }
-function toggleAnonymeDoleance() {
-  var anonyme = document.getElementById('fd-anonyme').checked;
-  document.getElementById('fd-identite-wrap').style.display = anonyme ? 'none' : '';
-  document.getElementById('fd-identite-wrap2').style.display = anonyme ? 'none' : '';
-}
 async function soumettreDoleance() {
   var msg = document.getElementById('msg-doleances');
   msg.className = 'msg';
-  var anonyme = document.getElementById('fd-anonyme').checked;
-  var nom = anonyme ? '' : document.getElementById('fd-nom').value.trim().toUpperCase();
-  var prenom = anonyme ? '' : document.getElementById('fd-prenom').value.trim();
-  var mat = anonyme ? '' : document.getElementById('fd-matricule').value.trim();
-  var service = anonyme ? '' : document.getElementById('fd-service').value.trim();
+  var nom = document.getElementById('fd-nom').value.trim().toUpperCase();
+  var prenom = document.getElementById('fd-prenom').value.trim();
+  var mat = document.getElementById('fd-matricule').value.trim();
+  var service = document.getElementById('fd-service').value.trim();
   var objet = document.getElementById('fd-objet').value.trim();
   var description = document.getElementById('fd-description').value.trim();
 
@@ -2588,9 +2566,9 @@ async function soumettreDoleance() {
     msg.className = 'msg err'; msg.style.display = 'flex';
     msg.textContent = "⚠️ Veuillez indiquer l'objet et la description de votre doléance."; return;
   }
-  if (!anonyme && (!nom || !prenom)) {
+  if (!nom || !prenom) {
     msg.className = 'msg err'; msg.style.display = 'flex';
-    msg.textContent = '⚠️ Veuillez renseigner votre nom et prénom, ou cocher « anonyme ».'; return;
+    msg.textContent = '⚠️ Veuillez renseigner votre nom et prénom.'; return;
   }
 
   var now = new Date();
@@ -2598,14 +2576,14 @@ async function soumettreDoleance() {
   var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
 
   var d = {
-    num: num, anonyme: anonyme, nom: nom, prenom: prenom, mat: mat, service: service,
+    num: num, nom: nom, prenom: prenom, mat: mat, service: service,
     objet: objet, description: description, date: dateStr, dateObj: now.toISOString(), statut: 'Nouveau'
   };
 
   persistDoleanceLocal(d);
   resetFormDoleance();
   msg.className = 'msg ok'; msg.style.display = 'flex';
-  msg.innerHTML = '✅ Merci ! Votre doléance a bien été enregistrée' + (anonyme ? ' de façon anonyme' : '') + '.';
+  msg.innerHTML = '✅ Merci ! Votre doléance a bien été enregistrée.';
 
   if (typeof window.fbCreateDoleance === 'function') {
     window.fbCreateDoleance(d).catch(function(err){
@@ -2617,8 +2595,6 @@ function resetFormDoleance() {
   ['fd-nom','fd-prenom','fd-matricule','fd-service','fd-objet','fd-description'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
-  document.getElementById('fd-anonyme').checked = false;
-  toggleAnonymeDoleance();
 }
 
 // ===== ANNONCES DU COMITÉ DE PARTICIPATION =====
@@ -4135,7 +4111,7 @@ function renderTableauIdees() {
   var rows = '';
   filtered.forEach(function(d) {
     var bc = d.statut === 'Lu' ? 'b-ok' : 'b-att';
-    var identite = d.anonyme ? '<em style="color:#7A6F58;">Anonyme</em>' : esc(d.nom) + ' ' + esc(d.prenom);
+    var identite = esc(d.nom) + ' ' + esc(d.prenom);
     var apercu = esc((d.message||'').slice(0,60)) + ((d.message||'').length > 60 ? '…' : '');
     rows += '<tr>';
     rows += '<td><strong>' + esc(d.num) + '</strong></td>';
@@ -4157,15 +4133,13 @@ function voirDetailIdee(num) {
   var d = idees.find(function(x){ return x.num === num; });
   if (!d) return;
   var bc = d.statut === 'Lu' ? 'b-ok' : 'b-att';
-  var identite = d.anonyme ? 'Anonyme' : (d.nom + ' ' + d.prenom);
+  var identite = d.nom + ' ' + d.prenom;
   var body = '<div class="detail-grid">';
   body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Auteur</div><div class="detail-val">' + esc(identite) + '</div></div>';
-  if (!d.anonyme) {
-    body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat || '—') + '</div></div>';
-    body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service || '—') + '</div></div>';
-  }
+  body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat || '—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service || '—') + '</div></div>';
   body += '</div>';
   body += '<div class="detail-item" style="margin-bottom:14px;"><div class="detail-lbl">Idée / suggestion</div><div class="detail-val" style="margin-top:4px;white-space:pre-wrap;">' + esc(d.message) + '</div></div>';
   body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
@@ -4206,16 +4180,15 @@ function exporterExcelIdees() {
   var data = idees.map(function(d){
     return {
       'N°': d.num, 'Date': d.date, 'Statut': d.statut,
-      'Anonyme': d.anonyme ? 'Oui' : 'Non',
-      'Nom': d.anonyme ? '' : (d.nom || ''),
-      'Prénom': d.anonyme ? '' : (d.prenom || ''),
-      'Matricule': d.anonyme ? '' : (d.mat || ''),
-      'Service': d.anonyme ? '' : (d.service || ''),
+      'Nom': d.nom || '',
+      'Prénom': d.prenom || '',
+      'Matricule': d.mat || '',
+      'Service': d.service || '',
       'Idée / suggestion': d.message
     };
   });
   var ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:16},{wch:18},{wch:11},{wch:10},{wch:14},{wch:14},{wch:12},{wch:16},{wch:60}];
+  ws['!cols'] = [{wch:16},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:16},{wch:60}];
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Boite a idees');
   var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
@@ -4255,7 +4228,7 @@ function renderTableauDoleances() {
   var rows = '';
   filtered.forEach(function(d) {
     var bc = d.statut === 'Traité' ? 'b-ok' : d.statut === 'En cours' ? 'b-att' : 'b-rej';
-    var identite = d.anonyme ? '<em style="color:#7A6F58;">Anonyme</em>' : esc(d.nom) + ' ' + esc(d.prenom);
+    var identite = esc(d.nom) + ' ' + esc(d.prenom);
     rows += '<tr>';
     rows += '<td><strong>' + esc(d.num) + '</strong></td>';
     rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
@@ -4275,15 +4248,13 @@ function voirDetailDoleance(num) {
   var d = doleances.find(function(x){ return x.num === num; });
   if (!d) return;
   var bc = d.statut === 'Traité' ? 'b-ok' : d.statut === 'En cours' ? 'b-att' : 'b-rej';
-  var identite = d.anonyme ? 'Anonyme' : (d.nom + ' ' + d.prenom);
+  var identite = d.nom + ' ' + d.prenom;
   var body = '<div class="detail-grid">';
   body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Auteur</div><div class="detail-val">' + esc(identite) + '</div></div>';
-  if (!d.anonyme) {
-    body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat || '—') + '</div></div>';
-    body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service || '—') + '</div></div>';
-  }
+  body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat || '—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service || '—') + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Objet</div><div class="detail-val">' + esc(d.objet) + '</div></div>';
   body += '</div>';
   body += '<div class="detail-item" style="margin-bottom:14px;"><div class="detail-lbl">Description</div><div class="detail-val" style="margin-top:4px;white-space:pre-wrap;">' + esc(d.description) + '</div></div>';
@@ -4327,17 +4298,16 @@ function exporterExcelDoleances() {
   var data = doleances.map(function(d){
     return {
       'N°': d.num, 'Date': d.date, 'Statut': d.statut,
-      'Anonyme': d.anonyme ? 'Oui' : 'Non',
-      'Nom': d.anonyme ? '' : (d.nom || ''),
-      'Prénom': d.anonyme ? '' : (d.prenom || ''),
-      'Matricule': d.anonyme ? '' : (d.mat || ''),
-      'Service': d.anonyme ? '' : (d.service || ''),
+      'Nom': d.nom || '',
+      'Prénom': d.prenom || '',
+      'Matricule': d.mat || '',
+      'Service': d.service || '',
       'Objet': d.objet,
       'Description': d.description
     };
   });
   var ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:16},{wch:18},{wch:11},{wch:10},{wch:14},{wch:14},{wch:12},{wch:16},{wch:26},{wch:60}];
+  ws['!cols'] = [{wch:16},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:16},{wch:26},{wch:60}];
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Doleances');
   var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
@@ -5126,12 +5096,10 @@ var I18N_AR = {
   'idees.eyebrow': 'استمارة إلكترونية',
   'idees.title': '📬 صندوق الأفكار',
   'idees.desc': 'اقترح أفكارك ومقترحاتك لتحسين سير عمل لجنة المشاركة. تُرسل مقترحاتكم مباشرة إلى اللجنة.',
-  'idees.anonyme': 'إرسال هذه الفكرة بشكل مجهول',
   'idees.message': 'فكرتك / اقتراحك',
   'doleances.eyebrow': 'استمارة إلكترونية',
   'doleances.title': '📝 سجل التظلمات',
   'doleances.desc': 'أبلغ عن شكوى أو صعوبة أو تظلم لدى لجنة المشاركة. سيتم تسجيله ومعالجته بسرية تامة.',
-  'doleances.anonyme': 'إرسال هذا التظلم بشكل مجهول',
   'doleances.objet': 'موضوع التظلم',
   'doleances.description': 'وصف تفصيلي',
   'suivi.eyebrow': 'تتبع طلبي',
