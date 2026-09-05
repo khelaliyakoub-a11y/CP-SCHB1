@@ -256,6 +256,55 @@
         return _fbDb.ref().update(updates);
       };
 
+      // ===== OMRA (inscriptions par année) =====
+      var _adminRefOmra = null;
+      var _adminValueHandlerOmra = null;
+
+      window.fbCreateOmra = function(d, suiviPublic) {
+        var updates = {};
+        updates['omra/' + d.num] = d;
+        updates['suiviOmra/' + d.trackingCode] = suiviPublic;
+        return _fbDb.ref().update(updates);
+      };
+
+      window.fbReadSuiviOmra = function(code) {
+        return _fbDb.ref('suiviOmra/' + code).once('value').then(function(snapshot) {
+          return snapshot.val();
+        });
+      };
+
+      window.fbListenAdminOmra = function(callback, errorCallback) {
+        if (_adminRefOmra && _adminValueHandlerOmra) _adminRefOmra.off('value', _adminValueHandlerOmra);
+        _adminRefOmra = _fbDb.ref('omra');
+        _adminValueHandlerOmra = function(snapshot) {
+          var data = snapshot.val();
+          callback(data ? Object.values(data) : []);
+        };
+        _adminRefOmra.on('value', _adminValueHandlerOmra, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopAdminListenOmra = function() {
+        if (_adminRefOmra && _adminValueHandlerOmra) _adminRefOmra.off('value', _adminValueHandlerOmra);
+        _adminRefOmra = null; _adminValueHandlerOmra = null;
+      };
+
+      window.fbUpdateOmra = function(num, patch, trackingCode) {
+        var updates = {};
+        Object.keys(patch).forEach(function(k){ updates['omra/' + num + '/' + k] = patch[k]; });
+        if (trackingCode) {
+          ['statut','dateValidation'].forEach(function(k){
+            if (Object.prototype.hasOwnProperty.call(patch, k)) updates['suiviOmra/' + trackingCode + '/' + k] = patch[k];
+          });
+        }
+        return _fbDb.ref().update(updates);
+      };
+
+      window.fbDeleteOmra = function(num, trackingCode) {
+        var updates = {};
+        updates['omra/' + num] = null;
+        if (trackingCode) updates['suiviOmra/' + trackingCode] = null;
+        return _fbDb.ref().update(updates);
+      };
+
       // ===== BOÎTE À IDÉES (propositions des travailleurs) =====
       var _adminRefIdees = null;
       var _adminValueHandlerIdees = null;
@@ -265,7 +314,6 @@
         updates['idees/' + d.num] = d;
         return _fbDb.ref().update(updates);
       };
-
       window.fbListenAdminIdees = function(callback, errorCallback) {
         if (_adminRefIdees && _adminValueHandlerIdees) _adminRefIdees.off('value', _adminValueHandlerIdees);
         _adminRefIdees = _fbDb.ref('idees');
@@ -279,52 +327,142 @@
         if (_adminRefIdees && _adminValueHandlerIdees) _adminRefIdees.off('value', _adminValueHandlerIdees);
         _adminRefIdees = null; _adminValueHandlerIdees = null;
       };
-
       window.fbUpdateIdee = function(num, patch) {
         var updates = {};
         Object.keys(patch).forEach(function(k){ updates['idees/' + num + '/' + k] = patch[k]; });
         return _fbDb.ref().update(updates);
       };
-
       window.fbDeleteIdee = function(num) {
         var updates = {};
         updates['idees/' + num] = null;
         return _fbDb.ref().update(updates);
       };
 
-      // ===== REGISTRE DE CONFIDENTIALITÉ (usage interne CP) =====
-      var _adminRefConfid = null;
-      var _adminValueHandlerConfid = null;
+      // ===== REGISTRE DE DOLÉANCES =====
+      var _adminRefDoleances = null;
+      var _adminValueHandlerDoleances = null;
 
-      window.fbCreateConfid = function(d) {
+      window.fbCreateDoleance = function(d) {
         var updates = {};
-        updates['confidentialite/' + d.num] = d;
+        updates['doleances/' + d.num] = d;
         return _fbDb.ref().update(updates);
       };
-
-      window.fbListenAdminConfid = function(callback, errorCallback) {
-        if (_adminRefConfid && _adminValueHandlerConfid) _adminRefConfid.off('value', _adminValueHandlerConfid);
-        _adminRefConfid = _fbDb.ref('confidentialite');
-        _adminValueHandlerConfid = function(snapshot) {
+      window.fbListenAdminDoleances = function(callback, errorCallback) {
+        if (_adminRefDoleances && _adminValueHandlerDoleances) _adminRefDoleances.off('value', _adminValueHandlerDoleances);
+        _adminRefDoleances = _fbDb.ref('doleances');
+        _adminValueHandlerDoleances = function(snapshot) {
           var data = snapshot.val();
           callback(data ? Object.values(data) : []);
         };
-        _adminRefConfid.on('value', _adminValueHandlerConfid, errorCallback || function(err){ console.error(err); });
+        _adminRefDoleances.on('value', _adminValueHandlerDoleances, errorCallback || function(err){ console.error(err); });
       };
-      window.fbStopAdminListenConfid = function() {
-        if (_adminRefConfid && _adminValueHandlerConfid) _adminRefConfid.off('value', _adminValueHandlerConfid);
-        _adminRefConfid = null; _adminValueHandlerConfid = null;
+      window.fbStopAdminListenDoleances = function() {
+        if (_adminRefDoleances && _adminValueHandlerDoleances) _adminRefDoleances.off('value', _adminValueHandlerDoleances);
+        _adminRefDoleances = null; _adminValueHandlerDoleances = null;
       };
-
-      window.fbUpdateConfid = function(num, patch) {
+      window.fbUpdateDoleance = function(num, patch) {
         var updates = {};
-        Object.keys(patch).forEach(function(k){ updates['confidentialite/' + num + '/' + k] = patch[k]; });
+        Object.keys(patch).forEach(function(k){ updates['doleances/' + num + '/' + k] = patch[k]; });
+        return _fbDb.ref().update(updates);
+      };
+      window.fbDeleteDoleance = function(num) {
+        var updates = {};
+        updates['doleances/' + num] = null;
         return _fbDb.ref().update(updates);
       };
 
-      window.fbDeleteConfid = function(num) {
+      // ===== ANNONCES DU COMITÉ DE PARTICIPATION (gérées par l'admin, affichées aux travailleurs sous forme d'images) =====
+      // Lecture publique (aucune connexion requise) afin que les travailleurs voient les annonces sur la page d'accueil.
+      // Écriture réservée à l'administrateur connecté (à restreindre côté règles Firebase, comme pour "effectifsPublic").
+      var _annoncesRef = null;
+      var _annoncesValueHandler = null;
+
+      window.fbListenAnnonces = function(callback, errorCallback) {
+        if (_annoncesRef && _annoncesValueHandler) _annoncesRef.off('value', _annoncesValueHandler);
+        _annoncesRef = _fbDb.ref('annonces');
+        _annoncesValueHandler = function(snapshot) {
+          var data = snapshot.val();
+          callback(data ? Object.values(data) : []);
+        };
+        _annoncesRef.on('value', _annoncesValueHandler, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopListenAnnonces = function() {
+        if (_annoncesRef && _annoncesValueHandler) _annoncesRef.off('value', _annoncesValueHandler);
+        _annoncesRef = null; _annoncesValueHandler = null;
+      };
+      window.fbAddAnnonce = function(d) {
         var updates = {};
-        updates['confidentialite/' + num] = null;
+        updates['annonces/' + d.id] = d;
+        return _fbDb.ref().update(updates);
+      };
+      window.fbDeleteAnnonce = function(id) {
+        var updates = {};
+        updates['annonces/' + id] = null;
+        return _fbDb.ref().update(updates);
+      };
+
+      // ===== ADMIN : CHANGEMENT DE MOT DE PASSE =====
+      // Ré-authentifie l'admin avec son mot de passe actuel avant de définir le nouveau
+      // (obligatoire côté Firebase pour cette opération sensible).
+      window.fbAdminChangePassword = function(currentPassword, newPassword) {
+        var user = _fbAuth.currentUser;
+        if (!user || !user.email) return Promise.reject(new Error('Aucun administrateur connecté.'));
+        var cred = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+        return user.reauthenticateWithCredential(cred).then(function() {
+          return user.updatePassword(newPassword);
+        });
+      };
+
+      // ===== EFFECTIFS (import Excel pour pré-remplissage automatique des formulaires) =====
+      // Deux nœuds distincts, pour des raisons de confidentialité :
+      //  - "effectifsPublic/{matricule}"  → champs non sensibles (nom, prénom, unité, direction,
+      //    département, service, poste). Lisible par tout le monde (même non connecté) afin que
+      //    le pré-remplissage fonctionne sur les formulaires publics. Écriture réservée à l'admin.
+      //  - "effectifs/{matricule}"        → fiche complète (salaire, date de naissance, diplôme…).
+      //    Lecture ET écriture réservées à l'administrateur connecté.
+      window.fbImportEffectifs = function(liste) {
+        var updatesPublic = {};
+        var updatesPrives = {};
+        liste.forEach(function(e) {
+          if (!e || !e.mat) return;
+          updatesPublic['effectifsPublic/' + e.mat] = {
+            nom: e.nom || '', prenom: e.prenom || '', unite: e.unite || '',
+            direction: e.direction || '', departement: e.departement || '',
+            service: e.service || '', poste: e.poste || ''
+          };
+          updatesPrives['effectifs/' + e.mat] = e;
+        });
+        return _fbDb.ref().update(updatesPublic).then(function() {
+          return _fbDb.ref().update(updatesPrives);
+        });
+      };
+
+      // Recherche publique (autocomplétion des formulaires) : ne renvoie que les champs non sensibles.
+      window.fbFindEffectifPublic = function(mat) {
+        if (!mat) return Promise.resolve(null);
+        return _fbDb.ref('effectifsPublic/' + mat).once('value').then(function(s) { return s.val(); });
+      };
+
+      // Listing complet — réservé à l'espace admin (pour vérifier/gérer les fiches importées).
+      var _adminRefEffectifs = null;
+      var _adminValueHandlerEffectifs = null;
+      window.fbListenAdminEffectifs = function(callback, errorCallback) {
+        if (_adminRefEffectifs && _adminValueHandlerEffectifs) _adminRefEffectifs.off('value', _adminValueHandlerEffectifs);
+        _adminRefEffectifs = _fbDb.ref('effectifs');
+        _adminValueHandlerEffectifs = function(snapshot) {
+          var data = snapshot.val();
+          callback(data ? Object.values(data) : []);
+        };
+        _adminRefEffectifs.on('value', _adminValueHandlerEffectifs, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopAdminListenEffectifs = function() {
+        if (_adminRefEffectifs && _adminValueHandlerEffectifs) _adminRefEffectifs.off('value', _adminValueHandlerEffectifs);
+        _adminRefEffectifs = null; _adminValueHandlerEffectifs = null;
+      };
+      window.fbDeleteAllEffectifs = function() {
+        var updates = {};
+        updates['effectifs'] = null;
+        updates['effectifsPublic'] = null;
         return _fbDb.ref().update(updates);
       };
 
@@ -397,6 +535,19 @@ main{max-width:1100px;margin:0 auto;padding:36px 24px 80px;}
 .act-desc{font-size:12.5px;color:#7A6F58;line-height:1.5;}
 .act-arrow{font-size:20px;color:var(--or);flex-shrink:0;transition:.2s;}
 .card-activite:hover .act-arrow{transform:translateX(4px);}
+.grid-annonces{display:grid;grid-template-columns:1fr;gap:26px;margin-bottom:28px;max-width:760px;}
+.card-annonce{background:white;border:1.5px solid var(--ligne);border-radius:16px;overflow:hidden;box-shadow:var(--ombre);transition:.2s;position:relative;}
+.card-annonce:hover{border-color:var(--or);transform:translateY(-3px);box-shadow:0 8px 26px rgba(14,58,83,.18);}
+.card-annonce img{width:100%;height:auto;max-height:820px;object-fit:contain;display:block;cursor:zoom-in;background:var(--creme);}
+.card-annonce-body{padding:16px 18px;}
+.card-annonce-title{font-weight:700;font-size:15px;color:var(--bleu);margin-bottom:4px;font-family:'Fraunces',serif;}
+.card-annonce-desc{font-size:12.5px;color:#7A6F58;line-height:1.5;margin-bottom:6px;}
+.card-annonce-date{font-size:11px;color:#A69C86;font-weight:600;}
+.btn-del-annonce{position:absolute;top:10px;right:10px;background:rgba(200,40,40,.92);color:#fff;border:none;border-radius:8px;width:32px;height:32px;font-size:15px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);z-index:2;}
+.btn-del-annonce:hover{background:var(--rouge);}
+.annonce-lightbox{position:fixed;inset:0;background:rgba(15,25,35,.88);display:none;align-items:center;justify-content:center;z-index:9999;padding:24px;cursor:zoom-out;}
+.annonce-lightbox.active{display:flex;}
+.annonce-lightbox img{max-width:92vw;max-height:88vh;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);}
 .spec-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
 .spec-icon.cl{background:#EAF1F5;}.spec-icon.ho{background:#E8F4EF;}
 .spec-icon.im{background:#FFF3E0;}.spec-icon.de{background:#FCE4EC;}.spec-icon.la{background:#F3E5F5;}
@@ -670,7 +821,10 @@ footer strong{color:var(--or-clair);}
   <button onclick="showVue('demande',this)" data-i18n="nav.demande">📋 Prise en charge médicale</button>
   <button onclick="showVue('livre',this)" data-i18n="nav.livre">📚 Livre scolaire</button>
   <button onclick="showVue('pret',this)" data-i18n="nav.pret">💰 Prêt social</button>
-  <button onclick="showVue('idees',this)" data-i18n="nav.idees">📮 Boîte à idées</button>
+  <button onclick="showVue('omra',this)" data-i18n="nav.omra">🕋 Omra</button>
+  <button onclick="showVue('idees',this)" data-i18n="nav.idees">📬 Boîte à idées</button>
+  <button onclick="showVue('doleances',this)" data-i18n="nav.doleances">📝 Registre de doléances</button>
+  <button onclick="showVue('annonces',this)" data-i18n="nav.annonces">📢 Annonces</button>
   <button onclick="showVue('suivi',this)" data-i18n="nav.suivi">🔍 Suivi</button>
   <button onclick="showVue('admin',this)" data-i18n="nav.admin">🔐 Administration</button>
 </nav>
@@ -709,11 +863,35 @@ footer strong{color:var(--or-clair);}
       </div>
       <div class="act-arrow">→</div>
     </div>
+    <div class="card-activite" onclick="goVue('omra')">
+      <div class="act-icon" style="background:#F3E5F5;">🕋</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.omra.title">Omra</div>
+        <div class="act-desc" data-i18n="accueil.card.omra.desc">Inscription au programme annuel de l'Omra.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
     <div class="card-activite" onclick="goVue('idees')">
-      <div class="act-icon" style="background:#F3E5F5;">📮</div>
+      <div class="act-icon" style="background:#E3F2FD;">📬</div>
       <div class="act-body">
         <div class="act-title" data-i18n="accueil.card.idees.title">Boîte à idées</div>
         <div class="act-desc" data-i18n="accueil.card.idees.desc">Proposez vos idées pour améliorer le Comité de Participation.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('doleances')">
+      <div class="act-icon" style="background:#FFEBEE;">📝</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.doleances.title">Registre de doléances</div>
+        <div class="act-desc" data-i18n="accueil.card.doleances.desc">Signalez une réclamation ou une doléance auprès du Comité de Participation.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('annonces')">
+      <div class="act-icon" style="background:#FFF8E1;">📢</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.annonces.title">Annonces</div>
+        <div class="act-desc" data-i18n="accueil.card.annonces.desc">Consultez les dernières annonces publiées par le Comité de Participation.</div>
       </div>
       <div class="act-arrow">→</div>
     </div>
@@ -1011,46 +1189,141 @@ footer strong{color:var(--or-clair);}
   </div>
 </div>
 
+<!-- ===== OMRA ===== -->
+<div id="vue-omra" class="vue">
+  <div class="sec-hdr">
+    <span class="eyebrow" data-i18n="omra.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="omra.title">Inscription — Omra</h2>
+    <p class="sec-desc" data-i18n="omra.desc">Inscrivez-vous au programme annuel d'Omra organisé par le Comité de Participation de la SCHB. Les inscriptions sont classées par année et clôturées automatiquement à la fin de chaque campagne.</p>
+  </div>
+
+  <div class="panneau">
+    <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="omra.h.adherent">👤 Informations de l'adhérent</h3>
+    <div class="cols2">
+      <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="fo-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+      <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="fo-prenom" type="text" placeholder="Prénom"></div>
+    </div>
+    <div class="cols2">
+      <div class="grp"><label data-i18n="f.matricule">Matricule <span class="req">*</span></label><input id="fo-matricule" type="text" placeholder="N° matricule"></div>
+      <div class="grp"><label data-i18n="f.tel">Téléphone <span class="req">*</span></label><input id="fo-tel" type="tel" placeholder="05/06/07 xx xx xx xx"></div>
+    </div>
+    <div class="cols2">
+      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="fo-service" type="text" placeholder="Ex: Direction Commerciale..."></div>
+      <div class="grp"><label data-i18n="omra.annee">Année d'inscription Omra <span class="req">*</span></label>
+        <select id="fo-annee"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="panneau">
+    <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="omra.h.pelerin">🕋 Informations du pèlerin</h3>
+    <p style="font-size:13px;color:#5C5142;margin-bottom:14px;" data-i18n="omra.h.pelerin.desc">Si le pèlerin est l'adhérent lui-même, reprenez les mêmes informations ci-dessous.</p>
+    <div class="cols2">
+      <div class="grp"><label data-i18n="omra.pelerin.nom">Nom du pèlerin <span class="req">*</span></label><input id="fo-pnom" type="text" placeholder="NOM DE FAMILLE"></div>
+      <div class="grp"><label data-i18n="omra.pelerin.prenom">Prénom du pèlerin <span class="req">*</span></label><input id="fo-pprenom" type="text" placeholder="Prénom"></div>
+    </div>
+    <div class="cols2">
+      <div class="grp"><label data-i18n="omra.naissance">Date de naissance <span class="req">*</span></label><input id="fo-naissance" type="date"></div>
+      <div class="grp"><label data-i18n="omra.passeport">N° passeport / CIN <span class="req">*</span></label><input id="fo-passeport" type="text" placeholder="Ex : 123456789"></div>
+    </div>
+    <div class="grp"><label data-i18n="omra.adresse">Adresse</label><input id="fo-adresse" type="text" placeholder="Adresse complète"></div>
+  </div>
+
+  <div class="bar-actions">
+    <button class="btn btn-primary" onclick="soumettreOmra()" data-i18n="btn.soumettre.omra">✅ Soumettre l'inscription</button>
+    <button class="btn btn-outline" onclick="resetFormOmra()" data-i18n="btn.reset">🔄 Réinitialiser</button>
+  </div>
+  <div class="msg" id="msg-omra"></div>
+
+  <div class="ticket" id="ticket-confirm-omra">
+    <div class="ticket-hdr">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7A6F58;margin-bottom:4px;" data-i18n="ticket.omra.saved">Inscription enregistrée</div>
+        <div class="ticket-num" id="tko-num">OM-0001</div>
+      </div>
+      <div class="badge-att" data-i18n="ticket.enattente">En attente de validation</div>
+    </div>
+    <div class="ticket-rows">
+      <div class="trow"><div class="trow-lbl" data-i18n="ticket.adherent">Adhérent</div><div class="trow-val" id="tko-adh"></div></div>
+      <div class="trow"><div class="trow-lbl" data-i18n="omra.pelerin">Pèlerin</div><div class="trow-val" id="tko-pelerin"></div></div>
+      <div class="trow"><div class="trow-lbl" data-i18n="omra.annee.short">Année</div><div class="trow-val" id="tko-annee"></div></div>
+      <div class="trow"><div class="trow-lbl" data-i18n="ticket.date">Date</div><div class="trow-val" id="tko-date"></div></div>
+      <div class="trow" style="grid-column:1/-1;border:1.5px solid var(--or);"><div class="trow-lbl" data-i18n="ticket.code">Code de suivi confidentiel</div><div class="trow-val" id="tko-code" style="font-family:monospace;font-size:16px;letter-spacing:.04em;color:var(--bleu);"></div></div>
+    </div>
+    <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;" data-i18n="ticket.conserverCode">
+      🔐 <strong>Conservez votre code de suivi confidentiel.</strong> Il permet de consulter l'état de votre inscription depuis l'onglet Suivi.
+    </div>
+  </div>
+</div>
+
 <!-- ===== BOÎTE À IDÉES ===== -->
 <div id="vue-idees" class="vue">
   <div class="sec-hdr">
     <span class="eyebrow" data-i18n="idees.eyebrow">Formulaire en ligne</span>
-    <h2 class="sec-title" data-i18n="idees.title">📮 Boîte à idées</h2>
-    <p class="sec-desc" data-i18n="idees.desc">Proposez vos idées, remarques ou suggestions pour améliorer le fonctionnement du Comité de Participation de la SCHB.</p>
+    <h2 class="sec-title" data-i18n="idees.title">📬 Boîte à idées</h2>
+    <p class="sec-desc" data-i18n="idees.desc">Proposez vos idées et suggestions pour améliorer le fonctionnement du Comité de Participation. Vos propositions sont transmises directement au Comité.</p>
   </div>
-
   <div class="panneau">
-    <div class="cols2" id="fi-identite-wrap">
-      <div class="grp"><label data-i18n="f.nom">Nom</label><input id="fi-nom" type="text" placeholder="NOM DE FAMILLE"></div>
-      <div class="grp"><label data-i18n="f.prenom">Prénom</label><input id="fi-prenom" type="text" placeholder="Prénom"></div>
+    <div class="grp" style="display:flex;align-items:center;gap:8px;flex-direction:row;">
+      <input id="fi-anonyme" type="checkbox" style="width:auto;" onchange="toggleAnonymeIdee()">
+      <label for="fi-anonyme" style="margin:0;" data-i18n="idees.anonyme">Soumettre cette idée de façon anonyme</label>
     </div>
-    <div class="cols2" id="fi-identite-wrap2">
-      <div class="grp"><label data-i18n="f.matricule">Matricule</label><input id="fi-matricule" type="text" placeholder="N° matricule"></div>
-      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="fi-service" type="text" placeholder="Ex: Direction Commerciale..."></div>
+    <div id="fi-identite-wrap" class="cols2">
+      <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="fi-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+      <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="fi-prenom" type="text" placeholder="Prénom"></div>
     </div>
-    <div class="grp"><label data-i18n="idees.sujet">Sujet de la proposition <span class="req">*</span></label><input id="fi-sujet" type="text" placeholder="Ex : Activités sportives, transport, cantine..."></div>
-    <div class="grp"><label data-i18n="idees.texte">Votre proposition / remarque <span class="req">*</span></label>
-      <textarea id="fi-texte" rows="6" placeholder="Décrivez votre idée ou votre remarque en détail..." style="width:100%;padding:12px 14px;border:1.5px solid #DDD3BE;border-radius:8px;font-family:inherit;font-size:14px;resize:vertical;"></textarea>
+    <div id="fi-identite-wrap2" class="cols2">
+      <div class="grp"><label data-i18n="f.matricule">Matricule</label><input id="fi-matricule" type="text" placeholder="Ex : 12345"></div>
+      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="fi-service" type="text" placeholder="Ex : Production"></div>
     </div>
+    <div class="grp"><label data-i18n="idees.message">Votre idée / suggestion <span class="req">*</span></label><textarea id="fi-message" rows="6" placeholder="Décrivez votre idée ou suggestion pour améliorer le Comité de Participation…"></textarea></div>
   </div>
-
   <div class="bar-actions">
-    <button class="btn btn-primary" onclick="soumettreIdee()" data-i18n="btn.soumettre.idees">✅ Envoyer ma proposition</button>
+    <button class="btn btn-primary" onclick="soumettreIdee()" data-i18n="btn.soumettre.idee">✅ Envoyer ma proposition</button>
     <button class="btn btn-outline" onclick="resetFormIdee()" data-i18n="btn.reset">🔄 Réinitialiser</button>
   </div>
   <div class="msg" id="msg-idees"></div>
+</div>
 
-  <div class="ticket" id="ticket-confirm-idees">
-    <div class="ticket-hdr">
-      <div>
-        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7A6F58;margin-bottom:4px;" data-i18n="ticket.idees.saved">Proposition envoyée</div>
-        <div class="ticket-num" id="tki-num">IDEE-0001</div>
-      </div>
-    </div>
-    <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;" data-i18n="idees.merci">
-      🙏 <strong>Merci pour votre contribution.</strong> Le Comité de Participation examinera votre proposition avec attention.
-    </div>
+<!-- ===== REGISTRE DE DOLÉANCES ===== -->
+<div id="vue-doleances" class="vue">
+  <div class="sec-hdr">
+    <span class="eyebrow" data-i18n="doleances.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="doleances.title">📝 Registre de doléances</h2>
+    <p class="sec-desc" data-i18n="doleances.desc">Signalez une réclamation, une difficulté ou une doléance auprès du Comité de Participation. Elle sera enregistrée et traitée en toute confidentialité.</p>
   </div>
+  <div class="panneau">
+    <div class="grp" style="display:flex;align-items:center;gap:8px;flex-direction:row;">
+      <input id="fd-anonyme" type="checkbox" style="width:auto;" onchange="toggleAnonymeDoleance()">
+      <label for="fd-anonyme" style="margin:0;" data-i18n="doleances.anonyme">Soumettre cette doléance de façon anonyme</label>
+    </div>
+    <div id="fd-identite-wrap" class="cols2">
+      <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="fd-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+      <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="fd-prenom" type="text" placeholder="Prénom"></div>
+    </div>
+    <div id="fd-identite-wrap2" class="cols2">
+      <div class="grp"><label data-i18n="f.matricule">Matricule</label><input id="fd-matricule" type="text" placeholder="Ex : 12345"></div>
+      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="fd-service" type="text" placeholder="Ex : Production"></div>
+    </div>
+    <div class="grp"><label data-i18n="doleances.objet">Objet de la doléance <span class="req">*</span></label><input id="fd-objet" type="text" placeholder="Ex : Conditions de transport"></div>
+    <div class="grp"><label data-i18n="doleances.description">Description détaillée <span class="req">*</span></label><textarea id="fd-description" rows="6" placeholder="Décrivez votre réclamation ou doléance en détail…"></textarea></div>
+  </div>
+  <div class="bar-actions">
+    <button class="btn btn-primary" onclick="soumettreDoleance()" data-i18n="btn.soumettre.doleance">✅ Envoyer ma doléance</button>
+    <button class="btn btn-outline" onclick="resetFormDoleance()" data-i18n="btn.reset">🔄 Réinitialiser</button>
+  </div>
+  <div class="msg" id="msg-doleances"></div>
+</div>
+
+<!-- ===== ANNONCES ===== -->
+<div id="vue-annonces" class="vue">
+  <div class="sec-hdr">
+    <span class="eyebrow" data-i18n="annonces.eyebrow">Comité de Participation</span>
+    <h2 class="sec-title" data-i18n="annonces.title">📢 Annonces</h2>
+    <p class="sec-desc" data-i18n="annonces.desc">Retrouvez ici les annonces publiées par le Comité de Participation à l'attention des travailleurs.</p>
+  </div>
+  <div id="annonces-grid" class="grid-annonces"></div>
+  <div id="annonces-empty" style="display:none;text-align:center;color:#7A6F58;padding:40px 10px;" data-i18n="annonces.vide">Aucune annonce publiée pour le moment.</div>
 </div>
 
 <!-- ===== SUIVI ===== -->
@@ -1090,7 +1363,22 @@ footer strong{color:var(--or-clair);}
         <h2 class="sec-title" style="margin-bottom:0;">Tableau de bord</h2>
         <div id="admin-user-email" style="font-size:12px;color:#7A6F58;margin-top:3px;"></div>
       </div>
-      <button class="btn btn-outline" onclick="logoutAdmin()" style="color:var(--rouge);border-color:var(--rouge);" data-i18n="admin.logout">🔓 Déconnexion</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-outline" onclick="toggleChangePasswordPanel()" data-i18n="admin.changepwd.btn">🔑 Changer le mot de passe</button>
+        <button class="btn btn-outline" onclick="logoutAdmin()" style="color:var(--rouge);border-color:var(--rouge);" data-i18n="admin.logout">🔓 Déconnexion</button>
+      </div>
+    </div>
+
+    <div id="admin-changepwd-panel" class="panneau" style="display:none;max-width:460px;margin-bottom:18px;">
+      <h3 class="serif" style="color:var(--bleu);margin-bottom:14px;font-size:16px;" data-i18n="admin.changepwd.title">🔑 Changer le mot de passe administrateur</h3>
+      <div class="grp"><label data-i18n="admin.changepwd.current">Mot de passe actuel</label><input id="pwd-current" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+      <div class="grp"><label data-i18n="admin.changepwd.new">Nouveau mot de passe</label><input id="pwd-new" type="password" autocomplete="new-password" placeholder="8 caractères minimum"></div>
+      <div class="grp"><label data-i18n="admin.changepwd.confirm">Confirmer le nouveau mot de passe</label><input id="pwd-confirm" type="password" autocomplete="new-password" placeholder="••••••••"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="changerMotDePasseAdmin()" data-i18n="admin.changepwd.submit">✅ Mettre à jour le mot de passe</button>
+        <button class="btn btn-outline" onclick="toggleChangePasswordPanel()" data-i18n="btn.reset">Annuler</button>
+      </div>
+      <div class="msg" id="msg-changepwd"></div>
     </div>
     <div class="admin-stats" id="admin-stats"></div>
 
@@ -1098,10 +1386,13 @@ footer strong{color:var(--or-clair);}
       <button class="btn-admin-tab actif" id="tab-btn-demandes" onclick="showAdminTab('demandes')" data-i18n="admtab.demandes">📋 Demandes</button>
       <button class="btn-admin-tab" id="tab-btn-livres" onclick="showAdminTab('livres')" data-i18n="admtab.livres">📚 Livres scolaires</button>
       <button class="btn-admin-tab" id="tab-btn-prets" onclick="showAdminTab('prets')" data-i18n="admtab.prets">💰 Prêts sociaux</button>
-      <button class="btn-admin-tab" id="tab-btn-idees" onclick="showAdminTab('idees')" data-i18n="admtab.idees">📮 Boîte à idées</button>
-      <button class="btn-admin-tab" id="tab-btn-confid" onclick="showAdminTab('confid')" data-i18n="admtab.confid">🔒 Registre de confidentialité</button>
+      <button class="btn-admin-tab" id="tab-btn-omra" onclick="showAdminTab('omra')" data-i18n="admtab.omra">🕋 Omra</button>
+      <button class="btn-admin-tab" id="tab-btn-idees" onclick="showAdminTab('idees')" data-i18n="admtab.idees">📬 Boîte à idées</button>
+      <button class="btn-admin-tab" id="tab-btn-doleances" onclick="showAdminTab('doleances')" data-i18n="admtab.doleances">📝 Doléances</button>
+      <button class="btn-admin-tab" id="tab-btn-annonces" onclick="showAdminTab('annonces')" data-i18n="admtab.annonces">📢 Annonces</button>
       <button class="btn-admin-tab" id="tab-btn-stats" onclick="showAdminTab('stats')" data-i18n="admtab.stats">📊 Statistiques par établissement</button>
       <button class="btn-admin-tab" id="tab-btn-rapport" onclick="showAdminTab('rapport')" data-i18n="admtab.rapport">📈 Rapport global</button>
+      <button class="btn-admin-tab" id="tab-btn-effectifs" onclick="showAdminTab('effectifs')" data-i18n="admtab.effectifs">🧑‍💼 Effectifs</button>
     </div>
 
     <div id="admin-tab-demandes">
@@ -1174,56 +1465,108 @@ footer strong{color:var(--or-clair);}
       </div>
     </div>
 
+    <div id="admin-tab-omra" style="display:none;">
+      <div class="admin-stats" id="omra-stats"></div>
+      <div class="panneau" style="margin-bottom:16px;">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:16px;">🎲 Tirage au sort — places limitées</h3>
+        <p style="font-size:13px;color:#5C5142;margin-bottom:14px;">Le tirage sélectionne aléatoirement les places parmi les inscriptions <strong>Validées</strong> de l'année choisie qui n'ont pas encore de résultat.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;">
+          <div class="grp" style="margin-bottom:0;"><label>Année de la campagne</label><select id="tirage-annee" style="min-width:140px;"></select></div>
+          <div class="grp" style="margin-bottom:0;"><label>Nombre de places</label><input id="tirage-places" type="number" min="1" value="10" style="width:110px;"></div>
+          <button class="btn btn-primary" onclick="lancerTirage()">🎲 Lancer le tirage au sort</button>
+          <button class="btn-cloture" onclick="reinitialiserTirage()">↺ Réinitialiser le tirage de cette année</button>
+        </div>
+        <div id="tirage-resultat" style="margin-top:14px;"></div>
+      </div>
+      <div class="panneau">
+        <div class="filter-bar">
+          <input id="filter-search-omra" type="text" placeholder="🔍 Rechercher nom, matricule, pèlerin…" oninput="renderTableauOmra()" style="flex:1;min-width:200px;">
+          <select id="filter-annee-omra" onchange="renderTableauOmra()"></select>
+          <select id="filter-status-omra" onchange="renderTableauOmra()">
+            <option value="" data-i18n="filter.tous">Tous les statuts</option>
+            <option value="En attente" data-i18n="statut.enattente">En attente</option>
+            <option value="Validé" data-i18n="statut.valide">Validé</option>
+            <option value="Refusé" data-i18n="statut.refuse">Refusé</option>
+            <option value="Clôturé" data-i18n="statut.cloture">Clôturé</option>
+          </select>
+          <button class="btn-excel" onclick="exporterExcelOmra()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
+          <button class="btn-pdf-sm" style="padding:9px 16px;" onclick="genererPDFOmraLot()">🖨 Imprimer les bons (sélection filtrée)</button>
+        </div>
+        <div class="tableau-wrap">
+          <table class="tab">
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th data-i18n="omra.pelerin">Pèlerin</th><th data-i18n="omra.annee.short">Année</th><th data-i18n="th.statut">Statut</th><th>Tirage</th><th data-i18n="th.actions">Actions</th></tr></thead>
+            <tbody id="tbody-omra"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div id="admin-tab-idees" style="display:none;">
       <div class="admin-stats" id="idees-stats"></div>
       <div class="panneau">
         <div class="filter-bar">
-          <input id="filter-search-idees" type="text" placeholder="🔍 Rechercher nom, matricule, sujet…" oninput="renderTableauIdees()" style="flex:1;min-width:200px;">
+          <input id="filter-search-idees" type="text" placeholder="🔍 Rechercher nom, matricule, service…" oninput="renderTableauIdees()" style="flex:1;min-width:200px;">
           <select id="filter-status-idees" onchange="renderTableauIdees()">
             <option value="" data-i18n="filter.tous">Tous les statuts</option>
             <option value="Nouveau" data-i18n="statut.nouveau">Nouveau</option>
             <option value="Lu" data-i18n="statut.lu">Lu</option>
-            <option value="Traité" data-i18n="statut.traite">Traité</option>
           </select>
           <button class="btn-excel" onclick="exporterExcelIdees()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
         </div>
         <div class="tableau-wrap">
           <table class="tab">
-            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.auteur">Auteur</th><th data-i18n="idees.sujet">Sujet</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="f.service">Service</th><th data-i18n="idees.message">Idée</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
             <tbody id="tbody-idees"></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <div id="admin-tab-confid" style="display:none;">
-      <div class="panneau" style="margin-bottom:16px;">
-        <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:16px;" data-i18n="confid.h1">🔒 Nouvelle entrée au registre</h3>
-        <p style="font-size:13px;color:#5C5142;margin-bottom:14px;" data-i18n="confid.desc">Consignez ici toute consultation ou communication d'une information confidentielle (dossiers médicaux, sociaux, familiaux…) traitée par un membre du Comité de Participation.</p>
-        <div class="cols2">
-          <div class="grp"><label data-i18n="confid.membre">Membre du CP <span class="req">*</span></label><input id="fc-membre" type="text" placeholder="Nom du membre du CP"></div>
-          <div class="grp"><label data-i18n="confid.dossier">Dossier / sujet concerné <span class="req">*</span></label><input id="fc-dossier" type="text" placeholder="Ex : Prise en charge médicale n° ..."></div>
-        </div>
-        <div class="cols2">
-          <div class="grp"><label data-i18n="confid.nature">Nature de l'information</label><input id="fc-nature" type="text" placeholder="Ex : Données médicales, familiales..."></div>
-          <div class="grp"><label data-i18n="confid.engagement">Engagement de confidentialité signé</label>
-            <select id="fc-engagement"><option value="Oui">Oui</option><option value="Non">Non</option></select>
-          </div>
-        </div>
-        <div class="grp"><label data-i18n="confid.observations">Observations</label><input id="fc-observations" type="text" placeholder="Remarques éventuelles"></div>
-        <button class="btn btn-primary" onclick="ajouterConfid()" data-i18n="confid.ajouter">➕ Ajouter au registre</button>
-      </div>
+    <div id="admin-tab-doleances" style="display:none;">
+      <div class="admin-stats" id="doleances-stats"></div>
       <div class="panneau">
         <div class="filter-bar">
-          <input id="filter-search-confid" type="text" placeholder="🔍 Rechercher membre, dossier…" oninput="renderTableauConfid()" style="flex:1;min-width:200px;">
-          <button class="btn-excel" onclick="exporterExcelConfid()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
+          <input id="filter-search-doleances" type="text" placeholder="🔍 Rechercher nom, matricule, service, objet…" oninput="renderTableauDoleances()" style="flex:1;min-width:200px;">
+          <select id="filter-status-doleances" onchange="renderTableauDoleances()">
+            <option value="" data-i18n="filter.tous">Tous les statuts</option>
+            <option value="Nouveau" data-i18n="statut.nouveau">Nouveau</option>
+            <option value="En cours" data-i18n="statut.encours">En cours</option>
+            <option value="Traité" data-i18n="statut.traite">Traité</option>
+          </select>
+          <button class="btn-excel" onclick="exporterExcelDoleances()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
         </div>
         <div class="tableau-wrap">
           <table class="tab">
-            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="confid.membre">Membre CP</th><th data-i18n="confid.dossier">Dossier</th><th data-i18n="confid.nature">Nature</th><th data-i18n="confid.engagement">Engagement</th><th data-i18n="confid.observations">Observations</th><th data-i18n="th.actions">Actions</th></tr></thead>
-            <tbody id="tbody-confid"></tbody>
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="f.service">Service</th><th data-i18n="doleances.objet">Objet</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
+            <tbody id="tbody-doleances"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <div id="admin-tab-annonces" style="display:none;">
+      <div class="panneau">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:17px;" data-i18n="annonces.admin.form.title">📢 Publier une nouvelle annonce</h3>
+        <div class="grp"><label data-i18n="annonces.form.titre">Titre de l'annonce <span class="req">*</span></label><input id="an-titre" type="text" placeholder="Ex : Programme Omra 2027"></div>
+        <div class="grp"><label data-i18n="annonces.form.description">Description (facultatif)</label><textarea id="an-description" rows="3" placeholder="Précisions complémentaires…"></textarea></div>
+        <div class="upload-zone" id="an-upload-zone" onclick="document.getElementById('an-image').click()">
+          <input type="file" id="an-image" accept="image/*" style="display:none" onchange="previewFileAnnonce(this)">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-label" data-i18n="annonces.form.image">Cliquez pour joindre l'image de l'annonce</div>
+          <div class="upload-hint" data-i18n="annonces.form.imageHint">JPG · PNG — 3 Mo max</div>
+          <img id="an-preview" class="preview-img">
+        </div>
+        <div id="an-image-name" style="margin-top:10px;font-size:13px;color:var(--vert);font-weight:600;display:none;"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+          <button class="btn btn-primary" onclick="publierAnnonce()" data-i18n="btn.publier.annonce">✅ Publier l'annonce</button>
+          <button class="btn btn-outline" onclick="resetFormAnnonce()" data-i18n="btn.reset">🔄 Réinitialiser</button>
+        </div>
+        <div class="msg" id="msg-annonces"></div>
+      </div>
+      <div class="panneau">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:14px;font-size:16px;" data-i18n="annonces.admin.list.title">📋 Annonces publiées</h3>
+        <div id="admin-annonces-grid" class="grid-annonces"></div>
+        <div id="admin-annonces-empty" style="display:none;text-align:center;color:#7A6F58;padding:20px;" data-i18n="annonces.vide">Aucune annonce publiée pour le moment.</div>
       </div>
     </div>
 
@@ -1237,7 +1580,7 @@ footer strong{color:var(--or-clair);}
           <button class="btn-cloture" onclick="cloturerAnneesPassees(true)" data-i18n="btn.cloturerMaintenant">🔒 Clôturer manuellement l'année écoulée</button>
         </div>
         <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:12.5px;color:#5C5142;margin-top:16px;line-height:1.6;" data-i18n="rapport.note">
-          ℹ️ La clôture automatique archive et bloque, au changement d'année civile, toutes les demandes encore « En attente » de l'année précédente (Prise en charge, Livre scolaire, Prêt social). Les dossiers déjà validés ou refusés restent consultables normalement.
+          ℹ️ La clôture automatique archive et bloque, au changement d'année civile, toutes les demandes encore « En attente » de l'année précédente (Prise en charge, Livre scolaire, Prêt social, Omra). Les dossiers déjà validés ou refusés restent consultables normalement.
         </div>
       </div>
     </div>
@@ -1269,7 +1612,38 @@ footer strong{color:var(--or-clair);}
         </div>
       </div>
     </div>
+
+    <div id="admin-tab-effectifs" style="display:none;">
+      <div class="panneau">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:18px;">🧑‍💼 État des effectifs (import Excel)</h3>
+        <p style="font-size:13.5px;color:#5C5142;margin-bottom:16px;line-height:1.6;">
+          Importez le fichier Excel « État des effectifs » (colonnes : Matricule, Unité, Nom, Prénom, Direction, Département, Service, Poste, etc.).
+          Une fois importé, le <b>matricule</b> saisi par un travailleur dans n'importe quel formulaire (prise en charge, livre scolaire, prêt social, Omra, idée, doléance)
+          remplira automatiquement son nom, prénom et service — ce qui évite les erreurs de saisie.
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+          <input type="file" id="effectifs-file" accept=".xlsx,.xls" style="max-width:320px;">
+          <button class="btn btn-primary" onclick="importerEffectifsExcel()">📥 Importer dans Firebase</button>
+          <button class="btn btn-outline" onclick="if(confirm('Supprimer toute la base des effectifs ?')) supprimerTousLesEffectifs();">🗑️ Vider la base des effectifs</button>
+        </div>
+        <div class="msg" id="msg-effectifs"></div>
+        <div style="font-size:13px;color:#5C5142;margin:10px 0;"><b id="effectifs-total">0</b> fiche(s) actuellement enregistrée(s) dans Firebase.</div>
+        <div class="filter-bar">
+          <input id="filter-search-effectifs" type="text" placeholder="🔍 Rechercher nom, matricule, service…" oninput="renderTableauEffectifs()" style="flex:1;min-width:200px;">
+        </div>
+        <div class="tableau-wrap">
+          <table class="tab">
+            <thead><tr><th>Matricule</th><th>Nom</th><th>Prénom</th><th>Unité</th><th>Direction</th><th>Département</th><th>Service</th><th>Poste</th></tr></thead>
+            <tbody id="tbody-effectifs"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
+</div>
+
+<div class="annonce-lightbox" id="annonce-lightbox" onclick="fermerLightboxAnnonce()">
+  <img id="annonce-lightbox-img" src="" alt="">
 </div>
 
 </main>
@@ -1390,6 +1764,45 @@ function mergePrets(fbArr) {
   return Object.values(map);
 }
 
+// ===== OMRA (local) =====
+function loadOmraLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_omra') || '[]'); } catch(e) { return []; }
+}
+function saveOmraLocal(arr) {
+  try { localStorage.setItem('schb_omra', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (omra):', e); }
+}
+function persistOmraLocal(d) {
+  var arr = loadOmraLocal();
+  var idx = arr.findIndex(function(x){ return x.num === d.num; });
+  if (idx >= 0) arr[idx] = d; else arr.push(d);
+  saveOmraLocal(arr);
+}
+function retirerOmraLocal(num) {
+  var arr = loadOmraLocal().filter(function(x){ return x.num !== num; });
+  saveOmraLocal(arr);
+}
+// Suivi des suppressions Omra : si la suppression Firebase échoue (ex. règles
+// manquantes pour le chemin 'omra'), on empêche quand même l'inscription supprimée
+// de réapparaître via la fusion avec les données Firebase.
+function loadOmraSupprimesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_omra_supprimes') || '[]'); } catch(e) { return []; }
+}
+function saveOmraSupprimesLocal(arr) {
+  try { localStorage.setItem('schb_omra_supprimes', JSON.stringify(arr)); } catch(e) {}
+}
+function marquerOmraSupprime(num) {
+  var arr = loadOmraSupprimesLocal();
+  if (arr.indexOf(num) === -1) { arr.push(num); saveOmraSupprimesLocal(arr); }
+}
+
+function mergeOmra(fbArr) {
+  var map = {};
+  loadOmraLocal().forEach(function(d){ map[d.num] = d; });
+  (fbArr||[]).forEach(function(d){ map[d.num] = d; });
+  loadOmraSupprimesLocal().forEach(function(num){ delete map[num]; });
+  return Object.values(map);
+}
+
 // ===== BOÎTE À IDÉES (local) =====
 function loadIdeesLocal() {
   try { return JSON.parse(localStorage.getItem('schb_idees') || '[]'); } catch(e) { return []; }
@@ -1407,34 +1820,89 @@ function retirerIdeeLocal(num) {
   var arr = loadIdeesLocal().filter(function(x){ return x.num !== num; });
   saveIdeesLocal(arr);
 }
+function loadIdeesSupprimesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_idees_supprimes') || '[]'); } catch(e) { return []; }
+}
+function saveIdeesSupprimesLocal(arr) {
+  try { localStorage.setItem('schb_idees_supprimes', JSON.stringify(arr)); } catch(e) {}
+}
+function marquerIdeeSupprimee(num) {
+  var arr = loadIdeesSupprimesLocal();
+  if (arr.indexOf(num) === -1) { arr.push(num); saveIdeesSupprimesLocal(arr); }
+}
 function mergeIdees(fbArr) {
   var map = {};
   loadIdeesLocal().forEach(function(d){ map[d.num] = d; });
   (fbArr||[]).forEach(function(d){ map[d.num] = d; });
+  loadIdeesSupprimesLocal().forEach(function(num){ delete map[num]; });
   return Object.values(map);
 }
 
-// ===== REGISTRE DE CONFIDENTIALITÉ (local) =====
-function loadConfidLocal() {
-  try { return JSON.parse(localStorage.getItem('schb_confid') || '[]'); } catch(e) { return []; }
+// ===== REGISTRE DE DOLÉANCES (local) =====
+function loadDoleancesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_doleances') || '[]'); } catch(e) { return []; }
 }
-function saveConfidLocal(arr) {
-  try { localStorage.setItem('schb_confid', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (confidentialité):', e); }
+function saveDoleancesLocal(arr) {
+  try { localStorage.setItem('schb_doleances', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (doléances):', e); }
 }
-function persistConfidLocal(d) {
-  var arr = loadConfidLocal();
+function persistDoleanceLocal(d) {
+  var arr = loadDoleancesLocal();
   var idx = arr.findIndex(function(x){ return x.num === d.num; });
   if (idx >= 0) arr[idx] = d; else arr.push(d);
-  saveConfidLocal(arr);
+  saveDoleancesLocal(arr);
 }
-function retirerConfidLocal(num) {
-  var arr = loadConfidLocal().filter(function(x){ return x.num !== num; });
-  saveConfidLocal(arr);
+function retirerDoleanceLocal(num) {
+  var arr = loadDoleancesLocal().filter(function(x){ return x.num !== num; });
+  saveDoleancesLocal(arr);
 }
-function mergeConfid(fbArr) {
+function loadDoleancesSupprimesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_doleances_supprimes') || '[]'); } catch(e) { return []; }
+}
+function saveDoleancesSupprimesLocal(arr) {
+  try { localStorage.setItem('schb_doleances_supprimes', JSON.stringify(arr)); } catch(e) {}
+}
+function marquerDoleanceSupprimee(num) {
+  var arr = loadDoleancesSupprimesLocal();
+  if (arr.indexOf(num) === -1) { arr.push(num); saveDoleancesSupprimesLocal(arr); }
+}
+function mergeDoleances(fbArr) {
   var map = {};
-  loadConfidLocal().forEach(function(d){ map[d.num] = d; });
+  loadDoleancesLocal().forEach(function(d){ map[d.num] = d; });
   (fbArr||[]).forEach(function(d){ map[d.num] = d; });
+  loadDoleancesSupprimesLocal().forEach(function(num){ delete map[num]; });
+  return Object.values(map);
+}
+
+// ===== ANNONCES DU COMITÉ DE PARTICIPATION (local) =====
+function loadAnnoncesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_annonces') || '[]'); } catch(e) { return []; }
+}
+function saveAnnoncesLocal(arr) {
+  try { localStorage.setItem('schb_annonces', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (annonces):', e); }
+}
+function persistAnnonceLocal(d) {
+  var arr = loadAnnoncesLocal();
+  var idx = arr.findIndex(function(x){ return x.id === d.id; });
+  if (idx >= 0) arr[idx] = d; else arr.push(d);
+  saveAnnoncesLocal(arr);
+}
+function loadAnnoncesSupprimesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_annonces_supprimes') || '[]'); } catch(e) { return []; }
+}
+function saveAnnoncesSupprimesLocal(arr) {
+  try { localStorage.setItem('schb_annonces_supprimes', JSON.stringify(arr)); } catch(e) {}
+}
+function retirerAnnonceLocal(id) {
+  var arr = loadAnnoncesLocal().filter(function(x){ return x.id !== id; });
+  saveAnnoncesLocal(arr);
+  var sup = loadAnnoncesSupprimesLocal();
+  if (sup.indexOf(id) === -1) { sup.push(id); saveAnnoncesSupprimesLocal(sup); }
+}
+function mergeAnnonces(fbArr) {
+  var map = {};
+  loadAnnoncesLocal().forEach(function(d){ map[d.id] = d; });
+  (fbArr||[]).forEach(function(d){ map[d.id] = d; });
+  loadAnnoncesSupprimesLocal().forEach(function(id){ delete map[id]; });
   return Object.values(map);
 }
 
@@ -1468,8 +1936,13 @@ var livres = loadLivresLocal();
 var suiviCacheLivre = {};
 var prets = loadPretsLocal();
 var suiviCachePret = {};
+var omra = loadOmraLocal();
+var suiviCacheOmra = {};
 var idees = loadIdeesLocal();
-var confid = loadConfidLocal();
+var doleances = loadDoleancesLocal();
+var effectifs = []; // fiches importées depuis le fichier Excel "État des effectifs" (voir onglet admin dédié)
+var annonces = loadAnnoncesLocal();
+var annonceBase64 = null;
 var adminAuthReady = false;
 
 function esc(v) {
@@ -1938,27 +2411,126 @@ function resetFormLivre() {
 // Un premier enfant est pré-affiché à l'ouverture du formulaire
 ajouterEnfantRow();
 
+// ===== OMRA =====
+function newOmraNumber(now) {
+  var y = String(now.getFullYear()).slice(-2);
+  var m = String(now.getMonth()+1).padStart(2,'0');
+  var d = String(now.getDate()).padStart(2,'0');
+  return 'OM-' + y + m + d + '-' + randomSecret(6);
+}
+function newTrackingCodeOmra() { return 'SCHB-OM-' + randomSecret(20); }
+
+function makeSuiviPublicOmra(d) {
+  return {
+    code: d.trackingCode, num: d.num, statut: d.statut, date: d.date, dateObj: d.dateObj, annee: d.annee,
+    nom: d.nom, prenom: d.prenom, mat: d.mat, tel: d.tel, service: d.service || '',
+    pnom: d.pnom, pprenom: d.pprenom, dateValidation: d.dateValidation || ''
+  };
+}
+
+function remplirAnneesOmraForm() {
+  var el = document.getElementById('fo-annee');
+  if (!el) return;
+  var cy = new Date().getFullYear();
+  var opts = [cy, cy+1];
+  el.innerHTML = opts.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
+}
+remplirAnneesOmraForm();
+
+async function soumettreOmra() {
+  var nom = document.getElementById('fo-nom').value.trim().toUpperCase();
+  var prenom = document.getElementById('fo-prenom').value.trim();
+  var mat = document.getElementById('fo-matricule').value.trim();
+  var tel = document.getElementById('fo-tel').value.trim();
+  var service = document.getElementById('fo-service').value.trim();
+  var anneeInscription = Number(document.getElementById('fo-annee').value);
+  var pnom = document.getElementById('fo-pnom').value.trim().toUpperCase();
+  var pprenom = document.getElementById('fo-pprenom').value.trim();
+  var naissance = document.getElementById('fo-naissance').value;
+  var passeport = document.getElementById('fo-passeport').value.trim();
+  var adresse = document.getElementById('fo-adresse').value.trim();
+  var msg = document.getElementById('msg-omra');
+  msg.className = 'msg';
+
+  if (!nom || !prenom || !mat || !tel || !anneeInscription) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = "⚠️ Veuillez remplir tous les champs obligatoires de l'adhérent."; return;
+  }
+  if (!pnom || !pprenom || !naissance || !passeport) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez renseigner toutes les informations obligatoires du pèlerin.'; return;
+  }
+
+  var now = new Date();
+  var num = newOmraNumber(now);
+  var trackingCode = newTrackingCodeOmra();
+  var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
+
+  var d = {
+    num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
+    pnom: pnom, pprenom: pprenom, naissance: naissance, passeport: passeport, adresse: adresse,
+    date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: anneeInscription
+  };
+
+  persistOmraLocal(d);
+
+  document.getElementById('tko-num').textContent = num;
+  document.getElementById('tko-adh').textContent = nom + ' ' + prenom + ' (' + mat + ')';
+  document.getElementById('tko-pelerin').textContent = pnom + ' ' + pprenom;
+  document.getElementById('tko-annee').textContent = anneeInscription;
+  document.getElementById('tko-date').textContent = dateStr;
+  document.getElementById('tko-code').textContent = trackingCode;
+  document.getElementById('ticket-confirm-omra').classList.add('visible');
+  msg.className = 'msg ok'; msg.style.display = 'flex';
+  msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
+
+  if (typeof window.fbCreateOmra === 'function') {
+    window.fbCreateOmra(d, makeSuiviPublicOmra(d)).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (omra, enregistrée localement) :', err);
+      msg.className = 'msg err'; msg.style.display = 'flex';
+      msg.innerHTML = "⚠️ Inscription <strong>" + esc(num) + "</strong> enregistrée sur cet appareil uniquement : la synchronisation avec le serveur a échoué (" + esc(err && err.message || 'erreur inconnue') + ").";
+    });
+  }
+}
+
+function resetFormOmra() {
+  ['fo-nom','fo-prenom','fo-matricule','fo-tel','fo-service','fo-pnom','fo-pprenom','fo-naissance','fo-passeport','fo-adresse'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  remplirAnneesOmraForm();
+  document.getElementById('ticket-confirm-omra').classList.remove('visible');
+  document.getElementById('msg-omra').style.display = 'none';
+}
+
 // ===== BOÎTE À IDÉES =====
 function newIdeeNumber(now) {
   var y = String(now.getFullYear()).slice(-2);
   var m = String(now.getMonth()+1).padStart(2,'0');
   var d = String(now.getDate()).padStart(2,'0');
-  return 'IDEE-' + y + m + d + '-' + randomSecret(6);
+  return 'IDE-' + y + m + d + '-' + randomSecret(6);
 }
-
+function toggleAnonymeIdee() {
+  var anonyme = document.getElementById('fi-anonyme').checked;
+  document.getElementById('fi-identite-wrap').style.display = anonyme ? 'none' : '';
+  document.getElementById('fi-identite-wrap2').style.display = anonyme ? 'none' : '';
+}
 async function soumettreIdee() {
-  var nom = document.getElementById('fi-nom').value.trim().toUpperCase();
-  var prenom = document.getElementById('fi-prenom').value.trim();
-  var mat = document.getElementById('fi-matricule').value.trim();
-  var service = document.getElementById('fi-service').value.trim();
-  var sujet = document.getElementById('fi-sujet').value.trim();
-  var texte = document.getElementById('fi-texte').value.trim();
   var msg = document.getElementById('msg-idees');
   msg.className = 'msg';
+  var anonyme = document.getElementById('fi-anonyme').checked;
+  var nom = anonyme ? '' : document.getElementById('fi-nom').value.trim().toUpperCase();
+  var prenom = anonyme ? '' : document.getElementById('fi-prenom').value.trim();
+  var mat = anonyme ? '' : document.getElementById('fi-matricule').value.trim();
+  var service = anonyme ? '' : document.getElementById('fi-service').value.trim();
+  var message = document.getElementById('fi-message').value.trim();
 
-  if (!sujet || !texte) {
+  if (!message) {
     msg.className = 'msg err'; msg.style.display = 'flex';
-    msg.textContent = '⚠️ Veuillez renseigner le sujet et le détail de votre proposition.'; return;
+    msg.textContent = '⚠️ Veuillez décrire votre idée avant de l\'envoyer.'; return;
+  }
+  if (!anonyme && (!nom || !prenom)) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez renseigner votre nom et prénom, ou cocher « anonyme ».'; return;
   }
 
   var now = new Date();
@@ -1966,35 +2538,267 @@ async function soumettreIdee() {
   var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
 
   var d = {
-    num: num,
-    nom: nom, prenom: prenom, mat: mat, service: service,
-    sujet: sujet, texte: texte,
-    date: dateStr, statut: 'Nouveau', dateObj: now.toISOString()
+    num: num, anonyme: anonyme, nom: nom, prenom: prenom, mat: mat, service: service,
+    message: message, date: dateStr, dateObj: now.toISOString(), statut: 'Nouveau'
   };
 
   persistIdeeLocal(d);
-
-  document.getElementById('tki-num').textContent = num;
-  document.getElementById('ticket-confirm-idees').classList.add('visible');
+  resetFormIdee();
   msg.className = 'msg ok'; msg.style.display = 'flex';
-  msg.innerHTML = '✅ Proposition <strong>' + esc(num) + '</strong> envoyée avec succès.';
+  msg.innerHTML = '✅ Merci ! Votre proposition a bien été enregistrée' + (anonyme ? ' de façon anonyme' : '') + '.';
 
   if (typeof window.fbCreateIdee === 'function') {
     window.fbCreateIdee(d).catch(function(err){
-      console.warn('Synchronisation Firebase échouée (idées, enregistrée localement) :', err);
-      msg.className = 'msg err'; msg.style.display = 'flex';
-      msg.innerHTML = "⚠️ Proposition <strong>" + esc(num) + "</strong> enregistrée sur cet appareil uniquement : la synchronisation avec le serveur a échoué (" + esc(err && err.message || 'erreur inconnue') + ").";
+      console.warn('Synchronisation Firebase échouée (idée, enregistrée localement) :', err);
+    });
+  }
+}
+function resetFormIdee() {
+  ['fi-nom','fi-prenom','fi-matricule','fi-service','fi-message'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('fi-anonyme').checked = false;
+  toggleAnonymeIdee();
+}
+
+// ===== REGISTRE DE DOLÉANCES =====
+function newDoleanceNumber(now) {
+  var y = String(now.getFullYear()).slice(-2);
+  var m = String(now.getMonth()+1).padStart(2,'0');
+  var d = String(now.getDate()).padStart(2,'0');
+  return 'DOL-' + y + m + d + '-' + randomSecret(6);
+}
+function toggleAnonymeDoleance() {
+  var anonyme = document.getElementById('fd-anonyme').checked;
+  document.getElementById('fd-identite-wrap').style.display = anonyme ? 'none' : '';
+  document.getElementById('fd-identite-wrap2').style.display = anonyme ? 'none' : '';
+}
+async function soumettreDoleance() {
+  var msg = document.getElementById('msg-doleances');
+  msg.className = 'msg';
+  var anonyme = document.getElementById('fd-anonyme').checked;
+  var nom = anonyme ? '' : document.getElementById('fd-nom').value.trim().toUpperCase();
+  var prenom = anonyme ? '' : document.getElementById('fd-prenom').value.trim();
+  var mat = anonyme ? '' : document.getElementById('fd-matricule').value.trim();
+  var service = anonyme ? '' : document.getElementById('fd-service').value.trim();
+  var objet = document.getElementById('fd-objet').value.trim();
+  var description = document.getElementById('fd-description').value.trim();
+
+  if (!objet || !description) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = "⚠️ Veuillez indiquer l'objet et la description de votre doléance."; return;
+  }
+  if (!anonyme && (!nom || !prenom)) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez renseigner votre nom et prénom, ou cocher « anonyme ».'; return;
+  }
+
+  var now = new Date();
+  var num = newDoleanceNumber(now);
+  var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
+
+  var d = {
+    num: num, anonyme: anonyme, nom: nom, prenom: prenom, mat: mat, service: service,
+    objet: objet, description: description, date: dateStr, dateObj: now.toISOString(), statut: 'Nouveau'
+  };
+
+  persistDoleanceLocal(d);
+  resetFormDoleance();
+  msg.className = 'msg ok'; msg.style.display = 'flex';
+  msg.innerHTML = '✅ Merci ! Votre doléance a bien été enregistrée' + (anonyme ? ' de façon anonyme' : '') + '.';
+
+  if (typeof window.fbCreateDoleance === 'function') {
+    window.fbCreateDoleance(d).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (doléance, enregistrée localement) :', err);
+    });
+  }
+}
+function resetFormDoleance() {
+  ['fd-nom','fd-prenom','fd-matricule','fd-service','fd-objet','fd-description'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('fd-anonyme').checked = false;
+  toggleAnonymeDoleance();
+}
+
+// ===== ANNONCES DU COMITÉ DE PARTICIPATION =====
+// Redimensionne/compresse l'image via un <canvas> avant de la convertir en base64.
+// Ceci évite les images « corrompues » à l'affichage : les photos prises directement avec un
+// téléphone peuvent peser plusieurs Mo, ce qui dépasse les limites de taille de Firebase/localStorage
+// et provoque un rendu brouillé. Le passage par un canvas garantit une image ré-encodée valide et légère.
+function previewFileAnnonce(inp) {
+  var file = inp.files[0];
+  if (!file) return;
+  // Certains appareils (notamment mobiles) ne renseignent pas toujours file.type ;
+  // dans ce cas on se base sur l'extension du fichier plutôt que de bloquer l'aperçu.
+  var isImage = file.type ? file.type.indexOf('image/') === 0 : /\.(jpe?g|png|gif|webp|bmp|heic|heif)$/i.test(file.name);
+  if (!isImage) {
+    alert("⚠️ Veuillez sélectionner un fichier image (JPG, PNG…).");
+    inp.value = '';
+    return;
+  }
+  var nameEl = document.getElementById('an-image-name');
+  var img = document.getElementById('an-preview');
+  img.style.display = 'none';
+  if (nameEl) { nameEl.style.display = 'none'; }
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var tempImg = new Image();
+    tempImg.onload = function() {
+      var MAX_DIM = 1400;
+      var w = tempImg.naturalWidth || tempImg.width;
+      var h = tempImg.naturalHeight || tempImg.height;
+      if (!w || !h) {
+        // Impossible de lire les dimensions (format non décodable par le navigateur) : on abandonne le recadrage
+        // et on tente d'utiliser le fichier tel quel, en dernier recours.
+        annonceBase64 = e.target.result;
+      } else {
+        if (w > MAX_DIM || h > MAX_DIM) {
+          if (w > h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+          else { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(tempImg, 0, 0, w, h);
+        var quality = 0.78;
+        var dataUrl = canvas.toDataURL('image/jpeg', quality);
+        // Réduit encore la qualité si le résultat reste volumineux (sécurité pour Firebase/localStorage).
+        var essais = 0;
+        while (dataUrl.length > 900000 && quality > 0.35 && essais < 6) {
+          quality -= 0.12; essais++;
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+        annonceBase64 = dataUrl;
+      }
+      if (nameEl) {
+        nameEl.textContent = '✅ Image jointe : ' + file.name;
+        nameEl.style.display = 'block';
+      }
+      img.onerror = function() {
+        img.style.display = 'none';
+        alert("⚠️ Cette image ne peut pas être prévisualisée par le navigateur (format non pris en charge, ex. HEIC). Essayez de la convertir en JPG ou PNG avant de l'importer.");
+      };
+      img.onload = function() { img.style.display = 'block'; };
+      img.src = annonceBase64;
+    };
+    tempImg.onerror = function() {
+      alert("⚠️ Cette image ne peut pas être lue par le navigateur (format non pris en charge, ex. HEIC). Essayez de la convertir en JPG ou PNG avant de l'importer, ou choisissez une autre photo.");
+    };
+    tempImg.src = e.target.result;
+  };
+  reader.onerror = function() {
+    alert("❌ Impossible de lire ce fichier. Veuillez réessayer avec une autre image.");
+  };
+  reader.readAsDataURL(file);
+}
+
+async function publierAnnonce() {
+  var msg = document.getElementById('msg-annonces');
+  msg.className = 'msg'; msg.style.display = 'none';
+  var titre = document.getElementById('an-titre').value.trim();
+  var description = document.getElementById('an-description').value.trim();
+
+  if (!titre) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = "⚠️ Veuillez indiquer un titre pour l'annonce."; return;
+  }
+  if (!annonceBase64) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = "⚠️ Veuillez joindre une image pour l'annonce."; return;
+  }
+
+  var now = new Date();
+  var id = 'AN-' + now.getTime();
+  var d = {
+    id: id, titre: titre, description: description, image: annonceBase64,
+    date: now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'}),
+    dateObj: now.toISOString()
+  };
+
+  persistAnnonceLocal(d);
+  annonces = loadAnnoncesLocal();
+  renderAnnonces(); renderAdminAnnonces();
+  resetFormAnnonce();
+  msg.className = 'msg ok'; msg.style.display = 'flex';
+  msg.textContent = "✅ Annonce publiée avec succès. Elle est désormais visible par les travailleurs.";
+
+  if (typeof window.fbAddAnnonce === 'function') {
+    window.fbAddAnnonce(d).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (annonce, enregistrée localement) :', err);
     });
   }
 }
 
-function resetFormIdee() {
-  ['fi-nom','fi-prenom','fi-matricule','fi-service','fi-sujet','fi-texte'].forEach(function(id){
-    var el = document.getElementById(id); if (el) el.value = '';
-  });
-  document.getElementById('ticket-confirm-idees').classList.remove('visible');
-  document.getElementById('ticket-confirm-idees').classList.remove('visible');
-  document.getElementById('msg-idees').style.display = 'none';
+function resetFormAnnonce() {
+  ['an-titre','an-description'].forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
+  var fileInp = document.getElementById('an-image'); if (fileInp) fileInp.value = '';
+  var img = document.getElementById('an-preview'); if (img) { img.style.display = 'none'; img.src = ''; }
+  var nameEl = document.getElementById('an-image-name'); if (nameEl) nameEl.style.display = 'none';
+  annonceBase64 = null;
+}
+
+function supprimerAnnonce(id) {
+  if (!confirm('Supprimer définitivement cette annonce ?')) return;
+  retirerAnnonceLocal(id);
+  annonces = loadAnnoncesLocal();
+  renderAnnonces(); renderAdminAnnonces();
+  if (typeof window.fbDeleteAnnonce === 'function') {
+    window.fbDeleteAnnonce(id).catch(function(err){ console.warn('Synchronisation Firebase échouée (suppression annonce) :', err); });
+  }
+}
+
+function trierAnnonces(liste) {
+  return (liste || []).slice().sort(function(a,b){ return (b.dateObj||'').localeCompare(a.dateObj||''); });
+}
+
+function renderAnnonces() {
+  var grid = document.getElementById('annonces-grid');
+  if (!grid) return;
+  var empty = document.getElementById('annonces-empty');
+  var liste = trierAnnonces(annonces);
+  if (!liste.length) { grid.innerHTML = ''; if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
+  grid.innerHTML = liste.map(function(a){
+    return '<div class="card-annonce">' +
+      '<img src="' + esc(a.image) + '" alt="' + esc(a.titre) + '" onclick="ouvrirLightboxAnnonce(this.src)" onerror="this.style.display=\'none\'">' +
+      '<div class="card-annonce-body">' +
+        '<div class="card-annonce-title">' + esc(a.titre) + '</div>' +
+        (a.description ? '<div class="card-annonce-desc">' + esc(a.description) + '</div>' : '') +
+        '<div class="card-annonce-date">' + esc(a.date) + '</div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function renderAdminAnnonces() {
+  var grid = document.getElementById('admin-annonces-grid');
+  if (!grid) return;
+  var empty = document.getElementById('admin-annonces-empty');
+  var liste = trierAnnonces(annonces);
+  if (!liste.length) { grid.innerHTML = ''; if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
+  grid.innerHTML = liste.map(function(a){
+    return '<div class="card-annonce">' +
+      '<button class="btn-del-annonce" onclick="supprimerAnnonce(\'' + a.id + '\')" title="Supprimer">🗑️</button>' +
+      '<img src="' + esc(a.image) + '" alt="' + esc(a.titre) + '" onclick="ouvrirLightboxAnnonce(this.src)" onerror="this.style.display=\'none\'">' +
+      '<div class="card-annonce-body">' +
+        '<div class="card-annonce-title">' + esc(a.titre) + '</div>' +
+        (a.description ? '<div class="card-annonce-desc">' + esc(a.description) + '</div>' : '') +
+        '<div class="card-annonce-date">' + esc(a.date) + '</div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function ouvrirLightboxAnnonce(src) {
+  var lb = document.getElementById('annonce-lightbox');
+  if (!lb) return;
+  document.getElementById('annonce-lightbox-img').src = src;
+  lb.classList.add('active');
+}
+function fermerLightboxAnnonce() {
+  var lb = document.getElementById('annonce-lightbox');
+  if (lb) lb.classList.remove('active');
 }
 
 // ===== SUIVI =====
@@ -2009,8 +2813,10 @@ async function rechercherSuivi() {
   if (matchLocal) { res.innerHTML = renderSuiviLivre(matchLocal); return; }
   var matchLocalPret = loadPretsLocal().find(function(x){ return x.trackingCode === code; });
   if (matchLocalPret) { res.innerHTML = renderSuiviPret(matchLocalPret); return; }
+  var matchLocalOmra = loadOmraLocal().find(function(x){ return x.trackingCode === code; });
+  if (matchLocalOmra) { res.innerHTML = renderSuiviOmra(matchLocalOmra); return; }
 
-  // 2) Firebase (demandes médicales + livres + prêts distants), si disponible
+  // 2) Firebase (demandes médicales + livres + prêts + omra distants), si disponible
   if (typeof window.fbReadSuivi !== 'function') {
     res.innerHTML = '<div class="msg info" style="display:flex">ℹ️ Aucun dossier trouvé avec ce code. Vérifiez le code reçu lors du dépôt.</div>'; return;
   }
@@ -2024,6 +2830,10 @@ async function rechercherSuivi() {
     if (typeof window.fbReadSuiviPret === 'function') {
       var dp = await window.fbReadSuiviPret(code);
       if (dp) { suiviCachePret[code] = dp; res.innerHTML = renderSuiviPret(dp); return; }
+    }
+    if (typeof window.fbReadSuiviOmra === 'function') {
+      var do_ = await window.fbReadSuiviOmra(code);
+      if (do_) { suiviCacheOmra[code] = do_; res.innerHTML = renderSuiviOmra(do_); return; }
     }
     res.innerHTML = '<div class="msg info" style="display:flex">ℹ️ Aucun dossier trouvé avec ce code. Vérifiez le code reçu lors du dépôt.</div>';
   } catch(err) {
@@ -2119,6 +2929,31 @@ function renderSuiviPret(d) {
   return html;
 }
 
+function renderSuiviOmra(d) {
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+  var html = '<div class="suivi-card">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">';
+  html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7A6F58;">Inscription Omra — ' + esc(d.annee) + '</div>';
+  html += '<div class="serif" style="font-size:22px;font-weight:700;color:var(--bleu);">' + esc(d.num) + '</div></div>';
+  html += '<span class="badge ' + bc + '">' + esc(d.statut) + '</span></div>';
+  html += '<div class="detail-grid">';
+  html += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Pèlerin</div><div class="detail-val">' + esc(d.pnom) + ' ' + esc(d.pprenom) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  html += '</div><div class="tl">';
+  html += '<div class="tl-item"><div class="tl-dot tl-done">✓</div><div class="tl-text"><div class="tl-title">Inscription soumise</div><div class="tl-sub">' + esc(d.date) + '</div></div></div>';
+  var dot2 = d.statut !== 'En attente' ? 'tl-done' : 'tl-pend';
+  var icon2 = d.statut !== 'En attente' ? '✓' : '⏳';
+  html += '<div class="tl-item"><div class="tl-dot ' + dot2 + '">' + icon2 + '</div><div class="tl-text"><div class="tl-title">Examen par le Comité</div><div class="tl-sub">' + (d.statut === 'En attente' ? 'En cours de traitement' : 'Traité') + '</div></div></div>';
+  var dot3 = d.statut === 'Validé' ? 'tl-done' : 'tl-empty';
+  var icon3 = d.statut === 'Validé' ? '✓' : d.statut === 'Refusé' ? '✗' : d.statut === 'Clôturé' ? '🔒' : '○';
+  var txt3 = d.statut === 'Validé' ? 'Inscription validée' : d.statut === 'Refusé' ? 'Inscription refusée' : d.statut === 'Clôturé' ? 'Campagne clôturée' : 'Décision finale';
+  html += '<div class="tl-item"><div class="tl-dot ' + dot3 + '">' + icon3 + '</div><div class="tl-text"><div class="tl-title">' + txt3 + '</div><div class="tl-sub">' + (d.statut === 'Validé' ? 'Votre inscription Omra est confirmée' : d.statut === 'Refusé' ? 'Contactez le Comité de Participation' : d.statut === 'Clôturé' ? "La campagne de l'année " + esc(d.annee) + ' est close' : 'En attente') + '</div></div></div>';
+  html += '</div></div>';
+  return html;
+}
+
 // ===== ADMIN =====
 async function loginAdmin() {
   var email = document.getElementById('admin-email').value.trim();
@@ -2194,28 +3029,52 @@ function applyAdminAuthState(user) {
         alert("Prêt social : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'prets'. Ajoutez les règles pour ce chemin dans la console Firebase.");
       });
     }
+    // Idem pour les inscriptions Omra.
+    omra = loadOmraLocal();
+    renderTableauOmra(); renderStatsOmra();
+    if (typeof window.fbListenAdminOmra === 'function') {
+      window.fbListenAdminOmra(function(arr) {
+        omra = mergeOmra(arr);
+        renderTableauOmra(); renderStatsOmra(); renderRapportStats();
+      }, function(err) {
+        console.error('Admin database read error (omra):', err);
+        alert("Omra : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'omra'. Ajoutez les règles pour ce chemin dans la console Firebase.");
+      });
+    }
     // Idem pour la boîte à idées.
     idees = loadIdeesLocal();
-    renderTableauIdees();
+    renderTableauIdees(); renderStatsIdees();
     if (typeof window.fbListenAdminIdees === 'function') {
       window.fbListenAdminIdees(function(arr) {
         idees = mergeIdees(arr);
-        renderTableauIdees();
+        renderTableauIdees(); renderStatsIdees();
       }, function(err) {
         console.error('Admin database read error (idées):', err);
         alert("Boîte à idées : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'idees'. Ajoutez les règles pour ce chemin dans la console Firebase.");
       });
     }
-    // Idem pour le registre de confidentialité.
-    confid = loadConfidLocal();
-    renderTableauConfid();
-    if (typeof window.fbListenAdminConfid === 'function') {
-      window.fbListenAdminConfid(function(arr) {
-        confid = mergeConfid(arr);
-        renderTableauConfid();
+    // Idem pour le registre de doléances.
+    doleances = loadDoleancesLocal();
+    renderTableauDoleances(); renderStatsDoleances();
+    if (typeof window.fbListenAdminDoleances === 'function') {
+      window.fbListenAdminDoleances(function(arr) {
+        doleances = mergeDoleances(arr);
+        renderTableauDoleances(); renderStatsDoleances();
       }, function(err) {
-        console.error('Admin database read error (confidentialité):', err);
-        alert("Registre de confidentialité : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'confidentialite'. Ajoutez les règles pour ce chemin dans la console Firebase.");
+        console.error('Admin database read error (doléances):', err);
+        alert("Registre de doléances : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'doleances'. Ajoutez les règles pour ce chemin dans la console Firebase.");
+      });
+    }
+    // Idem pour l'état des effectifs (import Excel).
+    effectifs = [];
+    if (typeof window.fbListenAdminEffectifs === 'function') {
+      window.fbListenAdminEffectifs(function(arr) {
+        effectifs = arr;
+        document.getElementById('effectifs-total').textContent = arr.length;
+        renderTableauEffectifs();
+      }, function(err) {
+        console.error('Admin database read error (effectifs):', err);
+        alert("Effectifs : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'effectifs'. Ajoutez les règles pour ce chemin dans la console Firebase.");
       });
     }
     showAdminTab('demandes');
@@ -2223,11 +3082,13 @@ function applyAdminAuthState(user) {
     // Clôture automatique par année : vérifie une fois par session si une nouvelle année a commencé.
     setTimeout(function(){ cloturerAnneesPassees(false); }, 1500);
   } else {
+    if (typeof window.fbStopAdminListenEffectifs === 'function') window.fbStopAdminListenEffectifs();
     if (typeof window.fbStopAdminListen === 'function') window.fbStopAdminListen();
     if (typeof window.fbStopAdminListenLivre === 'function') window.fbStopAdminListenLivre();
     if (typeof window.fbStopAdminListenPret === 'function') window.fbStopAdminListenPret();
+    if (typeof window.fbStopAdminListenOmra === 'function') window.fbStopAdminListenOmra();
     if (typeof window.fbStopAdminListenIdees === 'function') window.fbStopAdminListenIdees();
-    if (typeof window.fbStopAdminListenConfid === 'function') window.fbStopAdminListenConfid();
+    if (typeof window.fbStopAdminListenDoleances === 'function') window.fbStopAdminListenDoleances();
     demandes = [];
     try { localStorage.removeItem('pcm_demandes'); } catch(e) {}
     wrap.style.display = 'block'; board.style.display = 'none';
@@ -2239,24 +3100,226 @@ function showAdminTab(id) {
   document.getElementById('admin-tab-demandes').style.display = (id === 'demandes') ? 'block' : 'none';
   document.getElementById('admin-tab-livres').style.display = (id === 'livres') ? 'block' : 'none';
   document.getElementById('admin-tab-prets').style.display = (id === 'prets') ? 'block' : 'none';
+  document.getElementById('admin-tab-omra').style.display = (id === 'omra') ? 'block' : 'none';
   document.getElementById('admin-tab-idees').style.display = (id === 'idees') ? 'block' : 'none';
-  document.getElementById('admin-tab-confid').style.display = (id === 'confid') ? 'block' : 'none';
+  document.getElementById('admin-tab-doleances').style.display = (id === 'doleances') ? 'block' : 'none';
+  document.getElementById('admin-tab-annonces').style.display = (id === 'annonces') ? 'block' : 'none';
   document.getElementById('admin-tab-stats').style.display = (id === 'stats') ? 'block' : 'none';
   document.getElementById('admin-tab-rapport').style.display = (id === 'rapport') ? 'block' : 'none';
+  document.getElementById('admin-tab-effectifs').style.display = (id === 'effectifs') ? 'block' : 'none';
+  document.getElementById('tab-btn-effectifs').classList.toggle('actif', id === 'effectifs');
   document.getElementById('tab-btn-demandes').classList.toggle('actif', id === 'demandes');
   document.getElementById('tab-btn-livres').classList.toggle('actif', id === 'livres');
   document.getElementById('tab-btn-prets').classList.toggle('actif', id === 'prets');
+  document.getElementById('tab-btn-omra').classList.toggle('actif', id === 'omra');
   document.getElementById('tab-btn-idees').classList.toggle('actif', id === 'idees');
-  document.getElementById('tab-btn-confid').classList.toggle('actif', id === 'confid');
+  document.getElementById('tab-btn-doleances').classList.toggle('actif', id === 'doleances');
+  document.getElementById('tab-btn-annonces').classList.toggle('actif', id === 'annonces');
   document.getElementById('tab-btn-stats').classList.toggle('actif', id === 'stats');
   document.getElementById('tab-btn-rapport').classList.toggle('actif', id === 'rapport');
   if (id === 'stats') renderStatsChart();
   if (id === 'livres') renderTableauLivres();
   if (id === 'prets') { renderTableauPrets(); renderStatsPret(); }
-  if (id === 'idees') { renderTableauIdees(); }
-  if (id === 'confid') { renderTableauConfid(); }
+  if (id === 'omra') { renderTableauOmra(); renderStatsOmra(); }
+  if (id === 'idees') { renderTableauIdees(); renderStatsIdees(); }
+  if (id === 'doleances') { renderTableauDoleances(); renderStatsDoleances(); }
+  if (id === 'annonces') renderAdminAnnonces();
   if (id === 'rapport') renderRapportStats();
+  if (id === 'effectifs') renderTableauEffectifs();
 }
+
+// ===== EFFECTIFS : import du fichier Excel, tableau admin, pré-remplissage des formulaires =====
+
+// Normalise un intitulé de colonne pour un rapprochement tolérant aux accents/espaces/majuscules
+// (ex: "Alaire de Base" ou "Salaire de Base" -> "salairedebase").
+function normaliserEntete(s) {
+  return (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// Repère, dans une ligne d'en-têtes, l'index de colonne correspondant à chacun des champs voulus.
+function reperColonnesEffectifs(ligneEntetes) {
+  var entetesNorm = ligneEntetes.map(normaliserEntete);
+  var alias = {
+    mat: ['matricule'],
+    unite: ['unite'],
+    nom: ['nom'],
+    prenom: ['prenom'],
+    dateNaissance: ['datedenaissance'],
+    lieuNaissance: ['lieudenaissance'],
+    sexe: ['sexe'],
+    dateEntree: ['dateentree', 'datedentree'],
+    poste: ['poste'],
+    typeEmploi: ['typedemploi'],
+    finContrat: ['findecontrat', 'fincontrat'],
+    categorie: ['categorie'],
+    grilleSalaires: ['grilledessalaires'],
+    salaireBase: ['salairedebase', 'alairedebase'],
+    direction: ['direction'],
+    departement: ['departement'],
+    service: ['service'],
+    diplome: ['diplomeouniveaudinstruction', 'diplome']
+  };
+  var colonnes = {};
+  Object.keys(alias).forEach(function(champ) {
+    var idx = -1;
+    alias[champ].some(function(a) {
+      var i = entetesNorm.indexOf(a);
+      if (i !== -1) { idx = i; return true; }
+      return false;
+    });
+    colonnes[champ] = idx;
+  });
+  return colonnes;
+}
+
+function formaterDateExcel(v) {
+  if (v instanceof Date) {
+    var j = String(v.getDate()).padStart(2, '0'), m = String(v.getMonth() + 1).padStart(2, '0');
+    return j + '/' + m + '/' + v.getFullYear();
+  }
+  return v ? String(v).trim() : '';
+}
+
+function importerEffectifsExcel() {
+  var input = document.getElementById('effectifs-file');
+  var msg = document.getElementById('msg-effectifs');
+  if (!input.files || !input.files[0]) {
+    if (msg) { msg.textContent = '⚠️ Sélectionnez d\'abord un fichier Excel.'; msg.style.display = 'block'; }
+    return;
+  }
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb = XLSX.read(data, { type: 'array', cellDates: true });
+      var feuille = wb.Sheets[wb.SheetNames[0]];
+      var lignes = XLSX.utils.sheet_to_json(feuille, { header: 1, defval: '' });
+
+      // La ligne d'en-têtes n'est pas forcément la première (titre + ligne vide au-dessus dans ce fichier).
+      var idxEntete = -1;
+      for (var i = 0; i < Math.min(lignes.length, 15); i++) {
+        if (normaliserEntete(lignes[i][0]) === 'matricule') { idxEntete = i; break; }
+      }
+      if (idxEntete === -1) {
+        if (msg) { msg.textContent = "❌ Colonne « Matricule » introuvable dans les 15 premières lignes du fichier."; msg.style.display = 'block'; }
+        return;
+      }
+
+      var col = reperColonnesEffectifs(lignes[idxEntete]);
+      var liste = [];
+      for (var r = idxEntete + 1; r < lignes.length; r++) {
+        var ligne = lignes[r];
+        if (!ligne || col.mat === -1) continue;
+        var matBrut = ligne[col.mat];
+        if (matBrut === '' || matBrut === undefined || matBrut === null) continue;
+        var mat = String(matBrut).trim();
+        if (!mat) continue;
+        liste.push({
+          mat: mat,
+          unite: col.unite !== -1 ? String(ligne[col.unite] || '').trim() : '',
+          nom: col.nom !== -1 ? String(ligne[col.nom] || '').trim() : '',
+          prenom: col.prenom !== -1 ? String(ligne[col.prenom] || '').trim() : '',
+          dateNaissance: col.dateNaissance !== -1 ? formaterDateExcel(ligne[col.dateNaissance]) : '',
+          lieuNaissance: col.lieuNaissance !== -1 ? String(ligne[col.lieuNaissance] || '').trim() : '',
+          sexe: col.sexe !== -1 ? String(ligne[col.sexe] || '').trim() : '',
+          dateEntree: col.dateEntree !== -1 ? formaterDateExcel(ligne[col.dateEntree]) : '',
+          poste: col.poste !== -1 ? String(ligne[col.poste] || '').trim() : '',
+          typeEmploi: col.typeEmploi !== -1 ? String(ligne[col.typeEmploi] || '').trim() : '',
+          finContrat: col.finContrat !== -1 ? formaterDateExcel(ligne[col.finContrat]) : '',
+          categorie: col.categorie !== -1 ? String(ligne[col.categorie] || '').trim() : '',
+          grilleSalaires: col.grilleSalaires !== -1 ? String(ligne[col.grilleSalaires] || '').trim() : '',
+          salaireBase: col.salaireBase !== -1 ? ligne[col.salaireBase] : '',
+          direction: col.direction !== -1 ? String(ligne[col.direction] || '').trim() : '',
+          departement: col.departement !== -1 ? String(ligne[col.departement] || '').trim() : '',
+          service: col.service !== -1 ? String(ligne[col.service] || '').trim() : '',
+          diplome: col.diplome !== -1 ? String(ligne[col.diplome] || '').trim() : ''
+        });
+      }
+
+      if (!liste.length) {
+        if (msg) { msg.textContent = '⚠️ Aucune fiche exploitable trouvée dans le fichier.'; msg.style.display = 'block'; }
+        return;
+      }
+      if (msg) { msg.textContent = '⏳ Import de ' + liste.length + ' fiche(s) en cours…'; msg.style.display = 'block'; }
+
+      window.fbImportEffectifs(liste).then(function() {
+        if (msg) { msg.textContent = '✅ ' + liste.length + ' fiche(s) importée(s) avec succès dans Firebase.'; }
+        input.value = '';
+      }).catch(function(err) {
+        console.error(err);
+        if (msg) { msg.textContent = "❌ Échec de l'import : " + (err && err.message ? err.message : err); }
+      });
+    } catch (err) {
+      console.error(err);
+      if (msg) { msg.textContent = '❌ Fichier illisible : ' + (err && err.message ? err.message : err); msg.style.display = 'block'; }
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function supprimerTousLesEffectifs() {
+  var msg = document.getElementById('msg-effectifs');
+  window.fbDeleteAllEffectifs().then(function() {
+    if (msg) { msg.textContent = '🗑️ Base des effectifs vidée.'; msg.style.display = 'block'; }
+  }).catch(function(err) {
+    if (msg) { msg.textContent = '❌ Erreur : ' + (err && err.message ? err.message : err); msg.style.display = 'block'; }
+  });
+}
+
+function renderTableauEffectifs() {
+  var tbody = document.getElementById('tbody-effectifs');
+  if (!tbody) return;
+  var q = (document.getElementById('filter-search-effectifs') || {}).value || '';
+  q = q.toLowerCase().trim();
+  var liste = (effectifs || []).filter(function(e) {
+    if (!q) return true;
+    return [e.mat, e.nom, e.prenom, e.service, e.direction, e.departement].join(' ').toLowerCase().indexOf(q) !== -1;
+  });
+  tbody.innerHTML = liste.map(function(e) {
+    return '<tr><td>' + esc(e.mat) + '</td><td>' + esc(e.nom) + '</td><td>' + esc(e.prenom) + '</td><td>' +
+      esc(e.unite) + '</td><td>' + esc(e.direction) + '</td><td>' + esc(e.departement) + '</td><td>' +
+      esc(e.service) + '</td><td>' + esc(e.poste) + '</td></tr>';
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:#999;">Aucune fiche importée pour le moment.</td></tr>';
+}
+
+// ----- Pré-remplissage automatique des formulaires publics à partir du matricule -----
+// Dès que le travailleur quitte le champ Matricule, on cherche sa fiche dans
+// "effectifsPublic" (lecture publique, champs non sensibles uniquement) et on complète
+// automatiquement nom / prénom / service — uniquement si ces champs sont encore vides,
+// pour ne jamais écraser une saisie déjà faite par l'utilisateur.
+function autoRemplirDepuisMatricule(prefixe, champService) {
+  var matEl = document.getElementById(prefixe + '-matricule');
+  if (!matEl || typeof window.fbFindEffectifPublic !== 'function') return;
+  var mat = matEl.value.trim();
+  if (!mat) return;
+  window.fbFindEffectifPublic(mat).then(function(emp) {
+    if (!emp) return;
+    var nomEl = document.getElementById(prefixe + '-nom');
+    var prenomEl = document.getElementById(prefixe + '-prenom');
+    var servEl = document.getElementById(prefixe + '-' + (champService || 'service'));
+    if (nomEl && !nomEl.value.trim()) nomEl.value = emp.nom || '';
+    if (prenomEl && !prenomEl.value.trim()) prenomEl.value = emp.prenom || '';
+    if (servEl && !servEl.value.trim()) {
+      servEl.value = emp.service || [emp.direction, emp.departement].filter(Boolean).join(' — ');
+    }
+  }).catch(function(err) { console.warn('Recherche effectif impossible :', err); });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var champsMatricule = [
+    { id: 'f-matricule', prefixe: 'f' },
+    { id: 'fl-matricule', prefixe: 'fl' },
+    { id: 'fp-matricule', prefixe: 'fp', service: 'fonction' },
+    { id: 'fo-matricule', prefixe: 'fo' },
+    { id: 'fi-matricule', prefixe: 'fi' },
+    { id: 'fd-matricule', prefixe: 'fd' }
+  ];
+  champsMatricule.forEach(function(c) {
+    var el = document.getElementById(c.id);
+    if (el) el.addEventListener('blur', function() { autoRemplirDepuisMatricule(c.prefixe, c.service); });
+  });
+});
 
 // ===== CLÔTURE AUTOMATIQUE PAR ANNÉE =====
 // Archive et bloque (statut -> 'Clôturé') toutes les demandes encore "En attente"
@@ -2271,7 +3334,8 @@ function cloturerAnneesPassees(manuel) {
   var jeux = [
     { arr: function(){ return demandes; }, upd: window.fbUpdateDemande ? function(num,patch,tc){ return window.fbUpdateDemande(num,patch,tc); } : null, persist: null, label: 'Prise en charge médicale' },
     { arr: function(){ return livres; }, upd: window.fbUpdateLivre, persist: persistLivreLocal, label: 'Livre scolaire' },
-    { arr: function(){ return prets; }, upd: window.fbUpdatePret, persist: persistPretLocal, label: 'Prêt social' }
+    { arr: function(){ return prets; }, upd: window.fbUpdatePret, persist: persistPretLocal, label: 'Prêt social' },
+    { arr: function(){ return omra; }, upd: window.fbUpdateOmra, persist: persistOmraLocal, label: 'Omra' }
   ];
 
   var totalClotures = 0;
@@ -2294,8 +3358,8 @@ function cloturerAnneesPassees(manuel) {
   try { localStorage.setItem('schb_derniere_cloture_annee', String(cy)); } catch(e) {}
   if (typeof window.fbSetMetaCloture === 'function') window.fbSetMetaCloture(cy).catch(function(){});
 
-  renderTableau(); renderTableauLivres(); renderTableauPrets();
-  renderStats(); renderStatsPret(); renderRapportStats();
+  renderTableau(); renderTableauLivres(); renderTableauPrets(); renderTableauOmra();
+  renderStats(); renderStatsPret(); renderStatsOmra(); renderRapportStats();
 
   if (manuel) {
     alert(totalClotures > 0
@@ -2865,20 +3929,195 @@ function exporterExcelPrets() {
   XLSX.writeFile(wb, 'SCHB_Demandes_PretSocial_' + dateExp + '.xlsx');
 }
 
-// ===== ADMIN : BOÎTE À IDÉES =====
-function renderTableauIdees() {
-  var el = document.getElementById('idees-stats');
-  if (el) {
-    var total = idees.length;
-    var nouv = idees.filter(function(d){ return d.statut==='Nouveau'; }).length;
-    var lu = idees.filter(function(d){ return d.statut==='Lu'; }).length;
-    var tra = idees.filter(function(d){ return d.statut==='Traité'; }).length;
-    el.innerHTML =
-      '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
-      '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + nouv + '</div><div class="stat-lbl">Nouvelles</div></div>' +
-      '<div class="stat-card" style="border-color:var(--bleu);"><div class="stat-num" style="color:var(--bleu);">' + lu + '</div><div class="stat-lbl">Lues</div></div>' +
-      '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + tra + '</div><div class="stat-lbl">Traitées</div></div>';
+// ===== ADMIN : OMRA =====
+function renderStatsOmra() {
+  var el = document.getElementById('omra-stats');
+  if (!el) return;
+  var total = omra.length;
+  var att = omra.filter(function(d){ return d.statut==='En attente'; }).length;
+  var val = omra.filter(function(d){ return d.statut==='Validé'; }).length;
+  var ref = omra.filter(function(d){ return d.statut==='Refusé'; }).length;
+  var clo = omra.filter(function(d){ return d.statut==='Clôturé'; }).length;
+  el.innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
+    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + att + '</div><div class="stat-lbl">En attente</div></div>' +
+    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + val + '</div><div class="stat-lbl">Validées</div></div>' +
+    '<div class="stat-card" style="border-color:var(--rouge);"><div class="stat-num" style="color:var(--rouge);">' + ref + '</div><div class="stat-lbl">Refusées</div></div>' +
+    '<div class="stat-card" style="border-color:#334155;"><div class="stat-num" style="color:#334155;">' + clo + '</div><div class="stat-lbl">Clôturées</div></div>';
+}
+
+function renderTableauOmra() {
+  remplirSelectAnnees('filter-annee-omra', omra);
+  remplirAnneesTirage();
+  var searchEl = document.getElementById('filter-search-omra');
+  var statusEl = document.getElementById('filter-status-omra');
+  var anneeEl = document.getElementById('filter-annee-omra');
+  var tbody = document.getElementById('tbody-omra');
+  if (!searchEl || !statusEl || !tbody) return;
+  var q = (searchEl.value || '').toLowerCase();
+  var st = statusEl.value || '';
+  var an = (anneeEl && anneeEl.value) || '';
+  var filtered = omra.filter(function(d){
+    var matchQ = !q || (d.nom+d.prenom+d.mat+(d.pnom||'')+(d.pprenom||'')).toLowerCase().indexOf(q) >= 0;
+    var matchSt = !st || d.statut === st;
+    var matchAn = !an || String(getAnnee(d)) === an;
+    return matchQ && matchSt && matchAn;
+  });
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#7A6F58;padding:24px;">Aucune inscription trouvée</td></tr>'; return;
   }
+  var rows = '';
+  filtered.forEach(function(d) {
+    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+    var tirBadge = !d.resultatTirage ? '<span style="color:#B0A78C;font-size:12px;">—</span>'
+      : d.resultatTirage === 'Retenu' ? '<span class="badge b-ok">🎉 Retenu</span>'
+      : '<span class="badge b-clo">Non retenu</span>';
+    rows += '<tr>';
+    rows += '<td><strong>' + esc(d.num) + '</strong></td>';
+    rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
+    rows += '<td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td>';
+    rows += '<td>' + esc(d.mat) + '</td>';
+    rows += '<td>' + esc(d.pnom) + ' ' + esc(d.pprenom) + '</td>';
+    rows += '<td>' + esc(getAnnee(d)) + '</td>';
+    rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
+    rows += '<td>' + tirBadge + '</td>';
+    rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+    rows += '<button class="btn-view-sm" onclick="voirDetailOmra(&quot;' + d.num + '&quot;)">👁 Voir</button>';
+    if (d.statut === 'En attente') {
+      rows += '<button class="btn-success-sm" onclick="validerOmra(&quot;' + d.num + '&quot;)">✅ Valider</button>';
+      rows += '<button class="btn-danger-sm" onclick="refuserOmra(&quot;' + d.num + '&quot;)">❌ Refuser</button>';
+    }
+    rows += '<button class="btn-pdf-sm" onclick="genererPDFOmra(&quot;' + d.num + '&quot;)">🖨 Imprimer</button>';
+    rows += '<button class="btn-del-sm" onclick="supprimerOmra(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
+    rows += '</div></td></tr>';
+  });
+  tbody.innerHTML = rows;
+}
+
+function validerOmra(num) {
+  var d = omra.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Valider l'inscription Omra " + num + ' ?')) return;
+  d.statut = 'Validé';
+  d.dateValidation = new Date().toLocaleDateString('fr-DZ');
+  persistOmraLocal(d);
+  renderTableauOmra(); renderStatsOmra();
+  if (typeof window.fbUpdateOmra === 'function') {
+    window.fbUpdateOmra(num, { statut: d.statut, dateValidation: d.dateValidation }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (omra) :', err); });
+  }
+}
+
+function refuserOmra(num) {
+  var d = omra.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Refuser l'inscription Omra " + num + ' ?')) return;
+  d.statut = 'Refusé';
+  persistOmraLocal(d);
+  renderTableauOmra(); renderStatsOmra();
+  if (typeof window.fbUpdateOmra === 'function') {
+    window.fbUpdateOmra(num, { statut: 'Refusé' }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (omra) :', err); });
+  }
+}
+
+function supprimerOmra(num) {
+  var d = omra.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Voulez-vous vraiment supprimer définitivement l'inscription Omra " + num + ' (' + d.nom + ' ' + d.prenom + ') ? Cette action est irréversible.')) return;
+  omra = omra.filter(function(x){ return x.num !== num; });
+  retirerOmraLocal(num);
+  marquerOmraSupprime(num);
+  renderTableauOmra(); renderStatsOmra();
+  if (typeof window.fbDeleteOmra === 'function') {
+    window.fbDeleteOmra(num, d.trackingCode || '')
+      .catch(function(err){
+        console.warn('Synchronisation Firebase échouée (omra) :', err);
+        alert("L'inscription a bien été supprimée de votre affichage, mais la suppression n'a pas pu être synchronisée avec la base en ligne (règles Firebase manquantes ou insuffisantes pour le chemin 'omra'). Elle ne réapparaîtra plus ici, mais pensez à vérifier/ajouter les règles d'écriture pour ce chemin dans la console Firebase pour une suppression complète sur tous les appareils.");
+      });
+  }
+}
+
+function voirDetailOmra(num) {
+  var d = omra.find(function(x){ return x.num === num; });
+  if (!d) return;
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+  var body = '<div class="detail-grid">';
+  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Année</div><div class="detail-val">' + esc(getAnnee(d)) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Téléphone</div><div class="detail-val">' + esc(d.tel) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Pèlerin</div><div class="detail-val">' + esc(d.pnom) + ' ' + esc(d.pprenom) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date de naissance</div><div class="detail-val">' + esc(d.naissance||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">N° passeport / CIN</div><div class="detail-val">' + esc(d.passeport||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Adresse</div><div class="detail-val">' + esc(d.adresse||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Code de suivi</div><div class="detail-val" style="font-family:monospace;">' + esc(d.trackingCode || '—') + '</div></div>';
+  if (d.resultatTirage) {
+    body += '<div class="detail-item"><div class="detail-lbl">Résultat tirage</div><div class="detail-val"><span class="badge ' + (d.resultatTirage === 'Retenu' ? 'b-ok' : 'b-clo') + '">' + (d.resultatTirage === 'Retenu' ? '🎉 ' : '') + esc(d.resultatTirage) + '</span></div></div>';
+    body += '<div class="detail-item"><div class="detail-lbl">Date du tirage</div><div class="detail-val">' + esc(d.dateTirage || '—') + '</div></div>';
+  }
+  body += '</div>';
+  body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
+  if (d.statut === 'En attente') {
+    body += '<button class="btn btn-primary" onclick="validerOmra(&quot;' + d.num + '&quot;);closeModal()">✅ Valider</button>';
+    body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="refuserOmra(&quot;' + d.num + '&quot;);closeModal()">❌ Refuser</button>';
+  }
+  body += '<button class="btn btn-outline" onclick="genererPDFOmra(&quot;' + d.num + '&quot;)">🖨 Imprimer le bon</button>';
+  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerOmra(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer l\'inscription</button>';
+  body += '</div>';
+  document.getElementById('modal-title').textContent = 'Inscription Omra ' + d.num;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function exporterExcelOmra() {
+  if (!omra.length) { alert('Aucune inscription à exporter.'); return; }
+  var data = omra.map(function(d){
+    return {
+      'N° Inscription': d.num,
+      'Année': getAnnee(d),
+      'Date': d.date,
+      'Statut': d.statut,
+      'Nom adhérent': d.nom,
+      'Prénom adhérent': d.prenom,
+      'Matricule': d.mat,
+      'Téléphone': d.tel,
+      'Service': d.service || '',
+      'Nom pèlerin': d.pnom || '',
+      'Prénom pèlerin': d.pprenom || '',
+      'Date de naissance': d.naissance || '',
+      'N° passeport / CIN': d.passeport || '',
+      'Adresse': d.adresse || '',
+      'Date validation': d.dateValidation || '',
+      'Résultat tirage': d.resultatTirage || '',
+      'Date tirage': d.dateTirage || ''
+    };
+  });
+  var ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:16},{wch:26},{wch:16},{wch:14},{wch:14}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Omra');
+  var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
+  XLSX.writeFile(wb, 'SCHB_Inscriptions_Omra_' + dateExp + '.xlsx');
+}
+
+// ===== ADMIN : BOÎTE À IDÉES =====
+function renderStatsIdees() {
+  var el = document.getElementById('idees-stats');
+  if (!el) return;
+  var total = idees.length;
+  var nouv = idees.filter(function(d){ return d.statut==='Nouveau'; }).length;
+  var lu = idees.filter(function(d){ return d.statut==='Lu'; }).length;
+  el.innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
+    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + nouv + '</div><div class="stat-lbl">Nouvelles</div></div>' +
+    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + lu + '</div><div class="stat-lbl">Lues</div></div>';
+}
+
+function renderTableauIdees() {
   var searchEl = document.getElementById('filter-search-idees');
   var statusEl = document.getElementById('filter-status-idees');
   var tbody = document.getElementById('tbody-idees');
@@ -2886,31 +4125,56 @@ function renderTableauIdees() {
   var q = (searchEl.value || '').toLowerCase();
   var st = statusEl.value || '';
   var filtered = idees.filter(function(d){
-    var matchQ = !q || ((d.nom||'')+(d.prenom||'')+(d.mat||'')+(d.sujet||'')).toLowerCase().indexOf(q) >= 0;
+    var matchQ = !q || ((d.nom||'')+(d.prenom||'')+(d.mat||'')+(d.service||'')).toLowerCase().indexOf(q) >= 0;
     var matchSt = !st || d.statut === st;
     return matchQ && matchSt;
   }).sort(function(a,b){ return (b.dateObj||'').localeCompare(a.dateObj||''); });
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#7A6F58;padding:24px;">Aucune proposition trouvée</td></tr>'; return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#7A6F58;padding:24px;">Aucune proposition trouvée</td></tr>'; return;
   }
   var rows = '';
   filtered.forEach(function(d) {
-    var bc = d.statut === 'Traité' ? 'b-ok' : d.statut === 'Lu' ? 'b-att' : 'b-rej';
-    var auteur = (d.nom || d.prenom) ? (esc(d.nom) + ' ' + esc(d.prenom) + (d.mat ? ' (' + esc(d.mat) + ')' : '')) : '<span style="color:#7A6F58;">—</span>';
+    var bc = d.statut === 'Lu' ? 'b-ok' : 'b-att';
+    var identite = d.anonyme ? '<em style="color:#7A6F58;">Anonyme</em>' : esc(d.nom) + ' ' + esc(d.prenom);
+    var apercu = esc((d.message||'').slice(0,60)) + ((d.message||'').length > 60 ? '…' : '');
     rows += '<tr>';
     rows += '<td><strong>' + esc(d.num) + '</strong></td>';
     rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
-    rows += '<td>' + auteur + '</td>';
-    rows += '<td>' + esc(d.sujet) + '</td>';
+    rows += '<td>' + identite + '</td>';
+    rows += '<td>' + esc(d.service || '—') + '</td>';
+    rows += '<td>' + apercu + '</td>';
     rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
     rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
     rows += '<button class="btn-view-sm" onclick="voirDetailIdee(&quot;' + d.num + '&quot;)">👁 Voir</button>';
-    if (d.statut === 'Nouveau') rows += '<button class="btn-success-sm" onclick="marquerLuIdee(&quot;' + d.num + '&quot;)">📖 Marquer lu</button>';
-    if (d.statut !== 'Traité') rows += '<button class="btn-success-sm" onclick="marquerTraiteIdee(&quot;' + d.num + '&quot;)">✅ Traité</button>';
+    if (d.statut !== 'Lu') rows += '<button class="btn-success-sm" onclick="marquerLuIdee(&quot;' + d.num + '&quot;)">✅ Marquer lu</button>';
     rows += '<button class="btn-del-sm" onclick="supprimerIdee(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
     rows += '</div></td></tr>';
   });
   tbody.innerHTML = rows;
+}
+
+function voirDetailIdee(num) {
+  var d = idees.find(function(x){ return x.num === num; });
+  if (!d) return;
+  var bc = d.statut === 'Lu' ? 'b-ok' : 'b-att';
+  var identite = d.anonyme ? 'Anonyme' : (d.nom + ' ' + d.prenom);
+  var body = '<div class="detail-grid">';
+  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Auteur</div><div class="detail-val">' + esc(identite) + '</div></div>';
+  if (!d.anonyme) {
+    body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat || '—') + '</div></div>';
+    body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service || '—') + '</div></div>';
+  }
+  body += '</div>';
+  body += '<div class="detail-item" style="margin-bottom:14px;"><div class="detail-lbl">Idée / suggestion</div><div class="detail-val" style="margin-top:4px;white-space:pre-wrap;">' + esc(d.message) + '</div></div>';
+  body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
+  if (d.statut !== 'Lu') body += '<button class="btn btn-primary" onclick="marquerLuIdee(&quot;' + d.num + '&quot;);closeModal()">✅ Marquer comme lu</button>';
+  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerIdee(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer</button>';
+  body += '</div>';
+  document.getElementById('modal-title').textContent = 'Idée ' + d.num;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('overlay').classList.add('open');
 }
 
 function marquerLuIdee(num) {
@@ -2918,20 +4182,9 @@ function marquerLuIdee(num) {
   if (!d) return;
   d.statut = 'Lu';
   persistIdeeLocal(d);
-  renderTableauIdees();
+  renderTableauIdees(); renderStatsIdees();
   if (typeof window.fbUpdateIdee === 'function') {
     window.fbUpdateIdee(num, { statut: 'Lu' }).catch(function(err){ console.warn('Synchronisation Firebase échouée (idée) :', err); });
-  }
-}
-
-function marquerTraiteIdee(num) {
-  var d = idees.find(function(x){ return x.num === num; });
-  if (!d) return;
-  d.statut = 'Traité';
-  persistIdeeLocal(d);
-  renderTableauIdees();
-  if (typeof window.fbUpdateIdee === 'function') {
-    window.fbUpdateIdee(num, { statut: 'Traité' }).catch(function(err){ console.warn('Synchronisation Firebase échouée (idée) :', err); });
   }
 }
 
@@ -2941,154 +4194,458 @@ function supprimerIdee(num) {
   if (!confirm('Voulez-vous vraiment supprimer définitivement la proposition ' + num + ' ? Cette action est irréversible.')) return;
   idees = idees.filter(function(x){ return x.num !== num; });
   retirerIdeeLocal(num);
-  renderTableauIdees();
+  marquerIdeeSupprimee(num);
+  renderTableauIdees(); renderStatsIdees();
   if (typeof window.fbDeleteIdee === 'function') {
     window.fbDeleteIdee(num).catch(function(err){ console.warn('Synchronisation Firebase échouée (idée) :', err); });
   }
-}
-
-function voirDetailIdee(num) {
-  var d = idees.find(function(x){ return x.num === num; });
-  if (!d) return;
-  var bc = d.statut === 'Traité' ? 'b-ok' : d.statut === 'Lu' ? 'b-att' : 'b-rej';
-  var body = '<div class="detail-grid">';
-  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Auteur</div><div class="detail-val">' + ((d.nom || d.prenom) ? esc(d.nom) + ' ' + esc(d.prenom) : '—') + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat || '—') + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service || '—') + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Sujet</div><div class="detail-val">' + esc(d.sujet) + '</div></div>';
-  body += '</div>';
-  body += '<div class="detail-item" style="margin-bottom:14px;"><div class="detail-lbl">Proposition</div><div class="detail-val" style="margin-top:4px;white-space:pre-wrap;">' + esc(d.texte) + '</div></div>';
-  body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
-  if (d.statut === 'Nouveau') body += '<button class="btn btn-outline" onclick="marquerLuIdee(&quot;' + d.num + '&quot;);closeModal()">📖 Marquer lu</button>';
-  if (d.statut !== 'Traité') body += '<button class="btn btn-primary" onclick="marquerTraiteIdee(&quot;' + d.num + '&quot;);closeModal()">✅ Marquer traité</button>';
-  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerIdee(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer</button>';
-  body += '</div>';
-  document.getElementById('modal-title').textContent = 'Proposition ' + d.num;
-  document.getElementById('modal-body').innerHTML = body;
-  document.getElementById('overlay').classList.add('open');
 }
 
 function exporterExcelIdees() {
   if (!idees.length) { alert('Aucune proposition à exporter.'); return; }
   var data = idees.map(function(d){
     return {
-      'N°': d.num,
-      'Date': d.date,
-      'Statut': d.statut,
-      'Nom': d.nom || '',
-      'Prénom': d.prenom || '',
-      'Matricule': d.mat || '',
-      'Service': d.service || '',
-      'Sujet': d.sujet,
-      'Proposition': d.texte
+      'N°': d.num, 'Date': d.date, 'Statut': d.statut,
+      'Anonyme': d.anonyme ? 'Oui' : 'Non',
+      'Nom': d.anonyme ? '' : (d.nom || ''),
+      'Prénom': d.anonyme ? '' : (d.prenom || ''),
+      'Matricule': d.anonyme ? '' : (d.mat || ''),
+      'Service': d.anonyme ? '' : (d.service || ''),
+      'Idée / suggestion': d.message
     };
   });
   var ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:16},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:18},{wch:24},{wch:50}];
+  ws['!cols'] = [{wch:16},{wch:18},{wch:11},{wch:10},{wch:14},{wch:14},{wch:12},{wch:16},{wch:60}];
   var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Boîte à idées');
+  XLSX.utils.book_append_sheet(wb, ws, 'Boite a idees');
   var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
-  XLSX.writeFile(wb, 'SCHB_BoiteAIdees_' + dateExp + '.xlsx');
+  XLSX.writeFile(wb, 'SCHB_Boite_A_Idees_' + dateExp + '.xlsx');
 }
 
-// ===== ADMIN : REGISTRE DE CONFIDENTIALITÉ =====
-function newConfidNumber(now) {
-  var y = String(now.getFullYear()).slice(-2);
-  var m = String(now.getMonth()+1).padStart(2,'0');
-  var d = String(now.getDate()).padStart(2,'0');
-  return 'CONF-' + y + m + d + '-' + randomSecret(6);
+// ===== ADMIN : REGISTRE DE DOLÉANCES =====
+function renderStatsDoleances() {
+  var el = document.getElementById('doleances-stats');
+  if (!el) return;
+  var total = doleances.length;
+  var nouv = doleances.filter(function(d){ return d.statut==='Nouveau'; }).length;
+  var enc = doleances.filter(function(d){ return d.statut==='En cours'; }).length;
+  var trt = doleances.filter(function(d){ return d.statut==='Traité'; }).length;
+  el.innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
+    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + nouv + '</div><div class="stat-lbl">Nouvelles</div></div>' +
+    '<div class="stat-card" style="border-color:#2563EB;"><div class="stat-num" style="color:#2563EB;">' + enc + '</div><div class="stat-lbl">En cours</div></div>' +
+    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + trt + '</div><div class="stat-lbl">Traitées</div></div>';
 }
 
-function ajouterConfid() {
-  var membre = document.getElementById('fc-membre').value.trim();
-  var dossier = document.getElementById('fc-dossier').value.trim();
-  var nature = document.getElementById('fc-nature').value.trim();
-  var engagement = document.getElementById('fc-engagement').value;
-  var observations = document.getElementById('fc-observations').value.trim();
-
-  if (!membre || !dossier) {
-    alert('Veuillez renseigner au minimum le membre du CP et le dossier concerné.'); return;
-  }
-
-  var now = new Date();
-  var num = newConfidNumber(now);
-  var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
-
-  var d = { num: num, membre: membre, dossier: dossier, nature: nature, engagement: engagement, observations: observations, date: dateStr, dateObj: now.toISOString() };
-  persistConfidLocal(d);
-  renderTableauConfid();
-
-  ['fc-membre','fc-dossier','fc-nature','fc-observations'].forEach(function(id){ document.getElementById(id).value = ''; });
-  document.getElementById('fc-engagement').value = 'Oui';
-
-  if (typeof window.fbCreateConfid === 'function') {
-    window.fbCreateConfid(d).catch(function(err){ console.warn('Synchronisation Firebase échouée (confidentialité) :', err); });
-  }
-}
-
-function supprimerConfid(num) {
-  var d = confid.find(function(x){ return x.num === num; });
-  if (!d) return;
-  if (!confirm('Voulez-vous vraiment supprimer définitivement cette entrée du registre ? Cette action est irréversible.')) return;
-  confid = confid.filter(function(x){ return x.num !== num; });
-  retirerConfidLocal(num);
-  renderTableauConfid();
-  if (typeof window.fbDeleteConfid === 'function') {
-    window.fbDeleteConfid(num).catch(function(err){ console.warn('Synchronisation Firebase échouée (confidentialité) :', err); });
-  }
-}
-
-function renderTableauConfid() {
-  var searchEl = document.getElementById('filter-search-confid');
-  var tbody = document.getElementById('tbody-confid');
-  if (!searchEl || !tbody) return;
+function renderTableauDoleances() {
+  var searchEl = document.getElementById('filter-search-doleances');
+  var statusEl = document.getElementById('filter-status-doleances');
+  var tbody = document.getElementById('tbody-doleances');
+  if (!searchEl || !statusEl || !tbody) return;
   var q = (searchEl.value || '').toLowerCase();
-  var filtered = confid.filter(function(d){
-    return !q || ((d.membre||'')+(d.dossier||'')).toLowerCase().indexOf(q) >= 0;
+  var st = statusEl.value || '';
+  var filtered = doleances.filter(function(d){
+    var matchQ = !q || ((d.nom||'')+(d.prenom||'')+(d.mat||'')+(d.service||'')+(d.objet||'')).toLowerCase().indexOf(q) >= 0;
+    var matchSt = !st || d.statut === st;
+    return matchQ && matchSt;
   }).sort(function(a,b){ return (b.dateObj||'').localeCompare(a.dateObj||''); });
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#7A6F58;padding:24px;">Aucune entrée dans le registre</td></tr>'; return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#7A6F58;padding:24px;">Aucune doléance trouvée</td></tr>'; return;
   }
   var rows = '';
   filtered.forEach(function(d) {
+    var bc = d.statut === 'Traité' ? 'b-ok' : d.statut === 'En cours' ? 'b-att' : 'b-rej';
+    var identite = d.anonyme ? '<em style="color:#7A6F58;">Anonyme</em>' : esc(d.nom) + ' ' + esc(d.prenom);
     rows += '<tr>';
     rows += '<td><strong>' + esc(d.num) + '</strong></td>';
     rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
-    rows += '<td>' + esc(d.membre) + '</td>';
-    rows += '<td>' + esc(d.dossier) + '</td>';
-    rows += '<td>' + esc(d.nature || '—') + '</td>';
-    rows += '<td><span class="badge ' + (d.engagement === 'Oui' ? 'b-ok' : 'b-rej') + '">' + esc(d.engagement || 'Non') + '</span></td>';
-    rows += '<td>' + esc(d.observations || '—') + '</td>';
-    rows += '<td><button class="btn-del-sm" onclick="supprimerConfid(&quot;' + d.num + '&quot;)">🗑 Supprimer</button></td>';
-    rows += '</tr>';
+    rows += '<td>' + identite + '</td>';
+    rows += '<td>' + esc(d.service || '—') + '</td>';
+    rows += '<td>' + esc(d.objet) + '</td>';
+    rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
+    rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+    rows += '<button class="btn-view-sm" onclick="voirDetailDoleance(&quot;' + d.num + '&quot;)">👁 Voir</button>';
+    rows += '<button class="btn-del-sm" onclick="supprimerDoleance(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
+    rows += '</div></td></tr>';
   });
   tbody.innerHTML = rows;
 }
 
-function exporterExcelConfid() {
-  if (!confid.length) { alert('Aucune entrée à exporter.'); return; }
-  var data = confid.map(function(d){
+function voirDetailDoleance(num) {
+  var d = doleances.find(function(x){ return x.num === num; });
+  if (!d) return;
+  var bc = d.statut === 'Traité' ? 'b-ok' : d.statut === 'En cours' ? 'b-att' : 'b-rej';
+  var identite = d.anonyme ? 'Anonyme' : (d.nom + ' ' + d.prenom);
+  var body = '<div class="detail-grid">';
+  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Auteur</div><div class="detail-val">' + esc(identite) + '</div></div>';
+  if (!d.anonyme) {
+    body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat || '—') + '</div></div>';
+    body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service || '—') + '</div></div>';
+  }
+  body += '<div class="detail-item"><div class="detail-lbl">Objet</div><div class="detail-val">' + esc(d.objet) + '</div></div>';
+  body += '</div>';
+  body += '<div class="detail-item" style="margin-bottom:14px;"><div class="detail-lbl">Description</div><div class="detail-val" style="margin-top:4px;white-space:pre-wrap;">' + esc(d.description) + '</div></div>';
+  body += '<div class="grp" style="max-width:260px;"><label>Changer le statut</label><select id="doleance-statut-select" onchange="changerStatutDoleance(&quot;' + d.num + '&quot;, this.value)">' +
+    ['Nouveau','En cours','Traité'].map(function(s){ return '<option value="' + s + '"' + (s===d.statut?' selected':'') + '>' + s + '</option>'; }).join('') +
+    '</select></div>';
+  body += '<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">';
+  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerDoleance(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer</button>';
+  body += '</div>';
+  document.getElementById('modal-title').textContent = 'Doléance ' + d.num;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function changerStatutDoleance(num, statut) {
+  var d = doleances.find(function(x){ return x.num === num; });
+  if (!d) return;
+  d.statut = statut;
+  persistDoleanceLocal(d);
+  renderTableauDoleances(); renderStatsDoleances();
+  if (typeof window.fbUpdateDoleance === 'function') {
+    window.fbUpdateDoleance(num, { statut: statut }).catch(function(err){ console.warn('Synchronisation Firebase échouée (doléance) :', err); });
+  }
+}
+
+function supprimerDoleance(num) {
+  var d = doleances.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm('Voulez-vous vraiment supprimer définitivement la doléance ' + num + ' ? Cette action est irréversible.')) return;
+  doleances = doleances.filter(function(x){ return x.num !== num; });
+  retirerDoleanceLocal(num);
+  marquerDoleanceSupprimee(num);
+  renderTableauDoleances(); renderStatsDoleances();
+  if (typeof window.fbDeleteDoleance === 'function') {
+    window.fbDeleteDoleance(num).catch(function(err){ console.warn('Synchronisation Firebase échouée (doléance) :', err); });
+  }
+}
+
+function exporterExcelDoleances() {
+  if (!doleances.length) { alert('Aucune doléance à exporter.'); return; }
+  var data = doleances.map(function(d){
     return {
-      'N°': d.num,
-      'Date': d.date,
-      'Membre du CP': d.membre,
-      'Dossier / sujet': d.dossier,
-      'Nature de l\'information': d.nature || '',
-      'Engagement signé': d.engagement || '',
-      'Observations': d.observations || ''
+      'N°': d.num, 'Date': d.date, 'Statut': d.statut,
+      'Anonyme': d.anonyme ? 'Oui' : 'Non',
+      'Nom': d.anonyme ? '' : (d.nom || ''),
+      'Prénom': d.anonyme ? '' : (d.prenom || ''),
+      'Matricule': d.anonyme ? '' : (d.mat || ''),
+      'Service': d.anonyme ? '' : (d.service || ''),
+      'Objet': d.objet,
+      'Description': d.description
     };
   });
   var ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:16},{wch:18},{wch:18},{wch:26},{wch:22},{wch:14},{wch:34}];
+  ws['!cols'] = [{wch:16},{wch:18},{wch:11},{wch:10},{wch:14},{wch:14},{wch:12},{wch:16},{wch:26},{wch:60}];
   var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Registre confidentialité');
+  XLSX.utils.book_append_sheet(wb, ws, 'Doleances');
   var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
-  XLSX.writeFile(wb, 'SCHB_RegistreConfidentialite_' + dateExp + '.xlsx');
+  XLSX.writeFile(wb, 'SCHB_Registre_Doleances_' + dateExp + '.xlsx');
 }
 
-// ===== PDF =====
+// ===== ADMIN : CHANGEMENT DE MOT DE PASSE =====
+function toggleChangePasswordPanel() {
+  var panel = document.getElementById('admin-changepwd-panel');
+  var opening = panel.style.display === 'none';
+  panel.style.display = opening ? 'block' : 'none';
+  if (opening) {
+    ['pwd-current','pwd-new','pwd-confirm'].forEach(function(id){ document.getElementById(id).value = ''; });
+    document.getElementById('msg-changepwd').style.display = 'none';
+  }
+}
+
+async function changerMotDePasseAdmin() {
+  var current = document.getElementById('pwd-current').value;
+  var neuf = document.getElementById('pwd-new').value;
+  var confirmPwd = document.getElementById('pwd-confirm').value;
+  var msg = document.getElementById('msg-changepwd');
+  msg.className = 'msg';
+
+  if (!current || !neuf || !confirmPwd) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez remplir les trois champs.'; return;
+  }
+  if (neuf.length < 8) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Le nouveau mot de passe doit contenir au moins 8 caractères.'; return;
+  }
+  if (neuf !== confirmPwd) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Les deux mots de passe ne correspondent pas.'; return;
+  }
+  if (typeof window.fbAdminChangePassword !== 'function') {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '❌ Firebase Authentication est indisponible.'; return;
+  }
+
+  msg.className = 'msg info'; msg.style.display = 'flex';
+  msg.textContent = '⏳ Mise à jour du mot de passe…';
+  try {
+    await window.fbAdminChangePassword(current, neuf);
+    msg.className = 'msg ok'; msg.style.display = 'flex';
+    msg.textContent = '✅ Mot de passe mis à jour avec succès.';
+    ['pwd-current','pwd-new','pwd-confirm'].forEach(function(id){ document.getElementById(id).value = ''; });
+  } catch(err) {
+    console.error('Erreur changement mot de passe :', err);
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    if (err && err.code === 'auth/wrong-password') {
+      msg.textContent = '❌ Le mot de passe actuel est incorrect.';
+    } else if (err && err.code === 'auth/requires-recent-login') {
+      msg.textContent = '❌ Session trop ancienne : déconnectez-vous puis reconnectez-vous avant de changer le mot de passe.';
+    } else {
+      msg.textContent = '❌ Échec de la mise à jour (' + esc(err && err.message || 'erreur inconnue') + ').';
+    }
+  }
+}
+
+// ===== BON D'INSCRIPTION OMRA (PDF) =====
+function dessinerBonOmra(doc, d, W, M) {
+  doc.setFillColor(255,255,255);
+  doc.rect(0,0,W,297,'F');
+  doc.setFillColor(242,169,59);
+  doc.rect(0,0,W,3,'F');
+
+  try { doc.addImage(GICA_B64,'JPEG',M,6,36,17); } catch(e) {}
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(14,58,83);
+  doc.text("GROUPE INDUSTRIEL DES CIMENTS D'ALGERIE", W/2+10, 12, {align:'center'});
+  doc.setFontSize(9.5);
+  doc.text('SOCIETE DES CIMENTS DE HAMMA BOUZIANE', W/2+10, 18, {align:'center'});
+  doc.setFontSize(9);
+  doc.text('« S.C.H.B. »', W/2+10, 23, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(80,80,80);
+  doc.text('SPA au capital social de: 2.200.000.000 DA', W/2+10, 28, {align:'center'});
+
+  doc.setDrawColor(14,58,83); doc.setLineWidth(0.5);
+  doc.line(M, 32, W-M, 32);
+
+  doc.setFillColor(14,58,83);
+  doc.roundedRect(M, 40, W-2*M, 22, 2, 2, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bolditalic'); doc.setFontSize(9.5);
+  doc.text('Comité de participation de la SCHB', W/2, 47, {align:'center'});
+  doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text("BON D'INSCRIPTION — OMRA " + esc(getAnnee(d)), W/2, 55, {align:'center'});
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(220,200,100);
+  doc.text('N° ' + d.num, W-M-2, 46, {align:'right'});
+
+  doc.setDrawColor(14,58,83); doc.line(M,68,W-M,68);
+
+  var y = 78;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(14,58,83);
+  doc.text('ADHÉRENT', M, y);
+  doc.setDrawColor(220,200,100); doc.line(M, y+1.5, M+28, y+1.5);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Nom et prénom :', M, y);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
+  doc.text((d.nom + ' ' + d.prenom).toUpperCase(), M+45, y);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Matricule :', M, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+  doc.text(d.mat || '—', M+45, y);
+  doc.setFont('helvetica','bold'); doc.setTextColor(14,58,83);
+  doc.text('Téléphone :', M+95, y);
+  doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
+  doc.text(d.tel || '—', M+130, y);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Service / Direction :', M, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+  doc.text(d.service || '—', M+45, y);
+
+  y += 16;
+  doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(14,58,83);
+  doc.text('PÈLERIN', M, y);
+  doc.setDrawColor(220,200,100); doc.line(M, y+1.5, M+22, y+1.5);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Nom et prénom :', M, y);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
+  doc.text((d.pnom + ' ' + d.pprenom).toUpperCase(), M+45, y);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Date de naissance :', M, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+  doc.text(d.naissance || '—', M+45, y);
+  doc.setFont('helvetica','bold'); doc.setTextColor(14,58,83);
+  doc.text('N° passeport / CIN :', M+95, y);
+  doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
+  doc.text(d.passeport || '—', M+140, y);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Adresse :', M, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(0,0,0);
+  var adrLines = doc.splitTextToSize(d.adresse || '—', W-2*M-48);
+  doc.text(adrLines, M+45, y);
+  y += Math.max(adrLines.length * 5, 6) + 10;
+
+  if (d.resultatTirage) {
+    var couleurTir = d.resultatTirage === 'Retenu' ? [31,122,92] : [100,116,139];
+    doc.setFillColor(couleurTir[0], couleurTir[1], couleurTir[2]);
+    doc.roundedRect(M, y, 80, 9, 1.5, 1.5, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255,255,255);
+    doc.text('Tirage au sort ' + esc(getAnnee(d)) + ' : ' + d.resultatTirage.toUpperCase(), M+40, y+6, {align:'center'});
+    y += 15;
+  }
+
+  doc.setDrawColor(14,58,83); doc.line(M,y,W-M,y);
+  y += 6;
+
+  var mid = W/2;
+  doc.setFillColor(14,58,83);
+  doc.rect(M, y, W-2*M, 8, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(255,255,255);
+  doc.text('SIGNATURE DE L\'ADHÉRENT', (M+mid)/2, y+5.5, {align:'center'});
+  doc.text('VISA COMITÉ DE PARTICIPATION', (mid+W-M)/2, y+5.5, {align:'center'});
+  doc.setDrawColor(255,255,255); doc.setLineWidth(0.3);
+  doc.line(mid, y, mid, y+8);
+
+  y += 8;
+  doc.setDrawColor(14,58,83); doc.setLineWidth(0.5);
+  doc.rect(M, y, W-2*M, 44);
+  doc.line(mid, y, mid, y+44);
+
+  doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(170,170,170);
+  doc.text("(Signature de l'adhérent)", (M+mid)/2, y+30, {align:'center'});
+
+  var cx = (mid+W-M)/2;
+  if (d.statut === 'Validé') {
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(14,58,83);
+    doc.text('KHELALI Yakoub', cx, y+9, {align:'center'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    doc.text('Président du Comité de Participation', cx, y+13.5, {align:'center'});
+    var stampW = 30, stampH = 25;
+    var stampX = cx - stampW/2 - 6, stampY = y + 15;
+    try { doc.addImage(STAMP_B64, 'PNG', stampX, stampY, stampW, stampH); } catch(e) {}
+    var sigW = 34, sigH = 20.8;
+    var sigX = cx + 4, sigY = y + 17;
+    try { doc.addImage(SIG_B64, 'PNG', sigX, sigY, sigW, sigH); } catch(e) {}
+  } else {
+    doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(170,170,170);
+    doc.text('(Visa du Comité de Participation)', cx, y+30, {align:'center'});
+  }
+
+  y += 52;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(14,58,83);
+  doc.text('Statut de la demande : ' + d.statut, W/2, y+5, {align:'center'});
+
+  doc.setFillColor(242,169,59);
+  doc.rect(0,294,W,3,'F');
+}
+
+function genererPDFOmra(num) {
+  var d = omra.find(function(x){ return x.num === num; });
+  if (!d) return;
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  dessinerBonOmra(doc, d, 210, 14);
+  doc.save('Omra_' + d.num + '_' + d.nom + '.pdf');
+}
+
+function genererPDFOmraLot() {
+  var searchEl = document.getElementById('filter-search-omra');
+  var statusEl = document.getElementById('filter-status-omra');
+  var anneeEl = document.getElementById('filter-annee-omra');
+  var q = (searchEl && searchEl.value || '').toLowerCase();
+  var st = (statusEl && statusEl.value) || '';
+  var an = (anneeEl && anneeEl.value) || '';
+  var filtered = omra.filter(function(d){
+    var matchQ = !q || (d.nom+d.prenom+d.mat+(d.pnom||'')+(d.pprenom||'')).toLowerCase().indexOf(q) >= 0;
+    var matchSt = !st || d.statut === st;
+    var matchAn = !an || String(getAnnee(d)) === an;
+    return matchQ && matchSt && matchAn;
+  });
+  if (!filtered.length) { alert('Aucun bon à imprimer pour la sélection actuelle.'); return; }
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  filtered.forEach(function(d, i){
+    if (i > 0) doc.addPage();
+    dessinerBonOmra(doc, d, 210, 14);
+  });
+  var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
+  doc.save('SCHB_Bons_Omra_' + (an || 'toutes-annees') + '_' + dateExp + '.pdf');
+}
+
+// ===== TIRAGE AU SORT (OMRA) =====
+function remplirAnneesTirage() {
+  remplirSelectAnnees('tirage-annee', omra);
+}
+
+function lancerTirage() {
+  var anneeEl = document.getElementById('tirage-annee');
+  var placesEl = document.getElementById('tirage-places');
+  var resDiv = document.getElementById('tirage-resultat');
+  var annee = Number(anneeEl && anneeEl.value);
+  var nbPlaces = Number(placesEl && placesEl.value);
+  if (!annee) { alert('Veuillez choisir une année de campagne.'); return; }
+  if (!nbPlaces || nbPlaces < 1) { alert('Veuillez indiquer un nombre de places valide.'); return; }
+
+  var pool = omra.filter(function(d){ return getAnnee(d) === annee && d.statut === 'Validé' && !d.resultatTirage; });
+  if (!pool.length) {
+    alert("Aucun candidat éligible (statut « Validé », sans résultat de tirage) trouvé pour l'année " + annee + '.');
+    return;
+  }
+  if (!confirm('Lancer le tirage au sort pour ' + annee + ' parmi ' + pool.length + ' candidat(s) validé(s), pour ' + nbPlaces + ' place(s) ? Cette action est irréversible (sauf réinitialisation).')) return;
+
+  // Mélange aléatoire (Fisher-Yates)
+  var shuffled = pool.slice();
+  for (var i = shuffled.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
+  }
+  var dateT = new Date().toLocaleDateString('fr-DZ');
+  var retenus = [], nonRetenus = [];
+  shuffled.forEach(function(d, idx){
+    d.resultatTirage = (idx < nbPlaces) ? 'Retenu' : 'Non retenu';
+    d.dateTirage = dateT;
+    persistOmraLocal(d);
+    if (typeof window.fbUpdateOmra === 'function') {
+      window.fbUpdateOmra(d.num, { resultatTirage: d.resultatTirage, dateTirage: dateT }, d.trackingCode || '')
+        .catch(function(err){ console.warn('Synchronisation Firebase échouée (tirage omra) :', err); });
+    }
+    (idx < nbPlaces ? retenus : nonRetenus).push(d);
+  });
+
+  renderTableauOmra(); renderStatsOmra();
+
+  var html = '<div class="panneau" style="background:var(--creme2);margin-top:6px;">';
+  html += '<h4 style="color:var(--vert);margin-bottom:10px;">🎉 ' + retenus.length + ' candidat(s) retenu(s) sur ' + shuffled.length + ' — Campagne ' + annee + '</h4>';
+  html += '<ol style="padding-left:20px;font-size:13.5px;line-height:1.9;">';
+  retenus.forEach(function(d){ html += '<li><strong>' + esc(d.nom) + ' ' + esc(d.prenom) + '</strong> (' + esc(d.mat) + ') — pèlerin : ' + esc(d.pnom) + ' ' + esc(d.pprenom) + '</li>'; });
+  html += '</ol></div>';
+  resDiv.innerHTML = html;
+}
+
+function reinitialiserTirage() {
+  var anneeEl = document.getElementById('tirage-annee');
+  var annee = Number(anneeEl && anneeEl.value);
+  if (!annee) { alert('Veuillez choisir une année de campagne à réinitialiser.'); return; }
+  var concernes = omra.filter(function(d){ return getAnnee(d) === annee && d.resultatTirage; });
+  if (!concernes.length) { alert("Aucun tirage enregistré pour l'année " + annee + '.'); return; }
+  if (!confirm('Réinitialiser le tirage au sort de ' + annee + ' pour ' + concernes.length + ' dossier(s) ? Le résultat sera effacé et un nouveau tirage pourra être relancé.')) return;
+  concernes.forEach(function(d){
+    delete d.resultatTirage; delete d.dateTirage;
+    persistOmraLocal(d);
+    if (typeof window.fbUpdateOmra === 'function') {
+      window.fbUpdateOmra(d.num, { resultatTirage: null, dateTirage: null }, d.trackingCode || '')
+        .catch(function(err){ console.warn('Synchronisation Firebase échouée (réinitialisation tirage) :', err); });
+    }
+  });
+  renderTableauOmra(); renderStatsOmra();
+  document.getElementById('tirage-resultat').innerHTML = '';
+  alert('Tirage de ' + annee + ' réinitialisé.');
+}
+
 function genererPDFPret(num) {
   var d = prets.find(function(x){ return x.num === num; });
   if (!d) return;
@@ -3221,6 +4778,7 @@ function genererPDFPret(num) {
   doc.save('PretSocial_' + d.num + '_' + d.nom + '.pdf');
 }
 
+// ===== PDF =====
 function genererPDFSuivi(code) {
   var d = suiviCache[code];
   if (!d) { alert('Relancez la recherche avec votre code de suivi.'); return; }
@@ -3408,10 +4966,10 @@ function calculerRapportGlobal() {
       cloture: arr.filter(function(d){ return d.statut==='Clôturé'; }).length
     };
   }
-  var pc = statsOf(demandes), ls = statsOf(livres), ps = statsOf(prets);
+  var pc = statsOf(demandes), ls = statsOf(livres), ps = statsOf(prets), om = statsOf(omra);
   var montantPretValide = prets.filter(function(d){ return d.statut==='Validé'; }).reduce(function(s,d){ return s+(d.montant||0); }, 0);
-  return { pc: pc, ls: ls, ps: ps, montantPretValide: montantPretValide,
-    totalGlobal: pc.total + ls.total + ps.total, totalIdees: idees.length };
+  return { pc: pc, ls: ls, ps: ps, om: om, montantPretValide: montantPretValide,
+    totalGlobal: pc.total + ls.total + ps.total + om.total };
 }
 
 function renderRapportStats() {
@@ -3423,7 +4981,7 @@ function renderRapportStats() {
     '<div class="stat-card"><div class="stat-num">' + r.pc.total + '</div><div class="stat-lbl">Prise en charge</div></div>' +
     '<div class="stat-card"><div class="stat-num">' + r.ls.total + '</div><div class="stat-lbl">Livre scolaire</div></div>' +
     '<div class="stat-card"><div class="stat-num">' + r.ps.total + '</div><div class="stat-lbl">Prêt social</div></div>' +
-    '<div class="stat-card"><div class="stat-num">' + r.totalIdees + '</div><div class="stat-lbl">Boîte à idées</div></div>';
+    '<div class="stat-card"><div class="stat-num">' + r.om.total + '</div><div class="stat-lbl">Omra</div></div>';
 }
 
 async function genererRapportPPTX() {
@@ -3442,7 +5000,7 @@ async function genererRapportPPTX() {
   s1.addText('GICA — Groupe Industriel des Ciments d\'Algérie', { x:0.5, y:0.5, w:9, h:0.4, fontSize:14, color:'C7D9E3', bold:true });
   s1.addText('Comité de Participation — SCHB', { x:0.5, y:0.9, w:9, h:0.4, fontSize:12, color:OR });
   s1.addText('Rapport global des activités sociales', { x:0.5, y:2.0, w:9, h:0.8, fontSize:30, color:'FFFFFF', bold:true });
-  s1.addText('Prise en charge médicale · Livre scolaire · Prêt social', { x:0.5, y:2.75, w:9, h:0.4, fontSize:14, color:'C7D9E3' });
+  s1.addText('Prise en charge médicale · Livre scolaire · Prêt social · Omra', { x:0.5, y:2.75, w:9, h:0.4, fontSize:14, color:'C7D9E3' });
   s1.addText('Généré le ' + dateGen, { x:0.5, y:5.0, w:9, h:0.4, fontSize:11, color:'C7D9E3' });
 
   // Slide 2 : Résumé global (tableau)
@@ -3456,15 +5014,15 @@ async function genererRapportPPTX() {
       { text:'Refusées', options:{ bold:true, color:'FFFFFF', fill:{color:BLEU} } },
       { text:'Clôturées', options:{ bold:true, color:'FFFFFF', fill:{color:BLEU} } } ]
   ];
-  [['Prise en charge médicale', r.pc], ['Livre scolaire', r.ls], ['Prêt social', r.ps]].forEach(function(row){
+  [['Prise en charge médicale', r.pc], ['Livre scolaire', r.ls], ['Prêt social', r.ps], ['Omra', r.om]].forEach(function(row){
     var label = row[0], s = row[1];
     rows2.push([ String(label), String(s.total), String(s.valide), String(s.attente), String(s.refuse), String(s.cloture) ]);
   });
   rows2.push([ { text:'TOTAL', options:{ bold:true } }, { text:String(r.totalGlobal), options:{ bold:true } },
-    { text:String(r.pc.valide+r.ls.valide+r.ps.valide), options:{ bold:true } },
-    { text:String(r.pc.attente+r.ls.attente+r.ps.attente), options:{ bold:true } },
-    { text:String(r.pc.refuse+r.ls.refuse+r.ps.refuse), options:{ bold:true } },
-    { text:String(r.pc.cloture+r.ls.cloture+r.ps.cloture), options:{ bold:true } } ]);
+    { text:String(r.pc.valide+r.ls.valide+r.ps.valide+r.om.valide), options:{ bold:true } },
+    { text:String(r.pc.attente+r.ls.attente+r.ps.attente+r.om.attente), options:{ bold:true } },
+    { text:String(r.pc.refuse+r.ls.refuse+r.ps.refuse+r.om.refuse), options:{ bold:true } },
+    { text:String(r.pc.cloture+r.ls.cloture+r.ps.cloture+r.om.cloture), options:{ bold:true } } ]);
   s2.addTable(rows2, { x:0.4, y:1.0, w:9.2, fontSize:12, border:{type:'solid', color:'D9D2C4', pt:1}, autoPage:false });
   s2.addText('Montant total des prêts sociaux validés : ' + r.montantPretValide.toLocaleString('fr-DZ') + ' DA', { x:0.4, y:4.7, w:9.2, h:0.4, fontSize:13, color:VERT, bold:true });
 
@@ -3472,17 +5030,17 @@ async function genererRapportPPTX() {
   var s3 = pptx.addSlide();
   s3.addText('Répartition du volume par activité', { x:0.4, y:0.3, w:9.2, h:0.5, fontSize:22, color:BLEU, bold:true });
   s3.addChart('bar', [
-    { name: 'Total', labels: ['Prise en charge','Livre scolaire','Prêt social'],
-      values: [r.pc.total, r.ls.total, r.ps.total] }
-  ], { x:0.6, y:1.0, w:8.8, h:3.8, barColor:BLEU, showLegend:false, showValue:true, chartColors:[BLEU,OR,VERT] });
+    { name: 'Total', labels: ['Prise en charge','Livre scolaire','Prêt social','Omra'],
+      values: [r.pc.total, r.ls.total, r.ps.total, r.om.total] }
+  ], { x:0.6, y:1.0, w:8.8, h:3.8, barColor:BLEU, showLegend:false, showValue:true, chartColors:[BLEU,OR,VERT,GRIS] });
 
   // Slide 4 : Statuts globaux (camembert)
   var s4 = pptx.addSlide();
   s4.addText('Statuts des demandes — toutes activités', { x:0.4, y:0.3, w:9.2, h:0.5, fontSize:22, color:BLEU, bold:true });
-  var totVal = r.pc.valide+r.ls.valide+r.ps.valide;
-  var totAtt = r.pc.attente+r.ls.attente+r.ps.attente;
-  var totRef = r.pc.refuse+r.ls.refuse+r.ps.refuse;
-  var totClo = r.pc.cloture+r.ls.cloture+r.ps.cloture;
+  var totVal = r.pc.valide+r.ls.valide+r.ps.valide+r.om.valide;
+  var totAtt = r.pc.attente+r.ls.attente+r.ps.attente+r.om.attente;
+  var totRef = r.pc.refuse+r.ls.refuse+r.ps.refuse+r.om.refuse;
+  var totClo = r.pc.cloture+r.ls.cloture+r.ps.cloture+r.om.cloture;
   s4.addChart('pie', [
     { name:'Statuts', labels:['Validées','En attente','Refusées','Clôturées'], values:[totVal, totAtt, totRef, totClo] }
   ], { x:1.7, y:0.9, w:6.6, h:4.0, chartColors:[VERT,OR,ROUGE,GRIS], showLegend:true, legendPos:'r', showValue:true });
@@ -3500,7 +5058,9 @@ var I18N_AR = {
   'nav.demande': '📋 التكفل الطبي',
   'nav.livre': '📚 الكتاب المدرسي',
   'nav.pret': '💰 القرض الاجتماعي',
-  'nav.idees': '📮 صندوق الأفكار',
+  'nav.omra': '🕋 العمرة',
+  'nav.idees': '📬 صندوق الأفكار',
+  'nav.doleances': '📝 سجل التظلمات',
   'nav.suivi': '🔍 المتابعة',
   'nav.admin': '🔐 الإدارة',
   'accueil.eyebrow': 'لجنة المشاركة',
@@ -3512,12 +5072,31 @@ var I18N_AR = {
   'accueil.card.livre.desc': 'التسجيل السنوي لأبنائكم المتمدرسين للاستفادة من الكتاب المدرسي.',
   'accueil.card.pret.title': 'القرض الاجتماعي',
   'accueil.card.pret.desc': 'تقديم طلب قرض اجتماعي لدى لجنة المشاركة.',
+  'accueil.card.omra.title': 'العمرة',
+  'accueil.card.omra.desc': 'التسجيل في برنامج العمرة السنوي.',
   'accueil.card.idees.title': 'صندوق الأفكار',
-  'accueil.card.idees.desc': 'قدّم أفكارك لتحسين عمل لجنة المشاركة.',
+  'accueil.card.idees.desc': 'اقترح أفكارك لتحسين لجنة المشاركة.',
+  'accueil.card.doleances.title': 'سجل التظلمات',
+  'accueil.card.doleances.desc': 'أبلغ عن شكوى أو تظلم لدى لجنة المشاركة.',
   'accueil.card.suivi.title': 'متابعة الملف',
   'accueil.card.suivi.desc': 'تتبع حالة طلبكم باستخدام الرمز السري.',
   'accueil.card.admin.title': 'الإدارة',
   'accueil.card.admin.desc': 'فضاء مخصص للجنة المشاركة لتسيير الملفات.',
+  'accueil.card.annonces.title': 'الإعلانات',
+  'accueil.card.annonces.desc': 'اطلع على آخر الإعلانات الصادرة عن لجنة المشاركة.',
+  'nav.annonces': '📢 الإعلانات',
+  'annonces.eyebrow': 'لجنة المشاركة',
+  'annonces.title': '📢 الإعلانات',
+  'annonces.desc': 'تجدون هنا الإعلانات الصادرة عن لجنة المشاركة والموجهة للعمال.',
+  'annonces.vide': 'لا توجد إعلانات منشورة حاليًا.',
+  'annonces.form.titre': 'عنوان الإعلان',
+  'annonces.form.description': 'وصف (اختياري)',
+  'annonces.form.image': 'انقر لإرفاق صورة الإعلان',
+  'annonces.form.imageHint': 'JPG · PNG — الحد الأقصى 3 ميغا بايت',
+  'annonces.admin.form.title': '📢 نشر إعلان جديد',
+  'annonces.admin.list.title': '📋 الإعلانات المنشورة',
+  'btn.publier.annonce': '✅ نشر الإعلان',
+  'admtab.annonces': '📢 الإعلانات',
   'demande.spec.eyebrow': 'المؤسسات المتعاقدة',
   'demande.spec.title': 'التخصصات الطبية المعتمدة',
   'demande.spec.desc': 'يغطي التكفل العلاجات في المؤسسات المذكورة أدناه. الاستشارات البسيطة وعلاجات الأسنان العادية غير مؤهلة. الوصفة الطبية إلزامية.',
@@ -3530,20 +5109,31 @@ var I18N_AR = {
   'pret.eyebrow': 'استمارة إلكترونية',
   'pret.title': 'طلب قرض اجتماعي',
   'pret.desc': 'طلب موجه إلى السيد رئيس لجنة المشاركة. مبلغ القرض محدد بسقف 100.000 دج. الإثبات إلزامي لكل طلب بالمبلغ الأقصى.',
+  'omra.eyebrow': 'استمارة إلكترونية',
+  'omra.title': 'تسجيل — العمرة',
+  'omra.desc': 'سجّل في برنامج العمرة السنوي الذي تنظمه لجنة المشاركة لشركة SCHB. تُصنّف التسجيلات حسب السنة وتُغلق تلقائيًا في نهاية كل حملة.',
+  'omra.h.adherent': '👤 معلومات المنخرط',
+  'omra.h.pelerin': '🕋 معلومات المعتمر',
+  'omra.h.pelerin.desc': 'إذا كان المعتمر هو المنخرط نفسه، أعد إدخال نفس المعلومات أدناه.',
+  'omra.annee': 'سنة التسجيل للعمرة',
+  'omra.annee.short': 'السنة',
+  'omra.pelerin': 'المعتمر',
+  'omra.pelerin.nom': 'اسم المعتمر',
+  'omra.pelerin.prenom': 'الاسم الشخصي للمعتمر',
+  'omra.naissance': 'تاريخ الميلاد',
+  'omra.passeport': 'رقم جواز السفر / بطاقة التعريف',
+  'omra.adresse': 'العنوان',
   'idees.eyebrow': 'استمارة إلكترونية',
-  'idees.title': '📮 صندوق الأفكار',
-  'idees.desc': 'قدّم أفكارك أو ملاحظاتك أو اقتراحاتك لتحسين عمل لجنة المشاركة بشركة SCHB.',
-  'idees.sujet': 'موضوع الاقتراح',
-  'idees.texte': 'اقتراحك / ملاحظتك',
-  'idees.merci': '🙏 شكرًا لمساهمتك. ستدرس لجنة المشاركة اقتراحك باهتمام.',
-  'confid.h1': '🔒 إدخال جديد في السجل',
-  'confid.desc': 'سجّل هنا كل اطلاع أو تبليغ بمعلومة سرية تم التعامل معها من طرف أحد أعضاء لجنة المشاركة.',
-  'confid.membre': 'عضو لجنة المشاركة',
-  'confid.dossier': 'الملف / الموضوع المعني',
-  'confid.nature': 'طبيعة المعلومة',
-  'confid.engagement': 'التزام السرية الموقّع',
-  'confid.observations': 'ملاحظات',
-  'confid.ajouter': '➕ إضافة إلى السجل',
+  'idees.title': '📬 صندوق الأفكار',
+  'idees.desc': 'اقترح أفكارك ومقترحاتك لتحسين سير عمل لجنة المشاركة. تُرسل مقترحاتكم مباشرة إلى اللجنة.',
+  'idees.anonyme': 'إرسال هذه الفكرة بشكل مجهول',
+  'idees.message': 'فكرتك / اقتراحك',
+  'doleances.eyebrow': 'استمارة إلكترونية',
+  'doleances.title': '📝 سجل التظلمات',
+  'doleances.desc': 'أبلغ عن شكوى أو صعوبة أو تظلم لدى لجنة المشاركة. سيتم تسجيله ومعالجته بسرية تامة.',
+  'doleances.anonyme': 'إرسال هذا التظلم بشكل مجهول',
+  'doleances.objet': 'موضوع التظلم',
+  'doleances.description': 'وصف تفصيلي',
   'suivi.eyebrow': 'تتبع طلبي',
   'suivi.title': 'حالة التكفل الخاص بك',
   'suivi.desc': 'أدخل رمز المتابعة السري الذي تم تسليمه عند تسجيل طلبك.',
@@ -3557,19 +5147,29 @@ var I18N_AR = {
   'btn.soumettre.demande': '✅ إرسال الطلب',
   'btn.soumettre.livre': '✅ إرسال التسجيل',
   'btn.soumettre.pret': '✅ إرسال الطلب',
-  'btn.soumettre.idees': '✅ إرسال الاقتراح',
+  'btn.soumettre.omra': '✅ إرسال التسجيل',
+  'btn.soumettre.idee': '✅ إرسال اقتراحي',
+  'btn.soumettre.doleance': '✅ إرسال تظلمي',
   'btn.exportExcel': '📊 تصدير Excel',
   'btn.genererRapport': '📥 إنشاء تقرير PowerPoint',
   'btn.cloturerMaintenant': '🔒 إغلاق السنة المنقضية يدويًا',
   'admin.login.btn': 'الدخول بشكل آمن',
   'admin.logout': '🔓 تسجيل الخروج',
+  'admin.changepwd.btn': '🔑 تغيير كلمة المرور',
+  'admin.changepwd.title': '🔑 تغيير كلمة مرور المسؤول',
+  'admin.changepwd.current': 'كلمة المرور الحالية',
+  'admin.changepwd.new': 'كلمة المرور الجديدة',
+  'admin.changepwd.confirm': 'تأكيد كلمة المرور الجديدة',
+  'admin.changepwd.submit': '✅ تحديث كلمة المرور',
   'admtab.demandes': '📋 الطلبات',
   'admtab.livres': '📚 الكتب المدرسية',
   'admtab.prets': '💰 القروض الاجتماعية',
-  'admtab.idees': '📮 صندوق الأفكار',
-  'admtab.confid': '🔒 سجل السرية',
+  'admtab.omra': '🕋 العمرة',
+  'admtab.idees': '📬 صندوق الأفكار',
+  'admtab.doleances': '📝 التظلمات',
   'admtab.stats': '📊 إحصائيات حسب المؤسسة',
   'admtab.rapport': '📈 التقرير الشامل',
+  'admtab.effectifs': '🧑‍💼 القوى العاملة',
   'filter.tous': 'جميع الحالات',
   'filter.toutesAnnees': 'جميع السنوات',
   'statut.enattente': 'قيد الانتظار',
@@ -3577,8 +5177,9 @@ var I18N_AR = {
   'statut.refuse': 'مرفوض',
   'statut.cloture': 'مغلق',
   'statut.nouveau': 'جديد',
-  'statut.lu': 'مقروء',
-  'statut.traite': 'معالج',
+  'statut.lu': 'تمت القراءة',
+  'statut.encours': 'قيد المعالجة',
+  'statut.traite': 'تمت المعالجة',
   'th.date': 'التاريخ',
   'th.adherent': 'المنخرط',
   'th.matricule': 'رقم التسجيل',
@@ -3589,16 +5190,15 @@ var I18N_AR = {
   'th.enfants': 'الأبناء',
   'th.travailleur': 'العامل',
   'th.montant': 'المبلغ',
-  'th.auteur': 'المرسل',
   'ticket.adherent': 'المنخرط',
   'ticket.date': 'التاريخ',
   'ticket.code': 'رمز المتابعة السري',
   'ticket.enattente': 'قيد انتظار المصادقة',
-  'ticket.idees.saved': 'تم إرسال الاقتراح',
+  'ticket.omra.saved': 'تم تسجيل الطلب',
   'ticket.conserverCode': '🔐 احتفظ برمز المتابعة السري الخاص بك. يتيح لك تتبع حالة تسجيلك من قسم المتابعة.',
   'rapport.h1': '📈 التقرير الشامل للأنشطة',
   'rapport.desc': 'أنشئ تقريرًا تلخيصيًا (لجميع الأنشطة) بصيغة PowerPoint، جاهزًا لتقديمه لصاحب العمل أو للعمال.',
-  'rapport.note': 'ℹ️ يقوم الإغلاق التلقائي، عند تغيّر السنة الميلادية، بأرشفة وإغلاق جميع الطلبات التي ما زالت «قيد الانتظار» من السنة السابقة (التكفل الطبي، الكتاب المدرسي، القرض الاجتماعي). الملفات المقبولة أو المرفوضة مسبقًا تبقى قابلة للاطلاع عليها بشكل طبيعي.'
+  'rapport.note': 'ℹ️ يقوم الإغلاق التلقائي، عند تغيّر السنة الميلادية، بأرشفة وإغلاق جميع الطلبات التي ما زالت «قيد الانتظار» من السنة السابقة (التكفل الطبي، الكتاب المدرسي، القرض الاجتماعي، العمرة). الملفات المقبولة أو المرفوضة مسبقًا تبقى قابلة للاطلاع عليها بشكل طبيعي.'
 };
 
 function t(key) {
@@ -3627,8 +5227,9 @@ function applyLang(lang) {
   if (document.getElementById('tbody-demandes')) { try { renderTableau(); } catch(e) {} }
   if (document.getElementById('tbody-livres')) { try { renderTableauLivres(); } catch(e) {} }
   if (document.getElementById('tbody-prets')) { try { renderTableauPrets(); } catch(e) {} }
+  if (document.getElementById('tbody-omra')) { try { renderTableauOmra(); } catch(e) {} }
   if (document.getElementById('tbody-idees')) { try { renderTableauIdees(); } catch(e) {} }
-  if (document.getElementById('tbody-confid')) { try { renderTableauConfid(); } catch(e) {} }
+  if (document.getElementById('tbody-doleances')) { try { renderTableauDoleances(); } catch(e) {} }
 }
 
 function toggleLang() {
@@ -3659,6 +5260,23 @@ function saveData() {
   } else {
     console.error('Firebase Authentication indisponible après 25s.');
     applyAdminAuthState(null);
+  }
+})();
+
+// ===== ANNONCES : lecture publique, visible par tous les travailleurs sans connexion =====
+renderAnnonces();
+(function waitForFirebaseAnnonces(attempt) {
+  attempt = attempt || 0;
+  if (typeof window.fbListenAnnonces === 'function') {
+    window.fbListenAnnonces(function(arr) {
+      annonces = mergeAnnonces(arr);
+      renderAnnonces();
+      renderAdminAnnonces();
+    }, function(err) {
+      console.warn('Lecture des annonces indisponible pour le moment (Firebase) :', err);
+    });
+  } else if (attempt < 125) {
+    setTimeout(function(){ waitForFirebaseAnnonces(attempt + 1); }, 200);
   }
 })();
 </script>
