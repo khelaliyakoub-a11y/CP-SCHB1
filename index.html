@@ -474,73 +474,6 @@
         return _fbDb.ref('meta/derniereClotureAnnee').once('value').then(function(snap){ return snap.val(); });
       };
 
-      // ===== SPORT & TRAVAIL (inscriptions aux disciplines : Football à 7, Échecs, Pétanque…) =====
-      var _adminRefSport = null;
-      var _adminValueHandlerSport = null;
-
-      window.fbCreateSport = function(d, suiviPublic) {
-        var updates = {};
-        updates['sport/' + d.num] = d;
-        updates['suiviSport/' + d.trackingCode] = suiviPublic;
-        return _fbDb.ref().update(updates);
-      };
-      window.fbReadSuiviSport = function(code) {
-        return _fbDb.ref('suiviSport/' + code).once('value').then(function(snapshot) {
-          return snapshot.val();
-        });
-      };
-      window.fbListenAdminSport = function(callback, errorCallback) {
-        if (_adminRefSport && _adminValueHandlerSport) _adminRefSport.off('value', _adminValueHandlerSport);
-        _adminRefSport = _fbDb.ref('sport');
-        _adminValueHandlerSport = function(snapshot) {
-          var data = snapshot.val();
-          callback(data ? Object.values(data) : []);
-        };
-        _adminRefSport.on('value', _adminValueHandlerSport, errorCallback || function(err){ console.error(err); });
-      };
-      window.fbStopAdminListenSport = function() {
-        if (_adminRefSport && _adminValueHandlerSport) _adminRefSport.off('value', _adminValueHandlerSport);
-        _adminRefSport = null; _adminValueHandlerSport = null;
-      };
-      window.fbUpdateSport = function(num, patch, trackingCode) {
-        var updates = {};
-        Object.keys(patch).forEach(function(k){ updates['sport/' + num + '/' + k] = patch[k]; });
-        if (trackingCode) {
-          ['statut','dateValidation'].forEach(function(k){
-            if (Object.prototype.hasOwnProperty.call(patch, k)) updates['suiviSport/' + trackingCode + '/' + k] = patch[k];
-          });
-        }
-        return _fbDb.ref().update(updates);
-      };
-      window.fbDeleteSport = function(num, trackingCode) {
-        var updates = {};
-        updates['sport/' + num] = null;
-        if (trackingCode) updates['suiviSport/' + trackingCode] = null;
-        return _fbDb.ref().update(updates);
-      };
-
-      // ===== SAISONS (ouverture/fermeture des inscriptions par l'admin : Omra, Sport & Travail) =====
-      // Stockées sous meta/{cle}, lisibles par tous (pour afficher l'état aux travailleurs),
-      // écriture réservée à l'administrateur connecté.
-      var _saisonRefs = {};
-      var _saisonHandlers = {};
-      window.fbSetSaison = function(cle, ouverte) {
-        return _fbDb.ref('meta/' + cle).set(!!ouverte);
-      };
-      window.fbGetSaison = function(cle) {
-        return _fbDb.ref('meta/' + cle).once('value').then(function(snap){ return !!snap.val(); });
-      };
-      window.fbListenSaison = function(cle, callback, errorCallback) {
-        if (_saisonRefs[cle] && _saisonHandlers[cle]) _saisonRefs[cle].off('value', _saisonHandlers[cle]);
-        _saisonRefs[cle] = _fbDb.ref('meta/' + cle);
-        _saisonHandlers[cle] = function(snapshot) { callback(!!snapshot.val()); };
-        _saisonRefs[cle].on('value', _saisonHandlers[cle], errorCallback || function(err){ console.error(err); });
-      };
-      window.fbStopListenSaison = function(cle) {
-        if (_saisonRefs[cle] && _saisonHandlers[cle]) _saisonRefs[cle].off('value', _saisonHandlers[cle]);
-        delete _saisonRefs[cle]; delete _saisonHandlers[cle];
-      };
-
       window.dispatchEvent(new Event('firebase-sdk-ready'));
     } catch (e) {
       console.error("Erreur d'initialisation Firebase :", e);
@@ -889,7 +822,6 @@ footer strong{color:var(--or-clair);}
   <button onclick="showVue('livre',this)" data-i18n="nav.livre">📚 Livre scolaire</button>
   <button onclick="showVue('pret',this)" data-i18n="nav.pret">💰 Prêt social</button>
   <button onclick="showVue('omra',this)" data-i18n="nav.omra">🕋 Omra</button>
-  <button onclick="showVue('sport',this)" data-i18n="nav.sport">⚽ Sport &amp; Travail</button>
   <button onclick="showVue('idees',this)" data-i18n="nav.idees">📬 Boîte à idées</button>
   <button onclick="showVue('doleances',this)" data-i18n="nav.doleances">📝 Registre de doléances</button>
   <button onclick="showVue('annonces',this)" data-i18n="nav.annonces">📢 Annonces</button>
@@ -936,14 +868,6 @@ footer strong{color:var(--or-clair);}
       <div class="act-body">
         <div class="act-title" data-i18n="accueil.card.omra.title">Omra</div>
         <div class="act-desc" data-i18n="accueil.card.omra.desc">Inscription au programme annuel de l'Omra.</div>
-      </div>
-      <div class="act-arrow">→</div>
-    </div>
-    <div class="card-activite" onclick="goVue('sport')">
-      <div class="act-icon" style="background:#E8F5E9;">⚽</div>
-      <div class="act-body">
-        <div class="act-title" data-i18n="accueil.card.sport.title">Sport &amp; Travail</div>
-        <div class="act-desc" data-i18n="accueil.card.sport.desc">Inscrivez-vous aux disciplines sportives (Football à 7, Échecs, Pétanque…) lorsque la saison est ouverte.</div>
       </div>
       <div class="act-arrow">→</div>
     </div>
@@ -1273,17 +1197,6 @@ footer strong{color:var(--or-clair);}
     <p class="sec-desc" data-i18n="omra.desc">Inscrivez-vous au programme annuel d'Omra organisé par le Comité de Participation de la SCHB. Les inscriptions sont classées par année et clôturées automatiquement à la fin de chaque campagne.</p>
   </div>
 
-  <div id="omra-saison-fermee" class="panneau" style="display:block;border:1.5px solid var(--or);">
-    <div style="display:flex;gap:12px;align-items:center;">
-      <div style="font-size:28px;">🔒</div>
-      <div>
-        <div class="serif" style="color:var(--bleu);font-weight:700;font-size:16px;margin-bottom:4px;" data-i18n="omra.fermee.titre">Inscriptions actuellement fermées</div>
-        <div style="font-size:13.5px;color:#5C5142;" data-i18n="omra.fermee.desc">La campagne Omra n'a pas encore été ouverte par le Comité de Participation. Revenez consulter cette page dès l'annonce de l'ouverture des inscriptions.</div>
-      </div>
-    </div>
-  </div>
-
-  <div id="omra-form-wrap" style="display:none;">
   <div class="panneau">
     <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="omra.h.adherent">👤 Informations de l'adhérent</h3>
     <div class="cols2">
@@ -1339,85 +1252,6 @@ footer strong{color:var(--or-clair);}
     </div>
     <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;" data-i18n="ticket.conserverCode">
       🔐 <strong>Conservez votre code de suivi confidentiel.</strong> Il permet de consulter l'état de votre inscription depuis l'onglet Suivi.
-    </div>
-  </div>
-  </div>
-</div>
-
-<!-- ===== SPORT & TRAVAIL ===== -->
-<div id="vue-sport" class="vue">
-  <div class="sec-hdr">
-    <span class="eyebrow" data-i18n="sport.eyebrow">Formulaire en ligne</span>
-    <h2 class="sec-title" data-i18n="sport.title">Inscription — Sport &amp; Travail</h2>
-    <p class="sec-desc" data-i18n="sport.desc">Inscrivez-vous à l'une des disciplines sportives organisées par le Comité de Participation de la SCHB (Football à 7, Jeu d'échecs, Pétanque…). Les inscriptions ne sont possibles que lorsque l'administrateur a ouvert la saison sportive.</p>
-  </div>
-
-  <div id="sport-saison-fermee" class="panneau" style="display:block;border:1.5px solid var(--or);">
-    <div style="display:flex;gap:12px;align-items:center;">
-      <div style="font-size:28px;">🔒</div>
-      <div>
-        <div class="serif" style="color:var(--bleu);font-weight:700;font-size:16px;margin-bottom:4px;" data-i18n="sport.fermee.titre">Inscriptions actuellement fermées</div>
-        <div style="font-size:13.5px;color:#5C5142;" data-i18n="sport.fermee.desc">La saison sportive n'a pas encore été ouverte par le Comité de Participation. Revenez consulter cette page dès l'annonce de l'ouverture des inscriptions.</div>
-      </div>
-    </div>
-  </div>
-
-  <div id="sport-form-wrap" style="display:none;">
-    <div class="panneau">
-      <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="sport.h.adherent">👤 Informations du travailleur</h3>
-      <div class="cols2">
-        <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="fs-nom" type="text" placeholder="NOM DE FAMILLE"></div>
-        <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="fs-prenom" type="text" placeholder="Prénom"></div>
-      </div>
-      <div class="cols2">
-        <div class="grp"><label data-i18n="f.matricule">Matricule <span class="req">*</span></label><input id="fs-matricule" type="text" placeholder="N° matricule"></div>
-        <div class="grp"><label data-i18n="f.tel">Téléphone <span class="req">*</span></label><input id="fs-tel" type="tel" placeholder="05/06/07 xx xx xx xx"></div>
-      </div>
-      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="fs-service" type="text" placeholder="Ex: Direction Commerciale..."></div>
-    </div>
-
-    <div class="panneau">
-      <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="sport.h.discipline">⚽ Discipline</h3>
-      <div class="cols2">
-        <div class="grp">
-          <label data-i18n="sport.discipline">Discipline souhaitée <span class="req">*</span></label>
-          <select id="fs-discipline" onchange="document.getElementById('fs-discipline-autre-grp').style.display = (this.value==='Autre') ? 'block' : 'none';">
-            <option value="Football à 7" data-i18n="sport.discipline.foot">⚽ Football à 7</option>
-            <option value="Jeu d'échecs" data-i18n="sport.discipline.echecs">♟️ Jeu d'échecs</option>
-            <option value="Pétanque" data-i18n="sport.discipline.petanque">🎯 Pétanque</option>
-            <option value="Autre" data-i18n="sport.discipline.autre">Autre</option>
-          </select>
-        </div>
-        <div class="grp"><label data-i18n="sport.saison">Saison / Année <span class="req">*</span></label>
-          <select id="fs-annee"></select>
-        </div>
-      </div>
-      <div class="grp" id="fs-discipline-autre-grp" style="display:none;"><label data-i18n="sport.discipline.preciser">Précisez la discipline</label><input id="fs-discipline-autre" type="text" placeholder="Ex : Volley-ball"></div>
-    </div>
-
-    <div class="bar-actions">
-      <button class="btn btn-primary" onclick="soumettreSport()" data-i18n="btn.soumettre.sport">✅ Soumettre l'inscription</button>
-      <button class="btn btn-outline" onclick="resetFormSport()" data-i18n="btn.reset">🔄 Réinitialiser</button>
-    </div>
-    <div class="msg" id="msg-sport"></div>
-
-    <div class="ticket" id="ticket-confirm-sport">
-      <div class="ticket-hdr">
-        <div>
-          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7A6F58;margin-bottom:4px;" data-i18n="ticket.sport.saved">Inscription enregistrée</div>
-          <div class="ticket-num" id="tks-num">SP-0001</div>
-        </div>
-        <div class="badge-att" data-i18n="ticket.enattente">En attente de validation</div>
-      </div>
-      <div class="ticket-rows">
-        <div class="trow"><div class="trow-lbl" data-i18n="ticket.adherent">Adhérent</div><div class="trow-val" id="tks-adh"></div></div>
-        <div class="trow"><div class="trow-lbl" data-i18n="sport.discipline.short">Discipline</div><div class="trow-val" id="tks-discipline"></div></div>
-        <div class="trow"><div class="trow-lbl" data-i18n="ticket.date">Date</div><div class="trow-val" id="tks-date"></div></div>
-        <div class="trow" style="grid-column:1/-1;border:1.5px solid var(--or);"><div class="trow-lbl" data-i18n="ticket.code">Code de suivi confidentiel</div><div class="trow-val" id="tks-code" style="font-family:monospace;font-size:16px;letter-spacing:.04em;color:var(--bleu);"></div></div>
-      </div>
-      <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;" data-i18n="ticket.conserverCode">
-        🔐 <strong>Conservez votre code de suivi confidentiel.</strong> Il permet de consulter l'état de votre inscription depuis l'onglet Suivi.
-      </div>
     </div>
   </div>
 </div>
@@ -1545,7 +1379,6 @@ footer strong{color:var(--or-clair);}
       <button class="btn-admin-tab" id="tab-btn-livres" onclick="showAdminTab('livres')" data-i18n="admtab.livres">📚 Livres scolaires</button>
       <button class="btn-admin-tab" id="tab-btn-prets" onclick="showAdminTab('prets')" data-i18n="admtab.prets">💰 Prêts sociaux</button>
       <button class="btn-admin-tab" id="tab-btn-omra" onclick="showAdminTab('omra')" data-i18n="admtab.omra">🕋 Omra</button>
-      <button class="btn-admin-tab" id="tab-btn-sport" onclick="showAdminTab('sport')" data-i18n="admtab.sport">⚽ Sport &amp; Travail</button>
       <button class="btn-admin-tab" id="tab-btn-idees" onclick="showAdminTab('idees')" data-i18n="admtab.idees">📬 Boîte à idées</button>
       <button class="btn-admin-tab" id="tab-btn-doleances" onclick="showAdminTab('doleances')" data-i18n="admtab.doleances">📝 Doléances</button>
       <button class="btn-admin-tab" id="tab-btn-annonces" onclick="showAdminTab('annonces')" data-i18n="admtab.annonces">📢 Annonces</button>
@@ -1626,13 +1459,6 @@ footer strong{color:var(--or-clair);}
 
     <div id="admin-tab-omra" style="display:none;">
       <div class="admin-stats" id="omra-stats"></div>
-      <div class="panneau" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-        <div>
-          <h3 class="serif" style="color:var(--bleu);margin-bottom:4px;font-size:16px;">🕋 Saison d'inscription Omra</h3>
-          <div id="omra-saison-etat" style="font-size:13.5px;color:#5C5142;">Chargement de l'état de la saison…</div>
-        </div>
-        <button id="btn-toggle-saison-omra" class="btn btn-primary" onclick="toggleSaisonOmra()">…</button>
-      </div>
       <div class="panneau" style="margin-bottom:16px;">
         <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:16px;">🎲 Tirage au sort — places limitées</h3>
         <p style="font-size:13px;color:#5C5142;margin-bottom:14px;">Le tirage sélectionne aléatoirement les places parmi les inscriptions <strong>Validées</strong> de l'année choisie qui n'ont pas encore de résultat.</p>
@@ -1662,43 +1488,6 @@ footer strong{color:var(--or-clair);}
           <table class="tab">
             <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th data-i18n="omra.pelerin">Pèlerin</th><th data-i18n="omra.annee.short">Année</th><th data-i18n="th.statut">Statut</th><th>Tirage</th><th data-i18n="th.actions">Actions</th></tr></thead>
             <tbody id="tbody-omra"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div id="admin-tab-sport" style="display:none;">
-      <div class="admin-stats" id="sport-stats"></div>
-      <div class="panneau" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-        <div>
-          <h3 class="serif" style="color:var(--bleu);margin-bottom:4px;font-size:16px;">⚽ Saison sportive</h3>
-          <div id="sport-saison-etat" style="font-size:13.5px;color:#5C5142;">Chargement de l'état de la saison…</div>
-        </div>
-        <button id="btn-toggle-saison-sport" class="btn btn-primary" onclick="toggleSaisonSport()">…</button>
-      </div>
-      <div class="panneau">
-        <div class="filter-bar">
-          <input id="filter-search-sport" type="text" placeholder="🔍 Rechercher nom, matricule, discipline…" oninput="renderTableauSport()" style="flex:1;min-width:200px;">
-          <select id="filter-annee-sport" onchange="renderTableauSport()"></select>
-          <select id="filter-discipline-sport" onchange="renderTableauSport()">
-            <option value="">Toutes les disciplines</option>
-            <option value="Football à 7">⚽ Football à 7</option>
-            <option value="Jeu d'échecs">♟️ Jeu d'échecs</option>
-            <option value="Pétanque">🎯 Pétanque</option>
-          </select>
-          <select id="filter-status-sport" onchange="renderTableauSport()">
-            <option value="" data-i18n="filter.tous">Tous les statuts</option>
-            <option value="En attente" data-i18n="statut.enattente">En attente</option>
-            <option value="Validé" data-i18n="statut.valide">Validé</option>
-            <option value="Refusé" data-i18n="statut.refuse">Refusé</option>
-            <option value="Clôturé" data-i18n="statut.cloture">Clôturé</option>
-          </select>
-          <button class="btn-excel" onclick="exporterExcelSport()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
-        </div>
-        <div class="tableau-wrap">
-          <table class="tab">
-            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th data-i18n="sport.discipline.short">Discipline</th><th data-i18n="sport.saison">Saison</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
-            <tbody id="tbody-sport"></tbody>
           </table>
         </div>
       </div>
@@ -1783,7 +1572,7 @@ footer strong{color:var(--or-clair);}
           <button class="btn-cloture" onclick="cloturerAnneesPassees(true)" data-i18n="btn.cloturerMaintenant">🔒 Clôturer manuellement l'année écoulée</button>
         </div>
         <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:12.5px;color:#5C5142;margin-top:16px;line-height:1.6;" data-i18n="rapport.note">
-          ℹ️ La clôture automatique archive et bloque, au changement d'année civile, toutes les demandes encore « En attente » de l'année précédente (Prise en charge, Livre scolaire, Prêt social, Omra, Sport &amp; Travail). Les dossiers déjà validés ou refusés restent consultables normalement.
+          ℹ️ La clôture automatique archive et bloque, au changement d'année civile, toutes les demandes encore « En attente » de l'année précédente (Prise en charge, Livre scolaire, Prêt social, Omra). Les dossiers déjà validés ou refusés restent consultables normalement.
         </div>
       </div>
     </div>
@@ -2006,41 +1795,6 @@ function mergeOmra(fbArr) {
   return Object.values(map);
 }
 
-// ===== SPORT & TRAVAIL (local) =====
-function loadSportLocal() {
-  try { return JSON.parse(localStorage.getItem('schb_sport') || '[]'); } catch(e) { return []; }
-}
-function saveSportLocal(arr) {
-  try { localStorage.setItem('schb_sport', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (sport):', e); }
-}
-function persistSportLocal(d) {
-  var arr = loadSportLocal();
-  var idx = arr.findIndex(function(x){ return x.num === d.num; });
-  if (idx >= 0) arr[idx] = d; else arr.push(d);
-  saveSportLocal(arr);
-}
-function retirerSportLocal(num) {
-  var arr = loadSportLocal().filter(function(x){ return x.num !== num; });
-  saveSportLocal(arr);
-}
-function loadSportSupprimesLocal() {
-  try { return JSON.parse(localStorage.getItem('schb_sport_supprimes') || '[]'); } catch(e) { return []; }
-}
-function saveSportSupprimesLocal(arr) {
-  try { localStorage.setItem('schb_sport_supprimes', JSON.stringify(arr)); } catch(e) {}
-}
-function marquerSportSupprime(num) {
-  var arr = loadSportSupprimesLocal();
-  if (arr.indexOf(num) === -1) { arr.push(num); saveSportSupprimesLocal(arr); }
-}
-function mergeSport(fbArr) {
-  var map = {};
-  loadSportLocal().forEach(function(d){ map[d.num] = d; });
-  (fbArr||[]).forEach(function(d){ map[d.num] = d; });
-  loadSportSupprimesLocal().forEach(function(num){ delete map[num]; });
-  return Object.values(map);
-}
-
 // ===== BOÎTE À IDÉES (local) =====
 function loadIdeesLocal() {
   try { return JSON.parse(localStorage.getItem('schb_idees') || '[]'); } catch(e) { return []; }
@@ -2176,10 +1930,6 @@ var prets = loadPretsLocal();
 var suiviCachePret = {};
 var omra = loadOmraLocal();
 var suiviCacheOmra = {};
-var sport = loadSportLocal();
-var suiviCacheSport = {};
-var saisonOmraOuverte = false;
-var saisonSportOuverte = false;
 var idees = loadIdeesLocal();
 var doleances = loadDoleancesLocal();
 var effectifs = []; // fiches importées depuis le fichier Excel "État des effectifs" (voir onglet admin dédié)
@@ -2680,10 +2430,6 @@ function remplirAnneesOmraForm() {
 remplirAnneesOmraForm();
 
 async function soumettreOmra() {
-  if (!saisonOmraOuverte) {
-    alert("⚠️ La campagne Omra n'est pas encore ouverte par le Comité de Participation. Les inscriptions ne sont pas possibles pour le moment.");
-    return;
-  }
   var nom = document.getElementById('fo-nom').value.trim().toUpperCase();
   var prenom = document.getElementById('fo-prenom').value.trim();
   var mat = document.getElementById('fo-matricule').value.trim();
@@ -2746,104 +2492,6 @@ function resetFormOmra() {
   remplirAnneesOmraForm();
   document.getElementById('ticket-confirm-omra').classList.remove('visible');
   document.getElementById('msg-omra').style.display = 'none';
-}
-
-// Applique visuellement l'état d'une saison (ouverte/fermée) sur le formulaire public correspondant.
-// idFermee : id du bandeau "fermé", idFormWrap : id du wrapper du formulaire.
-function appliquerEtatSaisonPublic(ouverte, idFermee, idFormWrap) {
-  var bandeau = document.getElementById(idFermee);
-  var wrap = document.getElementById(idFormWrap);
-  if (bandeau) bandeau.style.display = ouverte ? 'none' : 'block';
-  if (wrap) wrap.style.display = ouverte ? 'block' : 'none';
-}
-
-// ===== SPORT & TRAVAIL =====
-function newSportNumber(now) {
-  var y = String(now.getFullYear()).slice(-2);
-  var m = String(now.getMonth()+1).padStart(2,'0');
-  var d = String(now.getDate()).padStart(2,'0');
-  return 'SP-' + y + m + d + '-' + randomSecret(6);
-}
-function newTrackingCodeSport() { return 'SCHB-SP-' + randomSecret(20); }
-
-function makeSuiviPublicSport(d) {
-  return {
-    code: d.trackingCode, num: d.num, statut: d.statut, date: d.date, dateObj: d.dateObj, annee: d.annee,
-    nom: d.nom, prenom: d.prenom, mat: d.mat, tel: d.tel, service: d.service || '',
-    discipline: d.discipline, dateValidation: d.dateValidation || ''
-  };
-}
-
-function remplirAnneesSportForm() {
-  var el = document.getElementById('fs-annee');
-  if (!el) return;
-  var cy = new Date().getFullYear();
-  var opts = [cy, cy+1];
-  el.innerHTML = opts.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
-}
-remplirAnneesSportForm();
-
-async function soumettreSport() {
-  if (!saisonSportOuverte) {
-    alert("⚠️ La saison sportive n'est pas encore ouverte par le Comité de Participation. Les inscriptions ne sont pas possibles pour le moment.");
-    return;
-  }
-  var nom = document.getElementById('fs-nom').value.trim().toUpperCase();
-  var prenom = document.getElementById('fs-prenom').value.trim();
-  var mat = document.getElementById('fs-matricule').value.trim();
-  var tel = document.getElementById('fs-tel').value.trim();
-  var service = document.getElementById('fs-service').value.trim();
-  var disciplineSel = document.getElementById('fs-discipline').value;
-  var disciplineAutre = document.getElementById('fs-discipline-autre').value.trim();
-  var discipline = (disciplineSel === 'Autre' && disciplineAutre) ? disciplineAutre : disciplineSel;
-  var anneeInscription = Number(document.getElementById('fs-annee').value);
-  var msg = document.getElementById('msg-sport');
-  msg.className = 'msg';
-
-  if (!nom || !prenom || !mat || !tel || !discipline || !anneeInscription) {
-    msg.className = 'msg err'; msg.style.display = 'flex';
-    msg.textContent = '⚠️ Veuillez remplir tous les champs obligatoires.'; return;
-  }
-
-  var now = new Date();
-  var num = newSportNumber(now);
-  var trackingCode = newTrackingCodeSport();
-  var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
-
-  var d = {
-    num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
-    discipline: discipline, date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: anneeInscription
-  };
-
-  persistSportLocal(d);
-
-  document.getElementById('tks-num').textContent = num;
-  document.getElementById('tks-adh').textContent = nom + ' ' + prenom + ' (' + mat + ')';
-  document.getElementById('tks-discipline').textContent = discipline;
-  document.getElementById('tks-date').textContent = dateStr;
-  document.getElementById('tks-code').textContent = trackingCode;
-  document.getElementById('ticket-confirm-sport').classList.add('visible');
-  msg.className = 'msg ok'; msg.style.display = 'flex';
-  msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
-
-  if (typeof window.fbCreateSport === 'function') {
-    window.fbCreateSport(d, makeSuiviPublicSport(d)).catch(function(err){
-      console.warn('Synchronisation Firebase échouée (sport, enregistrée localement) :', err);
-      msg.className = 'msg err'; msg.style.display = 'flex';
-      msg.innerHTML = "⚠️ Inscription <strong>" + esc(num) + "</strong> enregistrée sur cet appareil uniquement : la synchronisation avec le serveur a échoué (" + esc(err && err.message || 'erreur inconnue') + ").";
-    });
-  }
-}
-
-function resetFormSport() {
-  ['fs-nom','fs-prenom','fs-matricule','fs-tel','fs-service','fs-discipline-autre'].forEach(function(id){
-    var el = document.getElementById(id); if (el) el.value = '';
-  });
-  document.getElementById('fs-discipline').value = 'Football à 7';
-  document.getElementById('fs-discipline-autre-grp').style.display = 'none';
-  remplirAnneesSportForm();
-  document.getElementById('ticket-confirm-sport').classList.remove('visible');
-  document.getElementById('msg-sport').style.display = 'none';
 }
 
 // ===== BOÎTE À IDÉES =====
@@ -3143,8 +2791,6 @@ async function rechercherSuivi() {
   if (matchLocalPret) { res.innerHTML = renderSuiviPret(matchLocalPret); return; }
   var matchLocalOmra = loadOmraLocal().find(function(x){ return x.trackingCode === code; });
   if (matchLocalOmra) { res.innerHTML = renderSuiviOmra(matchLocalOmra); return; }
-  var matchLocalSport = loadSportLocal().find(function(x){ return x.trackingCode === code; });
-  if (matchLocalSport) { res.innerHTML = renderSuiviSport(matchLocalSport); return; }
 
   // 2) Firebase (demandes médicales + livres + prêts + omra distants), si disponible
   if (typeof window.fbReadSuivi !== 'function') {
@@ -3164,10 +2810,6 @@ async function rechercherSuivi() {
     if (typeof window.fbReadSuiviOmra === 'function') {
       var do_ = await window.fbReadSuiviOmra(code);
       if (do_) { suiviCacheOmra[code] = do_; res.innerHTML = renderSuiviOmra(do_); return; }
-    }
-    if (typeof window.fbReadSuiviSport === 'function') {
-      var ds_ = await window.fbReadSuiviSport(code);
-      if (ds_) { suiviCacheSport[code] = ds_; res.innerHTML = renderSuiviSport(ds_); return; }
     }
     res.innerHTML = '<div class="msg info" style="display:flex">ℹ️ Aucun dossier trouvé avec ce code. Vérifiez le code reçu lors du dépôt.</div>';
   } catch(err) {
@@ -3288,31 +2930,6 @@ function renderSuiviOmra(d) {
   return html;
 }
 
-function renderSuiviSport(d) {
-  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
-  var html = '<div class="suivi-card">';
-  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">';
-  html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7A6F58;">Inscription Sport &amp; Travail — ' + esc(d.discipline) + '</div>';
-  html += '<div class="serif" style="font-size:22px;font-weight:700;color:var(--bleu);">' + esc(d.num) + '</div></div>';
-  html += '<span class="badge ' + bc + '">' + esc(d.statut) + '</span></div>';
-  html += '<div class="detail-grid">';
-  html += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
-  html += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
-  html += '<div class="detail-item"><div class="detail-lbl">Discipline</div><div class="detail-val">' + esc(d.discipline) + '</div></div>';
-  html += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
-  html += '</div><div class="tl">';
-  html += '<div class="tl-item"><div class="tl-dot tl-done">✓</div><div class="tl-text"><div class="tl-title">Inscription soumise</div><div class="tl-sub">' + esc(d.date) + '</div></div></div>';
-  var dot2 = d.statut !== 'En attente' ? 'tl-done' : 'tl-pend';
-  var icon2 = d.statut !== 'En attente' ? '✓' : '⏳';
-  html += '<div class="tl-item"><div class="tl-dot ' + dot2 + '">' + icon2 + '</div><div class="tl-text"><div class="tl-title">Examen par le Comité</div><div class="tl-sub">' + (d.statut === 'En attente' ? 'En cours de traitement' : 'Traité') + '</div></div></div>';
-  var dot3 = d.statut === 'Validé' ? 'tl-done' : 'tl-empty';
-  var icon3 = d.statut === 'Validé' ? '✓' : d.statut === 'Refusé' ? '✗' : d.statut === 'Clôturé' ? '🔒' : '○';
-  var txt3 = d.statut === 'Validé' ? 'Inscription validée' : d.statut === 'Refusé' ? 'Inscription refusée' : d.statut === 'Clôturé' ? 'Saison clôturée' : 'Décision finale';
-  html += '<div class="tl-item"><div class="tl-dot ' + dot3 + '">' + icon3 + '</div><div class="tl-text"><div class="tl-title">' + txt3 + '</div><div class="tl-sub">' + (d.statut === 'Validé' ? 'Votre inscription est confirmée' : d.statut === 'Refusé' ? 'Contactez le Comité de Participation' : d.statut === 'Clôturé' ? 'La saison ' + esc(d.annee) + ' est close' : 'En attente') + '</div></div></div>';
-  html += '</div></div>';
-  return html;
-}
-
 // ===== ADMIN =====
 async function loginAdmin() {
   var email = document.getElementById('admin-email').value.trim();
@@ -3400,18 +3017,6 @@ function applyAdminAuthState(user) {
         alert("Omra : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'omra'. Ajoutez les règles pour ce chemin dans la console Firebase.");
       });
     }
-    // Idem pour les inscriptions Sport & Travail.
-    sport = loadSportLocal();
-    renderTableauSport(); renderStatsSport();
-    if (typeof window.fbListenAdminSport === 'function') {
-      window.fbListenAdminSport(function(arr) {
-        sport = mergeSport(arr);
-        renderTableauSport(); renderStatsSport(); renderRapportStats();
-      }, function(err) {
-        console.error('Admin database read error (sport):', err);
-        alert("Sport & Travail : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'sport'. Ajoutez les règles pour ce chemin dans la console Firebase.");
-      });
-    }
     // Idem pour la boîte à idées.
     idees = loadIdeesLocal();
     renderTableauIdees(); renderStatsIdees();
@@ -3458,7 +3063,6 @@ function applyAdminAuthState(user) {
     if (typeof window.fbStopAdminListenLivre === 'function') window.fbStopAdminListenLivre();
     if (typeof window.fbStopAdminListenPret === 'function') window.fbStopAdminListenPret();
     if (typeof window.fbStopAdminListenOmra === 'function') window.fbStopAdminListenOmra();
-    if (typeof window.fbStopAdminListenSport === 'function') window.fbStopAdminListenSport();
     if (typeof window.fbStopAdminListenIdees === 'function') window.fbStopAdminListenIdees();
     if (typeof window.fbStopAdminListenDoleances === 'function') window.fbStopAdminListenDoleances();
     demandes = [];
@@ -3473,7 +3077,6 @@ function showAdminTab(id) {
   document.getElementById('admin-tab-livres').style.display = (id === 'livres') ? 'block' : 'none';
   document.getElementById('admin-tab-prets').style.display = (id === 'prets') ? 'block' : 'none';
   document.getElementById('admin-tab-omra').style.display = (id === 'omra') ? 'block' : 'none';
-  document.getElementById('admin-tab-sport').style.display = (id === 'sport') ? 'block' : 'none';
   document.getElementById('admin-tab-idees').style.display = (id === 'idees') ? 'block' : 'none';
   document.getElementById('admin-tab-doleances').style.display = (id === 'doleances') ? 'block' : 'none';
   document.getElementById('admin-tab-annonces').style.display = (id === 'annonces') ? 'block' : 'none';
@@ -3485,7 +3088,6 @@ function showAdminTab(id) {
   document.getElementById('tab-btn-livres').classList.toggle('actif', id === 'livres');
   document.getElementById('tab-btn-prets').classList.toggle('actif', id === 'prets');
   document.getElementById('tab-btn-omra').classList.toggle('actif', id === 'omra');
-  document.getElementById('tab-btn-sport').classList.toggle('actif', id === 'sport');
   document.getElementById('tab-btn-idees').classList.toggle('actif', id === 'idees');
   document.getElementById('tab-btn-doleances').classList.toggle('actif', id === 'doleances');
   document.getElementById('tab-btn-annonces').classList.toggle('actif', id === 'annonces');
@@ -3495,7 +3097,6 @@ function showAdminTab(id) {
   if (id === 'livres') renderTableauLivres();
   if (id === 'prets') { renderTableauPrets(); renderStatsPret(); }
   if (id === 'omra') { renderTableauOmra(); renderStatsOmra(); }
-  if (id === 'sport') { renderTableauSport(); renderStatsSport(); }
   if (id === 'idees') { renderTableauIdees(); renderStatsIdees(); }
   if (id === 'doleances') { renderTableauDoleances(); renderStatsDoleances(); }
   if (id === 'annonces') renderAdminAnnonces();
@@ -3710,8 +3311,7 @@ function cloturerAnneesPassees(manuel) {
     { arr: function(){ return demandes; }, upd: window.fbUpdateDemande ? function(num,patch,tc){ return window.fbUpdateDemande(num,patch,tc); } : null, persist: null, label: 'Prise en charge médicale' },
     { arr: function(){ return livres; }, upd: window.fbUpdateLivre, persist: persistLivreLocal, label: 'Livre scolaire' },
     { arr: function(){ return prets; }, upd: window.fbUpdatePret, persist: persistPretLocal, label: 'Prêt social' },
-    { arr: function(){ return omra; }, upd: window.fbUpdateOmra, persist: persistOmraLocal, label: 'Omra' },
-    { arr: function(){ return sport; }, upd: window.fbUpdateSport, persist: persistSportLocal, label: 'Sport & Travail' }
+    { arr: function(){ return omra; }, upd: window.fbUpdateOmra, persist: persistOmraLocal, label: 'Omra' }
   ];
 
   var totalClotures = 0;
@@ -4478,224 +4078,6 @@ function exporterExcelOmra() {
   XLSX.utils.book_append_sheet(wb, ws, 'Omra');
   var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
   XLSX.writeFile(wb, 'SCHB_Inscriptions_Omra_' + dateExp + '.xlsx');
-}
-
-// ===== ADMIN : SPORT & TRAVAIL =====
-function renderStatsSport() {
-  var el = document.getElementById('sport-stats');
-  if (!el) return;
-  var total = sport.length;
-  var att = sport.filter(function(d){ return d.statut==='En attente'; }).length;
-  var val = sport.filter(function(d){ return d.statut==='Validé'; }).length;
-  var ref = sport.filter(function(d){ return d.statut==='Refusé'; }).length;
-  var clo = sport.filter(function(d){ return d.statut==='Clôturé'; }).length;
-  el.innerHTML =
-    '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
-    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + att + '</div><div class="stat-lbl">En attente</div></div>' +
-    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + val + '</div><div class="stat-lbl">Validées</div></div>' +
-    '<div class="stat-card" style="border-color:var(--rouge);"><div class="stat-num" style="color:var(--rouge);">' + ref + '</div><div class="stat-lbl">Refusées</div></div>' +
-    '<div class="stat-card" style="border-color:#334155;"><div class="stat-num" style="color:#334155;">' + clo + '</div><div class="stat-lbl">Clôturées</div></div>';
-}
-
-function renderTableauSport() {
-  remplirSelectAnnees('filter-annee-sport', sport);
-  var searchEl = document.getElementById('filter-search-sport');
-  var statusEl = document.getElementById('filter-status-sport');
-  var anneeEl = document.getElementById('filter-annee-sport');
-  var discEl = document.getElementById('filter-discipline-sport');
-  var tbody = document.getElementById('tbody-sport');
-  if (!searchEl || !statusEl || !tbody) return;
-  var q = (searchEl.value || '').toLowerCase();
-  var st = statusEl.value || '';
-  var an = (anneeEl && anneeEl.value) || '';
-  var disc = (discEl && discEl.value) || '';
-  var filtered = sport.filter(function(d){
-    var matchQ = !q || (d.nom+d.prenom+d.mat+(d.discipline||'')).toLowerCase().indexOf(q) >= 0;
-    var matchSt = !st || d.statut === st;
-    var matchAn = !an || String(getAnnee(d)) === an;
-    var matchDisc = !disc || d.discipline === disc;
-    return matchQ && matchSt && matchAn && matchDisc;
-  });
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#7A6F58;padding:24px;">Aucune inscription trouvée</td></tr>'; return;
-  }
-  var rows = '';
-  filtered.forEach(function(d) {
-    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
-    rows += '<tr>';
-    rows += '<td><strong>' + esc(d.num) + '</strong></td>';
-    rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
-    rows += '<td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td>';
-    rows += '<td>' + esc(d.mat) + '</td>';
-    rows += '<td>' + esc(d.discipline) + '</td>';
-    rows += '<td>' + esc(getAnnee(d)) + '</td>';
-    rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
-    rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
-    rows += '<button class="btn-view-sm" onclick="voirDetailSport(&quot;' + d.num + '&quot;)">👁 Voir</button>';
-    if (d.statut === 'En attente') {
-      rows += '<button class="btn-success-sm" onclick="validerSport(&quot;' + d.num + '&quot;)">✅ Valider</button>';
-      rows += '<button class="btn-danger-sm" onclick="refuserSport(&quot;' + d.num + '&quot;)">❌ Refuser</button>';
-    }
-    rows += '<button class="btn-del-sm" onclick="supprimerSport(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
-    rows += '</div></td></tr>';
-  });
-  tbody.innerHTML = rows;
-}
-
-function validerSport(num) {
-  var d = sport.find(function(x){ return x.num === num; });
-  if (!d) return;
-  if (!confirm("Valider l'inscription " + num + ' ?')) return;
-  d.statut = 'Validé';
-  d.dateValidation = new Date().toLocaleDateString('fr-DZ');
-  persistSportLocal(d);
-  renderTableauSport(); renderStatsSport();
-  if (typeof window.fbUpdateSport === 'function') {
-    window.fbUpdateSport(num, { statut: d.statut, dateValidation: d.dateValidation }, d.trackingCode || '')
-      .catch(function(err){ console.warn('Synchronisation Firebase échouée (sport) :', err); });
-  }
-}
-
-function refuserSport(num) {
-  var d = sport.find(function(x){ return x.num === num; });
-  if (!d) return;
-  if (!confirm("Refuser l'inscription " + num + ' ?')) return;
-  d.statut = 'Refusé';
-  persistSportLocal(d);
-  renderTableauSport(); renderStatsSport();
-  if (typeof window.fbUpdateSport === 'function') {
-    window.fbUpdateSport(num, { statut: 'Refusé' }, d.trackingCode || '')
-      .catch(function(err){ console.warn('Synchronisation Firebase échouée (sport) :', err); });
-  }
-}
-
-function supprimerSport(num) {
-  var d = sport.find(function(x){ return x.num === num; });
-  if (!d) return;
-  if (!confirm("Voulez-vous vraiment supprimer définitivement l'inscription " + num + ' (' + d.nom + ' ' + d.prenom + ') ? Cette action est irréversible.')) return;
-  sport = sport.filter(function(x){ return x.num !== num; });
-  retirerSportLocal(num);
-  marquerSportSupprime(num);
-  renderTableauSport(); renderStatsSport();
-  if (typeof window.fbDeleteSport === 'function') {
-    window.fbDeleteSport(num, d.trackingCode || '')
-      .catch(function(err){
-        console.warn('Synchronisation Firebase échouée (sport) :', err);
-        alert("L'inscription a bien été supprimée de votre affichage, mais la suppression n'a pas pu être synchronisée avec la base en ligne (règles Firebase manquantes ou insuffisantes pour le chemin 'sport'). Elle ne réapparaîtra plus ici, mais pensez à vérifier/ajouter les règles pour ce chemin dans la console Firebase pour une suppression complète sur tous les appareils.");
-      });
-  }
-}
-
-function voirDetailSport(num) {
-  var d = sport.find(function(x){ return x.num === num; });
-  if (!d) return;
-  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
-  var body = '<div class="detail-grid">';
-  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Saison</div><div class="detail-val">' + esc(getAnnee(d)) + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Téléphone</div><div class="detail-val">' + esc(d.tel) + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service||'—') + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Discipline</div><div class="detail-val">' + esc(d.discipline) + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Code de suivi</div><div class="detail-val" style="font-family:monospace;">' + esc(d.trackingCode || '—') + '</div></div>';
-  body += '</div>';
-  body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
-  if (d.statut === 'En attente') {
-    body += '<button class="btn btn-primary" onclick="validerSport(&quot;' + d.num + '&quot;);closeModal()">✅ Valider</button>';
-    body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="refuserSport(&quot;' + d.num + '&quot;);closeModal()">❌ Refuser</button>';
-  }
-  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerSport(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer l\'inscription</button>';
-  body += '</div>';
-  document.getElementById('modal-title').textContent = 'Inscription Sport & Travail ' + d.num;
-  document.getElementById('modal-body').innerHTML = body;
-  document.getElementById('overlay').classList.add('open');
-}
-
-function exporterExcelSport() {
-  if (!sport.length) { alert('Aucune inscription à exporter.'); return; }
-  var data = sport.map(function(d){
-    return {
-      'N° Inscription': d.num,
-      'Saison': getAnnee(d),
-      'Date': d.date,
-      'Statut': d.statut,
-      'Nom': d.nom,
-      'Prénom': d.prenom,
-      'Matricule': d.mat,
-      'Téléphone': d.tel,
-      'Service': d.service || '',
-      'Discipline': d.discipline || '',
-      'Date validation': d.dateValidation || ''
-    };
-  });
-  var ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:20},{wch:16},{wch:16}];
-  var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Sport et Travail');
-  var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
-  XLSX.writeFile(wb, 'SCHB_Inscriptions_Sport_' + dateExp + '.xlsx');
-}
-
-// ===== SAISONS (ouverture/fermeture par l'admin : Omra + Sport & Travail) =====
-function refreshBoutonSaison(cle, ouverte) {
-  var idBtn = cle === 'omraOuverte' ? 'btn-toggle-saison-omra' : 'btn-toggle-saison-sport';
-  var idEtat = cle === 'omraOuverte' ? 'omra-saison-etat' : 'sport-saison-etat';
-  var btn = document.getElementById(idBtn);
-  var etat = document.getElementById(idEtat);
-  if (btn) {
-    btn.textContent = ouverte ? '🔒 Fermer les inscriptions' : '🔓 Ouvrir les inscriptions';
-    btn.style.background = ouverte ? 'var(--rouge)' : '';
-    btn.style.borderColor = ouverte ? 'var(--rouge)' : '';
-  }
-  if (etat) {
-    etat.innerHTML = ouverte
-      ? '<span class="badge b-ok">🔓 Ouvertes</span> — les travailleurs peuvent s\'inscrire actuellement.'
-      : '<span class="badge b-clo">🔒 Fermées</span> — les travailleurs ne peuvent pas encore s\'inscrire.';
-  }
-}
-
-function toggleSaisonOmra() {
-  var nouvelEtat = !saisonOmraOuverte;
-  if (typeof window.fbSetSaison === 'function') {
-    window.fbSetSaison('omraOuverte', nouvelEtat).catch(function(err){
-      alert("Impossible de modifier l'état de la saison Omra : " + (err && err.message || 'erreur inconnue'));
-    });
-  } else {
-    saisonOmraOuverte = nouvelEtat;
-    refreshBoutonSaison('omraOuverte', saisonOmraOuverte);
-    appliquerEtatSaisonPublic(saisonOmraOuverte, 'omra-saison-fermee', 'omra-form-wrap');
-  }
-}
-
-function toggleSaisonSport() {
-  var nouvelEtat = !saisonSportOuverte;
-  if (typeof window.fbSetSaison === 'function') {
-    window.fbSetSaison('sportOuverte', nouvelEtat).catch(function(err){
-      alert("Impossible de modifier l'état de la saison sportive : " + (err && err.message || 'erreur inconnue'));
-    });
-  } else {
-    saisonSportOuverte = nouvelEtat;
-    refreshBoutonSaison('sportOuverte', saisonSportOuverte);
-    appliquerEtatSaisonPublic(saisonSportOuverte, 'sport-saison-fermee', 'sport-form-wrap');
-  }
-}
-
-// Écoute publique (aucune connexion requise) des saisons, dès que Firebase est prêt,
-// afin que tous les travailleurs voient en temps réel si les inscriptions sont ouvertes.
-function demarrerEcouteSaisonsPubliques() {
-  if (typeof window.fbListenSaison !== 'function') return;
-  window.fbListenSaison('omraOuverte', function(ouverte) {
-    saisonOmraOuverte = ouverte;
-    appliquerEtatSaisonPublic(ouverte, 'omra-saison-fermee', 'omra-form-wrap');
-    refreshBoutonSaison('omraOuverte', ouverte);
-  });
-  window.fbListenSaison('sportOuverte', function(ouverte) {
-    saisonSportOuverte = ouverte;
-    appliquerEtatSaisonPublic(ouverte, 'sport-saison-fermee', 'sport-form-wrap');
-    refreshBoutonSaison('sportOuverte', ouverte);
-  });
 }
 
 // ===== ADMIN : BOÎTE À IDÉES =====
@@ -5863,18 +5245,6 @@ renderAnnonces();
     });
   } else if (attempt < 125) {
     setTimeout(function(){ waitForFirebaseAnnonces(attempt + 1); }, 200);
-  }
-})();
-
-// ===== SAISONS (Omra + Sport & Travail) : écoute publique, visible par tous sans connexion =====
-(function waitForFirebaseSaisons(attempt) {
-  attempt = attempt || 0;
-  if (typeof window.fbListenSaison === 'function') {
-    demarrerEcouteSaisonsPubliques();
-  } else if (attempt < 125) {
-    setTimeout(function(){ waitForFirebaseSaisons(attempt + 1); }, 200);
-  } else {
-    console.warn('Lecture des saisons (Omra/Sport) indisponible après 25s.');
   }
 })();
 </script>
