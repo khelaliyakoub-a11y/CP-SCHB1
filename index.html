@@ -2116,7 +2116,7 @@ footer strong{color:var(--or-clair);}
       </div>
       <div class="panneau" id="panneau-cloture-periode">
         <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:18px;">🔒 Clôture par période</h3>
-        <p style="font-size:13.5px;color:#5C5142;margin-bottom:16px;line-height:1.6;">Clôturez les actes encore « En attente » <strong>mois par mois</strong>, puis en dernier lieu <strong>l'année entière</strong>. Les dossiers déjà validés ou refusés ne sont pas modifiés.</p>
+        <p style="font-size:13.5px;color:#5C5142;margin-bottom:16px;line-height:1.6;">Clôturez les actes <strong>validés</strong> (ou encore « En attente ») <strong>mois par mois</strong>, puis en dernier lieu <strong>l'année entière</strong>. Les autres dossiers ne sont pas modifiés.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">
           <div class="grp" style="margin:0;min-width:200px;"><label>Activité</label>
             <select id="clo-activite" onchange="majApercuCloture()">
@@ -2127,6 +2127,11 @@ footer strong{color:var(--or-clair);}
               <option value="omra">Omra</option>
               <option value="sport">Sport &amp; Travail</option>
             </select></div>
+          <div class="grp" style="margin:0;min-width:180px;"><label>Actes à clôturer</label>
+            <select id="clo-statut" onchange="majApercuCloture()">
+              <option value="Validé" selected>Actes validés</option>
+              <option value="En attente">Actes en attente</option>
+            </select></div>
           <div class="grp" style="margin:0;min-width:120px;"><label>Année</label>
             <select id="clo-annee" onchange="majApercuCloture()"></select></div>
           <div class="grp" style="margin:0;min-width:160px;"><label>Mois</label>
@@ -2135,6 +2140,7 @@ footer strong{color:var(--or-clair);}
         <div style="display:flex;gap:12px;flex-wrap:wrap;">
           <button class="btn-cloture" onclick="cloturerPeriode('mois')">🔒 1. Clôturer ce mois</button>
           <button class="btn-cloture" style="background:#334155;color:white;" onclick="cloturerPeriode('annee')">🔒 2. Clôturer toute l'année</button>
+          <button class="btn-cloture" onclick="exporterClotures()">📦 Exporter les archives (Excel)</button>
         </div>
         <div id="clo-apercu" style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;margin-top:16px;line-height:1.7;"></div>
       </div>
@@ -3594,7 +3600,7 @@ function renderSuiviMedical(d, code) {
   var txt3 = d.statut === 'Validé' ? 'Prise en charge validée' : d.statut === 'Refusé' ? 'Demande refusée' : 'Décision finale';
   html += '<div class="tl-item"><div class="tl-dot ' + dot3 + '">' + icon3 + '</div><div class="tl-text"><div class="tl-title">' + txt3 + '</div><div class="tl-sub">' + (d.statut === 'Validé' ? 'Votre prise en charge est disponible' : d.statut === 'Refusé' ? 'Contactez le Comité de Participation' : 'En attente') + '</div></div></div>';
   html += '</div>';
-  if (d.statut === 'Validé') html += '<div style="margin-top:18px;"><button class="btn btn-or" onclick="genererPDFSuivi(&quot;' + esc(code) + '&quot;)">📥 Télécharger la prise en charge</button></div>';
+  if (wasValide(d)) html += '<div style="margin-top:18px;"><button class="btn btn-or" onclick="genererPDFSuivi(&quot;' + esc(code) + '&quot;)">📥 Télécharger la prise en charge</button></div>';
   html += '</div>';
   return html;
 }
@@ -4113,13 +4119,8 @@ function cloturerAnneesPassees(manuel) {
     (jeu.arr() || []).forEach(function(d){
       var a = getAnnee(d);
       if (a < cy && d.statut === 'En attente') {
-        d.statut = 'Clôturé';
-        d.dateCloture = new Date().toLocaleDateString('fr-DZ');
-        if (jeu.persist) jeu.persist(d);
-        if (typeof jeu.upd === 'function') {
-          jeu.upd(d.num, { statut: 'Clôturé', dateCloture: d.dateCloture }, d.trackingCode || '')
-            .catch(function(err){ console.warn('Clôture Firebase échouée :', err); });
-        }
+        if (typeof jeu.upd === 'function') _clorerActe(jeu, d, new Date().toLocaleDateString('fr-DZ'));
+        else { d.statutAvantCloture = d.statut; d.statut = 'Clôturé'; d.dateCloture = new Date().toLocaleDateString('fr-DZ'); if (jeu.persist) jeu.persist(d); }
         totalClotures++;
       }
     });
@@ -4139,6 +4140,54 @@ function cloturerAnneesPassees(manuel) {
 }
 
 // ===== CLÔTURE PAR PÉRIODE (mois, puis année) =====
+// ===== ARCHIVAGE : les actes clôturés restent TOUS conservés et consultables =====
+// Un acte clôturé n'est jamais supprimé : il garde toutes ses données (et son PDF s'il avait été validé).
+function wasValide(d) {
+  return !!d && (d.statut === 'Validé' || (d.statut === 'Clôturé' && (d.statutAvantCloture === 'Validé' || !!d.dateValidation)));
+}
+function clotureSansValidation(d) { return !!d && d.statut === 'Clôturé' && !wasValide(d); }
+
+// Clôture un acte en mémorisant son statut d'origine (réessaie sans ce champ si Firebase le refuse)
+function _clorerActe(jeu, d, today) {
+  var avant = d.statut;
+  d.statutAvantCloture = avant;
+  d.statut = 'Clôturé';
+  d.dateCloture = today;
+  if (jeu.persist) jeu.persist(d);
+  var tc = d.trackingCode || '';
+  return Promise.resolve(jeu.upd(d.num, { statut: 'Clôturé', dateCloture: today, statutAvantCloture: avant }, tc))
+    .catch(function() {
+      return jeu.upd(d.num, { statut: 'Clôturé', dateCloture: today }, tc);
+    })
+    .catch(function(err){ console.warn('Clôture Firebase échouée :', err); });
+}
+
+// Export Excel des actes clôturés (archives) — une feuille par activité
+function exporterClotures() {
+  if (typeof XLSX === 'undefined') { alert('Bibliothèque Excel non chargée.'); return; }
+  var annee = Number((document.getElementById('clo-annee') || {}).value) || 0;
+  var act = (document.getElementById('clo-activite') || {}).value || 'all';
+  var wb = XLSX.utils.book_new(), total = 0;
+  _jeuxCloture().forEach(function(jeu) {
+    if (act !== 'all' && act !== jeu.key) return;
+    var rows = (jeu.arr() || []).filter(function(d){
+      return d.statut === 'Clôturé' && (!annee || getAnnee(d) === annee);
+    }).map(function(d) {
+      var o = {};
+      Object.keys(d).forEach(function(k) {
+        var v = d[k];
+        if (v === null || v === undefined || typeof v === 'object') return;
+        if (typeof v === 'string' && v.length > 400) return; // pièces jointes (base64)
+        o[k] = v;
+      });
+      return o;
+    });
+    if (rows.length) { total += rows.length; XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), jeu.label.replace(/[^\w ]/g,'').slice(0,31)); }
+  });
+  if (!total) { alert('Aucun acte clôturé à exporter pour cette sélection.'); return; }
+  XLSX.writeFile(wb, 'Archives_actes_clotures' + (annee ? '_' + annee : '') + '.xlsx');
+}
+
 var MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
 function getMois(d) {
@@ -4161,13 +4210,14 @@ function _jeuxCloture() {
   ];
 }
 
-// Liste des actes « En attente » correspondant à l'activité / année / mois (mois = -1 : toute l'année)
-function _actesAClore(activite, annee, mois) {
+// Liste des actes (statut « Validé » par défaut, ou « En attente ») correspondant à l'activité / année / mois (mois = -1 : toute l'année)
+function _actesAClore(activite, annee, mois, statut) {
+  statut = statut || 'Validé';
   var out = [];
   _jeuxCloture().forEach(function(jeu) {
     if (activite !== 'all' && activite !== jeu.key) return;
     (jeu.arr() || []).forEach(function(d) {
-      if (d.statut !== 'En attente') return;
+      if (d.statut !== statut) return;
       if (getAnnee(d) !== annee) return;
       if (mois >= 0 && getMois(d) !== mois) return;
       out.push({ jeu: jeu, d: d });
@@ -4198,12 +4248,21 @@ function majApercuCloture() {
   if (prevA && selA.querySelector('option[value="' + prevA + '"]')) selA.value = prevA;
 
   var annee = Number(selA.value), mois = Number(selM.value), act = selAct.value;
-  var parMois = _actesAClore(act, annee, mois), parAnnee = _actesAClore(act, annee, -1);
+  var st = (document.getElementById('clo-statut') || {}).value || 'Validé';
+  var stLbl = (st === 'Validé') ? 'validé(s)' : 'en attente';
+  var parMois = _actesAClore(act, annee, mois, st), parAnnee = _actesAClore(act, annee, -1, st);
   var detail = {};
   parAnnee.forEach(function(x){ detail[x.jeu.label] = (detail[x.jeu.label] || 0) + 1; });
   var lignes = Object.keys(detail).map(function(k){ return k + ' : <strong>' + detail[k] + '</strong>'; }).join(' · ');
-  box.innerHTML = '📊 <strong>' + parMois.length + '</strong> acte(s) en attente en <strong>' + MOIS_FR[mois] + ' ' + annee + '</strong><br>' +
-                  '📊 <strong>' + parAnnee.length + '</strong> acte(s) en attente sur toute l\'année <strong>' + annee + '</strong>' + (lignes ? '<br><span style="font-size:12px;">' + lignes + '</span>' : '');
+  box.innerHTML = '📊 <strong>' + parMois.length + '</strong> acte(s) ' + stLbl + ' en <strong>' + MOIS_FR[mois] + ' ' + annee + '</strong><br>' +
+                  '📊 <strong>' + parAnnee.length + '</strong> acte(s) ' + stLbl + ' sur toute l\'année <strong>' + annee + '</strong>' + (lignes ? '<br><span style="font-size:12px;">' + lignes + '</span>' : '');
+
+  var nArch = 0;
+  _jeuxCloture().forEach(function(j){ if (act !== 'all' && act !== j.key) return; (j.arr() || []).forEach(function(d){ if (d.statut === 'Clôturé' && getAnnee(d) === annee) nArch++; }); });
+  box.innerHTML += '<br>🗄️ <strong>' + nArch + '</strong> acte(s) déjà clôturé(s) et archivé(s) en <strong>' + annee + '</strong> — toujours consultables dans chaque onglet (filtre « Clôturé »).';
+  var nArch = 0;
+  _jeuxCloture().forEach(function(j){ if (act !== 'all' && act !== j.key) return; (j.arr() || []).forEach(function(d){ if (d.statut === 'Clôturé' && getAnnee(d) === annee) nArch++; }); });
+  box.innerHTML += '<br>🗄️ <strong>' + nArch + '</strong> acte(s) déjà clôturé(s) et archivé(s) en <strong>' + annee + '</strong> — toujours consultables dans chaque onglet (filtre « Clôturé »).';
 }
 
 function cloturerPeriode(type) {
@@ -4212,19 +4271,16 @@ function cloturerPeriode(type) {
   var act = (document.getElementById('clo-activite') || {}).value || 'all';
   if (!annee) return;
   var enAnnee = (type === 'annee');
-  var liste = _actesAClore(act, annee, enAnnee ? -1 : mois);
+  var st = (document.getElementById('clo-statut') || {}).value || 'Validé';
+  var stLbl = (st === 'Validé') ? '« Validé »' : '« En attente »';
+  var liste = _actesAClore(act, annee, enAnnee ? -1 : mois, st);
   var periode = enAnnee ? ('l\'année ' + annee) : (MOIS_FR[mois] + ' ' + annee);
-  if (!liste.length) { alert('Aucun acte « En attente » à clôturer pour ' + periode + '.'); return; }
-  if (!confirm('Clôturer ' + liste.length + ' acte(s) en attente pour ' + periode + ' ?\n\nIls passeront au statut « Clôturé » et ne pourront plus être validés ni refusés.')) return;
+  if (!liste.length) { alert('Aucun acte ' + stLbl + ' à clôturer pour ' + periode + '.'); return; }
+  if (!confirm('Clôturer ' + liste.length + ' acte(s) ' + stLbl + ' pour ' + periode + ' ?\n\nIls passeront au statut « Clôturé » et ne pourront plus être modifiés.\n\n✅ Ils restent TOUS conservés et consultables (filtre « Clôturé », PDF, export des archives).')) return;
 
   var today = new Date().toLocaleDateString('fr-DZ'), parAct = {};
   liste.forEach(function(x) {
-    var d = x.d;
-    d.statut = 'Clôturé';
-    d.dateCloture = today;
-    if (x.jeu.persist) x.jeu.persist(d);
-    x.jeu.upd(d.num, { statut: 'Clôturé', dateCloture: today }, d.trackingCode || '')
-      .catch(function(err){ console.warn('Clôture Firebase échouée :', err); });
+    _clorerActe(x.jeu, x.d, today);
     parAct[x.jeu.label] = (parAct[x.jeu.label] || 0) + 1;
   });
   saveData();
@@ -4251,7 +4307,7 @@ function cloturerPeriode(type) {
 function renderStats() {
   var total = demandes.length;
   var att = demandes.filter(function(d){ return d.statut==='En attente'; }).length;
-  var val = demandes.filter(function(d){ return d.statut==='Validé'; }).length;
+  var val = demandes.filter(wasValide).length;
   var ref = demandes.filter(function(d){ return d.statut==='Refusé'; }).length;
   document.getElementById('admin-stats').innerHTML =
     '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
@@ -4267,7 +4323,7 @@ function calculerStatsEtab() {
     var nom = d.etab || 'Non précisé';
     if (!map[nom]) map[nom] = { nom: nom, total: 0, valide: 0, attente: 0, refuse: 0 };
     map[nom].total++;
-    if (d.statut === 'Validé') map[nom].valide++;
+    if (wasValide(d)) map[nom].valide++;
     else if (d.statut === 'Refusé') map[nom].refuse++;
     else map[nom].attente++;
   });
@@ -4375,7 +4431,7 @@ function renderTableau() {
       rows += '<button class="btn-success-sm" onclick="validerDemande(&quot;' + d.num + '&quot;)">✅ Valider</button>';
       rows += '<button class="btn-danger-sm" onclick="refuserDemande(&quot;' + d.num + '&quot;)">❌ Refuser</button>';
     }
-    if (d.statut === 'Validé') {
+    if (wasValide(d)) {
       rows += '<button class="btn-pdf-sm" onclick="genererPDF(&quot;' + d.num + '&quot;)">📥 PDF</button>';
     }
     rows += '<button class="btn-del-sm" onclick="supprimerDemande(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
@@ -4390,7 +4446,7 @@ function validerDemande(num) {
   if (!confirm('Valider la demande ' + num + ' ?')) return;
   d.statut = 'Validé';
   d.dateValidation = new Date().toLocaleDateString('fr-DZ');
-  d.numPC = String(demandes.filter(function(x){ return x.statut==='Validé'; }).length).padStart(2,'0');
+  d.numPC = String(demandes.filter(wasValide).length).padStart(2,'0');
   saveData(); renderStats(); renderTableau();
   // Sync to Firebase
   if (typeof window.fbUpdateDemande === 'function') {
@@ -4440,7 +4496,7 @@ function voirDetail(num) {
     body += '<button class="btn btn-primary" onclick="validerDemande(&quot;' + d.num + '&quot;);closeModal()">✅ Valider</button>';
     body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="refuserDemande(&quot;' + d.num + '&quot;);closeModal()">❌ Refuser</button>';
   }
-  if (d.statut === 'Validé') {
+  if (wasValide(d)) {
     body += '<button class="btn btn-or" onclick="genererPDF(&quot;' + d.num + '&quot;)">📥 Télécharger PDF</button>';
   }
   body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerDemande(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer la demande</button>';
@@ -4664,9 +4720,9 @@ function renderStatsPret() {
   if (!el) return;
   var total = prets.length;
   var att = prets.filter(function(d){ return d.statut==='En attente'; }).length;
-  var val = prets.filter(function(d){ return d.statut==='Validé'; }).length;
+  var val = prets.filter(wasValide).length;
   var ref = prets.filter(function(d){ return d.statut==='Refusé'; }).length;
-  var montantValide = prets.filter(function(d){ return d.statut==='Validé'; }).reduce(function(s,d){ return s + (d.montant||0); }, 0);
+  var montantValide = prets.filter(wasValide).reduce(function(s,d){ return s + (d.montant||0); }, 0);
   el.innerHTML =
     '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
     '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + att + '</div><div class="stat-lbl">En attente</div></div>' +
@@ -4824,9 +4880,9 @@ function renderStatsOmra() {
   if (!el) return;
   var total = omra.length;
   var att = omra.filter(function(d){ return d.statut==='En attente'; }).length;
-  var val = omra.filter(function(d){ return d.statut==='Validé'; }).length;
+  var val = omra.filter(wasValide).length;
   var ref = omra.filter(function(d){ return d.statut==='Refusé'; }).length;
-  var clo = omra.filter(function(d){ return d.statut==='Clôturé'; }).length;
+  var clo = omra.filter(clotureSansValidation).length;
   el.innerHTML =
     '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
     '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + att + '</div><div class="stat-lbl">En attente</div></div>' +
@@ -5019,9 +5075,9 @@ function renderStatsSport() {
   if (!el) return;
   var total = sport.length;
   var att = sport.filter(function(d){ return d.statut==='En attente'; }).length;
-  var val = sport.filter(function(d){ return d.statut==='Validé'; }).length;
+  var val = sport.filter(wasValide).length;
   var ref = sport.filter(function(d){ return d.statut==='Refusé'; }).length;
-  var clo = sport.filter(function(d){ return d.statut==='Clôturé'; }).length;
+  var clo = sport.filter(clotureSansValidation).length;
   el.innerHTML =
     '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
     '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + att + '</div><div class="stat-lbl">En attente</div></div>' +
@@ -5650,7 +5706,7 @@ function dessinerBonOmra(doc, d, W, M, avecCachet) {
   doc.text("(Signature de l'adhérent)", (M+mid)/2, y+30, {align:'center'});
 
   var cx = (mid+W-M)/2;
-  if (d.statut === 'Validé' || avecCachet) {
+  if (wasValide(d) || avecCachet) {
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(14,58,83);
     doc.text('KHELALI Yakoub', cx, y+9, {align:'center'});
     doc.setFont('helvetica','normal'); doc.setFontSize(8);
@@ -5885,7 +5941,7 @@ function genererPDFPret(num) {
   doc.text('(Signature du demandeur)', (M+mid)/2, y+30, {align:'center'});
 
   var cx = (mid+W-M)/2;
-  if (d.statut === 'Validé') {
+  if (wasValide(d)) {
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(14,58,83);
     doc.text('KHELALI Yakoub', cx, y+9, {align:'center'});
     doc.setFont('helvetica','normal'); doc.setFontSize(8);
@@ -5920,7 +5976,7 @@ function genererPDFSuivi(code) {
 
 function genererPDF(num, dataOverride) {
   var d = dataOverride || demandes.find(function(x){ return x.num === num; });
-  if (!d || d.statut !== 'Validé') { alert("Cette demande n'est pas encore validée."); return; }
+  if (!d || !wasValide(d)) { alert("Cette demande n'est pas encore validée."); return; }
 
   var jsPDF = window.jspdf.jsPDF;
   var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -6094,13 +6150,13 @@ function calculerRapportGlobal() {
     return {
       total: arr.length,
       attente: arr.filter(function(d){ return d.statut==='En attente'; }).length,
-      valide: arr.filter(function(d){ return d.statut==='Validé'; }).length,
+      valide: arr.filter(wasValide).length,
       refuse: arr.filter(function(d){ return d.statut==='Refusé'; }).length,
-      cloture: arr.filter(function(d){ return d.statut==='Clôturé'; }).length
+      cloture: arr.filter(clotureSansValidation).length
     };
   }
   var pc = statsOf(demandes), ls = statsOf(livres), ps = statsOf(prets), om = statsOf(omra);
-  var montantPretValide = prets.filter(function(d){ return d.statut==='Validé'; }).reduce(function(s,d){ return s+(d.montant||0); }, 0);
+  var montantPretValide = prets.filter(wasValide).reduce(function(s,d){ return s+(d.montant||0); }, 0);
   return { pc: pc, ls: ls, ps: ps, om: om, montantPretValide: montantPretValide,
     totalGlobal: pc.total + ls.total + ps.total + om.total };
 }
