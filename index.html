@@ -278,7 +278,19 @@
         _adminRefOmra = _fbDb.ref('omra');
         _adminValueHandlerOmra = function(snapshot) {
           var data = snapshot.val();
-          callback(data ? Object.values(data) : []);
+          var arr = [];
+          if (data) Object.keys(data).forEach(function(k) {
+            var v = data[k];
+            if (v && typeof v === 'object') {
+              if (!v.num) v.num = k;
+              v._key = k;
+              arr.push(v);
+            } else {
+              // entrée invalide : on l'affiche pour pouvoir la supprimer
+              arr.push({ num: k, _key: k, nom: '(entrée invalide)', prenom: '', mat: '', pnom: '', pprenom: '', statut: 'Invalide', date: '' });
+            }
+          });
+          callback(arr);
         };
         _adminRefOmra.on('value', _adminValueHandlerOmra, errorCallback || function(err){ console.error(err); });
       };
@@ -295,12 +307,15 @@
             if (Object.prototype.hasOwnProperty.call(patch, k)) updates['suiviOmra/' + trackingCode + '/' + k] = patch[k];
           });
         }
-        return _fbDb.ref().update(updates);
+        return _fbDb.ref('omra/' + num).once('value').then(function(snap) {
+          if (!snap.exists()) return null; // inscription supprimée entre-temps : ne pas la recréer
+          return _fbDb.ref().update(updates);
+        });
       };
 
-      window.fbDeleteOmra = function(num, trackingCode) {
+      window.fbDeleteOmra = function(num, trackingCode, key) {
         var updates = {};
-        updates['omra/' + num] = null;
+        updates['omra/' + (key || num)] = null;
         if (trackingCode) updates['suiviOmra/' + trackingCode] = null;
         return _fbDb.ref().update(updates);
       };
@@ -1038,6 +1053,11 @@ footer strong{color:var(--or-clair);}
     <div class="card-spec"><div class="spec-icon cl">🏥</div><div><div class="spec-name">Clinique Massinissa</div><div class="spec-addr">El Khroub, Constantine</div><div class="spec-type">Médecine · Chirurgie</div></div></div>
     <div class="card-spec"><div class="spec-icon cl">🏥</div><div><div class="spec-name">Clinique El Anouar</div><div class="spec-addr">El Mansoura, Constantine</div><div class="spec-type">Médecine · Chirurgie</div></div></div>
     <div class="card-spec"><div class="spec-icon de">👓</div><div><div class="spec-name">Zohra Optique</div><div class="spec-addr">El Khroub, Constantine</div><div class="spec-type">Opticien</div></div></div>
+    <div class="card-spec"><div class="spec-icon la">🧪</div><div><div class="spec-name">Laboratoire d'Analyses Ouchenane Zoulikha</div><div class="spec-addr">Didouche Mourad, Constantine</div><div class="spec-type">Analyses biologiques</div></div></div>
+    <div class="card-spec"><div class="spec-icon la">🧪</div><div><div class="spec-name">Laboratoire Dr Ben Mouloud S. épouse Fridja</div><div class="spec-addr">El Bouni, Annaba</div><div class="spec-type">Analyses biologiques</div></div></div>
+    <div class="card-spec"><div class="spec-icon cl">👁️</div><div><div class="spec-name">Clinique Ophtalmologique Snani Assia</div><div class="spec-addr">Annaba</div><div class="spec-type">Ophtalmologie</div></div></div>
+    <div class="card-spec"><div class="spec-icon im">🔬</div><div><div class="spec-name">Centre d'Imagerie Dr Mibarki</div><div class="spec-addr">El Hadjar, Annaba</div><div class="spec-type">IRM · Scanner · Imagerie</div></div></div>
+    <div class="card-spec"><div class="spec-icon de">🦷</div><div><div class="spec-name">Cabinet Dentaire Dr Bouchemla Brahim</div><div class="spec-addr">El Bouni, Annaba</div><div class="spec-type">Soins dentaires spécialisés</div></div></div>
   </div>
   <div class="panneau" style="background:linear-gradient(135deg,var(--bleu),var(--bleu2));color:white;border:none;margin-bottom:32px;">
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
@@ -1097,6 +1117,11 @@ footer strong{color:var(--or-clair);}
         <option value="Clinique Massinissa – El Khroub">Clinique Massinissa – El Khroub</option>
         <option value="Clinique El Anouar – El Mansoura">Clinique El Anouar – El Mansoura</option>
         <option value="Zohra Optique – El Khroub">Zohra Optique – El Khroub</option>
+        <option value="Laboratoire d'Analyses Ouchenane Zoulikha – Didouche Mourad, Constantine">Laboratoire d'Analyses Ouchenane Zoulikha – Didouche Mourad, Constantine</option>
+        <option value="Laboratoire Dr Ben Mouloud S. épouse Fridja – El Bouni, Annaba">Laboratoire Dr Ben Mouloud S. épouse Fridja – El Bouni, Annaba</option>
+        <option value="Clinique Ophtalmologique Snani Assia – Annaba">Clinique Ophtalmologique Snani Assia – Annaba</option>
+        <option value="Centre d'Imagerie Dr Mibarki – El Hadjar, Annaba">Centre d'Imagerie Dr Mibarki – El Hadjar, Annaba</option>
+        <option value="Cabinet Dentaire Dr Bouchemla Brahim – El Bouni, Annaba">Cabinet Dentaire Dr Bouchemla Brahim – El Bouni, Annaba</option>
       </select>
     </div>
     <div class="grp">
@@ -1318,7 +1343,7 @@ footer strong{color:var(--or-clair);}
       <div class="grp"><label data-i18n="f.tel">Téléphone <span class="req">*</span></label><input id="fo-tel" type="tel" placeholder="05/06/07 xx xx xx xx"></div>
     </div>
     <div class="cols2">
-      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="fo-service" type="text" placeholder="Ex: Direction Commerciale..."></div>
+      <div class="grp"><label data-i18n="f.service">Service / Direction <span class="req">*</span></label><input id="fo-service" type="text" placeholder="Ex: Direction Commerciale..."></div>
       <div class="grp"><label data-i18n="omra.annee">Année d'inscription Omra <span class="req">*</span></label>
         <select id="fo-annee"></select>
       </div>
@@ -1334,7 +1359,11 @@ footer strong{color:var(--or-clair);}
     </div>
     <div class="cols2">
       <div class="grp"><label data-i18n="omra.naissance">Date de naissance <span class="req">*</span></label><input id="fo-naissance" type="date"></div>
-      <div class="grp"><label data-i18n="omra.passeport">N° passeport / CIN <span class="req">*</span></label><input id="fo-passeport" type="text" placeholder="Ex : 123456789"></div>
+      <div class="grp"><label data-i18n="omra.passeport">N° passeport <span class="req">*</span></label><input id="fo-passeport" type="text" placeholder="Ex : 123456789"></div>
+    </div>
+    <div class="cols2">
+      <div class="grp"><label data-i18n="omra.passeportExp">Date d'expiration du passeport <span class="req">*</span></label><input id="fo-passeport-exp" type="date"></div>
+      <div class="grp"></div>
     </div>
     <div class="grp"><label data-i18n="omra.adresse">Adresse</label><input id="fo-adresse" type="text" placeholder="Adresse complète"></div>
   </div>
@@ -1358,10 +1387,15 @@ footer strong{color:var(--or-clair);}
       <div class="trow"><div class="trow-lbl" data-i18n="omra.pelerin">Pèlerin</div><div class="trow-val" id="tko-pelerin"></div></div>
       <div class="trow"><div class="trow-lbl" data-i18n="omra.annee.short">Année</div><div class="trow-val" id="tko-annee"></div></div>
       <div class="trow"><div class="trow-lbl" data-i18n="ticket.date">Date</div><div class="trow-val" id="tko-date"></div></div>
+      <div class="trow"><div class="trow-lbl" data-i18n="omra.heure">Heure d'inscription</div><div class="trow-val" id="tko-heure"></div></div>
       <div class="trow" style="grid-column:1/-1;border:1.5px solid var(--or);"><div class="trow-lbl" data-i18n="ticket.code">Code de suivi confidentiel</div><div class="trow-val" id="tko-code" style="font-family:monospace;font-size:16px;letter-spacing:.04em;color:var(--bleu);"></div></div>
     </div>
     <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;" data-i18n="ticket.conserverCode">
       🔐 <strong>Conservez votre code de suivi confidentiel.</strong> Il permet de consulter l'état de votre inscription depuis l'onglet Suivi.
+    </div>
+    <div style="background:#FFF6E0;border:1.5px solid var(--or);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;margin-top:10px;">
+      📄 <strong>Bon d'inscription obligatoire.</strong> Téléchargez votre bon, imprimez-le, signez-le et remettez-le au Comité de Participation : sans bon remis, l'inscription n'entre pas au tirage au sort.
+      <div style="margin-top:10px;"><button class="btn btn-primary" onclick="telechargerBonOmraTicket()">⬇️ Télécharger mon bon d'inscription</button></div>
     </div>
   </div>
   </div>
@@ -2080,6 +2114,30 @@ footer strong{color:var(--or-clair);}
           ℹ️ La clôture automatique archive et bloque, au changement d'année civile, toutes les demandes encore « En attente » de l'année précédente (Prise en charge, Livre scolaire, Prêt social, Omra, Sport &amp; Travail). Les dossiers déjà validés ou refusés restent consultables normalement.
         </div>
       </div>
+      <div class="panneau" id="panneau-cloture-periode">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:18px;">🔒 Clôture par période</h3>
+        <p style="font-size:13.5px;color:#5C5142;margin-bottom:16px;line-height:1.6;">Clôturez les actes encore « En attente » <strong>mois par mois</strong>, puis en dernier lieu <strong>l'année entière</strong>. Les dossiers déjà validés ou refusés ne sont pas modifiés.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">
+          <div class="grp" style="margin:0;min-width:200px;"><label>Activité</label>
+            <select id="clo-activite" onchange="majApercuCloture()">
+              <option value="all">Toutes les activités</option>
+              <option value="demandes">Prise en charge médicale</option>
+              <option value="livres">Livre scolaire</option>
+              <option value="prets">Prêt social</option>
+              <option value="omra">Omra</option>
+              <option value="sport">Sport &amp; Travail</option>
+            </select></div>
+          <div class="grp" style="margin:0;min-width:120px;"><label>Année</label>
+            <select id="clo-annee" onchange="majApercuCloture()"></select></div>
+          <div class="grp" style="margin:0;min-width:160px;"><label>Mois</label>
+            <select id="clo-mois" onchange="majApercuCloture()"></select></div>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn-cloture" onclick="cloturerPeriode('mois')">🔒 1. Clôturer ce mois</button>
+          <button class="btn-cloture" style="background:#334155;color:white;" onclick="cloturerPeriode('annee')">🔒 2. Clôturer toute l'année</button>
+        </div>
+        <div id="clo-apercu" style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;margin-top:16px;line-height:1.7;"></div>
+      </div>
     </div>
 
     <div id="admin-tab-stats" style="display:none;">
@@ -2263,7 +2321,10 @@ function mergePrets(fbArr) {
 
 // ===== OMRA (local) =====
 function loadOmraLocal() {
-  try { return JSON.parse(localStorage.getItem('schb_omra') || '[]'); } catch(e) { return []; }
+  try {
+    var arr = JSON.parse(localStorage.getItem('schb_omra') || '[]');
+    return Array.isArray(arr) ? arr.filter(function(d){ return !estOmraFantome(d); }) : [];
+  } catch(e) { return []; }
 }
 function saveOmraLocal(arr) {
   try { localStorage.setItem('schb_omra', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (omra):', e); }
@@ -2292,10 +2353,30 @@ function marquerOmraSupprime(num) {
   if (arr.indexOf(num) === -1) { arr.push(num); saveOmraSupprimesLocal(arr); }
 }
 
+function estOmraFantome(d) {
+  return !d || typeof d !== 'object' || (!(d.nom||'').trim() && !(d.mat||'').trim() && !(d.pnom||'').trim());
+}
+
+// Supprime définitivement (local + Firebase) les inscriptions Omra vides/corrompues.
+function purgerOmraFantomes(fbArr) {
+  var locales = loadOmraLocal();
+  var gardees = locales.filter(function(d){ return !estOmraFantome(d); });
+  if (gardees.length !== locales.length) saveOmraLocal(gardees);
+  (fbArr||[]).forEach(function(d){
+    if (!estOmraFantome(d)) return;
+    var key = d._key || d.num;
+    if (key && typeof window.fbDeleteOmra === 'function') {
+      window.fbDeleteOmra(d.num || key, d.trackingCode || '', key)
+        .catch(function(err){ console.warn('Purge inscription Omra invalide impossible :', err); });
+    }
+  });
+}
+
 function mergeOmra(fbArr) {
+  purgerOmraFantomes(fbArr);
   var map = {};
-  loadOmraLocal().forEach(function(d){ map[d.num] = d; });
-  (fbArr||[]).forEach(function(d){ map[d.num] = d; });
+  loadOmraLocal().forEach(function(d){ if (!estOmraFantome(d)) map[d.num] = d; });
+  (fbArr||[]).forEach(function(d){ if (!estOmraFantome(d)) map[d.num] = d; });
   loadOmraSupprimesLocal().forEach(function(num){ delete map[num]; });
   return Object.values(map);
 }
@@ -2456,7 +2537,7 @@ function remplirSelectAnnees(selectId, arr) {
   if (!el) return;
   var cur = el.value;
   var years = anneesDisponibles(arr);
-  el.innerHTML = '<option value="" data-i18n="filter.toutesAnnees">' + t('filter.toutesAnnees') + '</option>' +
+  el.innerHTML = '<option value="" data-i18n="filter.toutesAnnees">' + (t('filter.toutesAnnees') === 'filter.toutesAnnees' ? 'Toutes les années' : t('filter.toutesAnnees')) + '</option>' +
     years.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
   if (cur && years.indexOf(Number(cur)) !== -1) el.value = cur;
 }
@@ -2988,27 +3069,35 @@ async function soumettreOmra() {
   var pprenom = document.getElementById('fo-pprenom').value.trim();
   var naissance = document.getElementById('fo-naissance').value;
   var passeport = document.getElementById('fo-passeport').value.trim();
+  var passeportExp = document.getElementById('fo-passeport-exp').value;
   var adresse = document.getElementById('fo-adresse').value.trim();
   var msg = document.getElementById('msg-omra');
   msg.className = 'msg';
 
-  if (!nom || !prenom || !mat || !tel || !anneeInscription) {
+  if (!nom || !prenom || !mat || !tel || !service || !anneeInscription) {
     msg.className = 'msg err'; msg.style.display = 'flex';
     msg.textContent = "⚠️ Veuillez remplir tous les champs obligatoires de l'adhérent."; return;
   }
-  if (!pnom || !pprenom || !naissance || !passeport) {
+  if (!pnom || !pprenom || !naissance || !passeport || !passeportExp) {
     msg.className = 'msg err'; msg.style.display = 'flex';
-    msg.textContent = '⚠️ Veuillez renseigner toutes les informations obligatoires du pèlerin.'; return;
+    msg.textContent = '⚠️ Veuillez renseigner toutes les informations obligatoires du pèlerin (y compris la date d\'expiration du passeport).'; return;
+  }
+  var _auj = new Date(); _auj.setHours(0,0,0,0);
+  if (new Date(passeportExp) <= _auj) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Le passeport est expiré : inscription impossible avec un passeport périmé.'; return;
   }
 
   var now = new Date();
   var num = newOmraNumber(now);
   var trackingCode = newTrackingCodeOmra();
+  var heureStr = now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
   var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
 
   var d = {
     num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
-    pnom: pnom, pprenom: pprenom, naissance: naissance, passeport: passeport, adresse: adresse,
+    pnom: pnom, pprenom: pprenom, naissance: naissance, passeport: passeport, passeportExp: passeportExp, adresse: adresse,
+    heure: heureStr, bonRecu: false,
     date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: anneeInscription
   };
 
@@ -3019,6 +3108,8 @@ async function soumettreOmra() {
   document.getElementById('tko-pelerin').textContent = pnom + ' ' + pprenom;
   document.getElementById('tko-annee').textContent = anneeInscription;
   document.getElementById('tko-date').textContent = dateStr;
+  document.getElementById('tko-heure').textContent = heureStr;
+  window._dernierOmraInscrit = d;
   document.getElementById('tko-code').textContent = trackingCode;
   document.getElementById('ticket-confirm-omra').classList.add('visible');
   msg.className = 'msg ok'; msg.style.display = 'flex';
@@ -3033,8 +3124,17 @@ async function soumettreOmra() {
   }
 }
 
+function telechargerBonOmraTicket() {
+  var d = window._dernierOmraInscrit;
+  if (!d) return;
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  dessinerBonOmra(doc, d, 210, 14);
+  doc.save('Bon_Omra_' + d.num + '_' + d.nom + '.pdf');
+}
+
 function resetFormOmra() {
-  ['fo-nom','fo-prenom','fo-matricule','fo-tel','fo-service','fo-pnom','fo-pprenom','fo-naissance','fo-passeport','fo-adresse'].forEach(function(id){
+  ['fo-nom','fo-prenom','fo-matricule','fo-tel','fo-service','fo-pnom','fo-pprenom','fo-naissance','fo-passeport','fo-passeport-exp','fo-adresse'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
   remplirAnneesOmraForm();
@@ -4038,6 +4138,116 @@ function cloturerAnneesPassees(manuel) {
   }
 }
 
+// ===== CLÔTURE PAR PÉRIODE (mois, puis année) =====
+var MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function getMois(d) {
+  if (d.dateObj) { var m = new Date(d.dateObj).getMonth(); if (!isNaN(m)) return m; }
+  if (d.date) {
+    var p = String(d.date).split(/[\/\-\.]/);
+    if (p.length >= 3) { var mm = parseInt(p[1], 10) - 1; if (mm >= 0 && mm < 12) return mm; }
+  }
+  return -1;
+}
+
+function _jeuxCloture() {
+  function viaFb(nom) { return function(n, patch, tc) { return typeof window[nom] === 'function' ? window[nom](n, patch, tc) : Promise.resolve(); }; }
+  return [
+    { key: 'demandes', label: 'Prise en charge médicale', arr: function(){ return demandes; }, upd: viaFb('fbUpdateDemande'), persist: null },
+    { key: 'livres',   label: 'Livre scolaire',           arr: function(){ return livres; },   upd: viaFb('fbUpdateLivre'),   persist: persistLivreLocal },
+    { key: 'prets',    label: 'Prêt social',              arr: function(){ return prets; },    upd: viaFb('fbUpdatePret'),    persist: persistPretLocal },
+    { key: 'omra',     label: 'Omra',                     arr: function(){ return omra; },     upd: viaFb('fbUpdateOmra'),    persist: persistOmraLocal },
+    { key: 'sport',    label: 'Sport & Travail',          arr: function(){ return sport; },    upd: viaFb('fbUpdateSport'),   persist: persistSportLocal }
+  ];
+}
+
+// Liste des actes « En attente » correspondant à l'activité / année / mois (mois = -1 : toute l'année)
+function _actesAClore(activite, annee, mois) {
+  var out = [];
+  _jeuxCloture().forEach(function(jeu) {
+    if (activite !== 'all' && activite !== jeu.key) return;
+    (jeu.arr() || []).forEach(function(d) {
+      if (d.statut !== 'En attente') return;
+      if (getAnnee(d) !== annee) return;
+      if (mois >= 0 && getMois(d) !== mois) return;
+      out.push({ jeu: jeu, d: d });
+    });
+  });
+  return out;
+}
+
+function majApercuCloture() {
+  var selA = document.getElementById('clo-annee'), selM = document.getElementById('clo-mois'), selAct = document.getElementById('clo-activite'), box = document.getElementById('clo-apercu');
+  if (!selA || !selM || !selAct || !box) return;
+
+  // Années : reconstruites à chaque appel (les données arrivent de Firebase après coup), sélection conservée
+  var premier = !selM.options.length, prevA = selA.value;
+  var set = {}; set[new Date().getFullYear()] = true;
+  _jeuxCloture().forEach(function(j){ (j.arr() || []).forEach(function(d){ set[getAnnee(d)] = true; }); });
+  selA.innerHTML = '';
+  Object.keys(set).map(Number).sort(function(a,b){ return b-a; }).forEach(function(y){
+    var o = document.createElement('option'); o.value = y; o.textContent = y; selA.appendChild(o);
+  });
+  if (premier) {
+    MOIS_FR.forEach(function(m, i){ var o = document.createElement('option'); o.value = i; o.textContent = m; selM.appendChild(o); });
+    var now = new Date(), mp = now.getMonth() - 1, ap = now.getFullYear();
+    if (mp < 0) { mp = 11; ap--; }
+    selM.value = String(mp);
+    prevA = String(ap);
+  }
+  if (prevA && selA.querySelector('option[value="' + prevA + '"]')) selA.value = prevA;
+
+  var annee = Number(selA.value), mois = Number(selM.value), act = selAct.value;
+  var parMois = _actesAClore(act, annee, mois), parAnnee = _actesAClore(act, annee, -1);
+  var detail = {};
+  parAnnee.forEach(function(x){ detail[x.jeu.label] = (detail[x.jeu.label] || 0) + 1; });
+  var lignes = Object.keys(detail).map(function(k){ return k + ' : <strong>' + detail[k] + '</strong>'; }).join(' · ');
+  box.innerHTML = '📊 <strong>' + parMois.length + '</strong> acte(s) en attente en <strong>' + MOIS_FR[mois] + ' ' + annee + '</strong><br>' +
+                  '📊 <strong>' + parAnnee.length + '</strong> acte(s) en attente sur toute l\'année <strong>' + annee + '</strong>' + (lignes ? '<br><span style="font-size:12px;">' + lignes + '</span>' : '');
+}
+
+function cloturerPeriode(type) {
+  var annee = Number((document.getElementById('clo-annee') || {}).value);
+  var mois = Number((document.getElementById('clo-mois') || {}).value);
+  var act = (document.getElementById('clo-activite') || {}).value || 'all';
+  if (!annee) return;
+  var enAnnee = (type === 'annee');
+  var liste = _actesAClore(act, annee, enAnnee ? -1 : mois);
+  var periode = enAnnee ? ('l\'année ' + annee) : (MOIS_FR[mois] + ' ' + annee);
+  if (!liste.length) { alert('Aucun acte « En attente » à clôturer pour ' + periode + '.'); return; }
+  if (!confirm('Clôturer ' + liste.length + ' acte(s) en attente pour ' + periode + ' ?\n\nIls passeront au statut « Clôturé » et ne pourront plus être validés ni refusés.')) return;
+
+  var today = new Date().toLocaleDateString('fr-DZ'), parAct = {};
+  liste.forEach(function(x) {
+    var d = x.d;
+    d.statut = 'Clôturé';
+    d.dateCloture = today;
+    if (x.jeu.persist) x.jeu.persist(d);
+    x.jeu.upd(d.num, { statut: 'Clôturé', dateCloture: today }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Clôture Firebase échouée :', err); });
+    parAct[x.jeu.label] = (parAct[x.jeu.label] || 0) + 1;
+  });
+  saveData();
+
+  [renderTableau, renderTableauLivres, renderTableauPrets, renderTableauOmra, renderTableauSport,
+   renderStats, renderStatsPret, renderStatsOmra, renderStatsSport, renderRapportStats, renderStatsChart].forEach(function(fn) {
+    try { fn(); } catch(e) { console.warn(e); }
+  });
+
+  alert('🔒 ' + liste.length + ' acte(s) clôturé(s) — ' + periode + '\n\n' +
+        Object.keys(parAct).map(function(k){ return '• ' + k + ' : ' + parAct[k]; }).join('\n'));
+}
+
+// L'aperçu se met à jour dès que les données admin sont rechargées
+(function() {
+  var _orig = renderRapportStats;
+  renderRapportStats = function() {
+    var r = _orig.apply(this, arguments);
+    try { majApercuCloture(); } catch(e) {}
+    return r;
+  };
+})();
+
 function renderStats() {
   var total = demandes.length;
   var att = demandes.filter(function(d){ return d.statut==='En attente'; }).length;
@@ -4123,12 +4333,21 @@ function renderStatsChart() {
   tbody.innerHTML = rows;
 }
 
+// Tri : les demandes les plus récentes apparaissent en premier (puis par numéro décroissant)
+function triRecent(arr) {
+  return (arr || []).slice().sort(function(a, b) {
+    var da = a.dateObj || '', db = b.dateObj || '';
+    if (da !== db) return db.localeCompare(da);
+    return String(b.num || '').localeCompare(String(a.num || ''), undefined, { numeric: true });
+  });
+}
+
 function renderTableau() {
   remplirSelectAnnees('filter-annee', demandes);
   var q = (document.getElementById('filter-search').value || '').toLowerCase();
   var st = document.getElementById('filter-status').value || '';
   var an = document.getElementById('filter-annee').value || '';
-  var filtered = demandes.filter(function(d){
+  var filtered = triRecent(demandes).filter(function(d){
     var matchQ = !q || (d.nom+d.prenom+d.mat+d.etab).toLowerCase().indexOf(q) >= 0;
     var matchSt = !st || d.statut === st;
     var matchAn = !an || String(getAnnee(d)) === an;
@@ -4306,7 +4525,7 @@ function renderTableauLivres() {
   var q = (searchEl.value || '').toLowerCase();
   var st = statusEl.value || '';
   var an = (anneeEl && anneeEl.value) || '';
-  var filtered = livres.filter(function(d){
+  var filtered = triRecent(livres).filter(function(d){
     var enfantsStr = (d.enfants||[]).map(function(e){ return e.nom + e.prenom; }).join('');
     var matchQ = !q || (d.nom+d.prenom+d.mat+enfantsStr).toLowerCase().indexOf(q) >= 0;
     var matchSt = !st || d.statut === st;
@@ -4466,7 +4685,7 @@ function renderTableauPrets() {
   var q = (searchEl.value || '').toLowerCase();
   var st = statusEl.value || '';
   var an = (anneeEl && anneeEl.value) || '';
-  var filtered = prets.filter(function(d){
+  var filtered = triRecent(prets).filter(function(d){
     var matchQ = !q || (d.nom+d.prenom+d.mat+d.fonction).toLowerCase().indexOf(q) >= 0;
     var matchSt = !st || d.statut === st;
     var matchAn = !an || String(getAnnee(d)) === an;
@@ -4627,7 +4846,7 @@ function renderTableauOmra() {
   var q = (searchEl.value || '').toLowerCase();
   var st = statusEl.value || '';
   var an = (anneeEl && anneeEl.value) || '';
-  var filtered = omra.filter(function(d){
+  var filtered = triRecent(omra).filter(function(d){
     var matchQ = !q || (d.nom+d.prenom+d.mat+(d.pnom||'')+(d.pprenom||'')).toLowerCase().indexOf(q) >= 0;
     var matchSt = !st || d.statut === st;
     var matchAn = !an || String(getAnnee(d)) === an;
@@ -4657,11 +4876,24 @@ function renderTableauOmra() {
       rows += '<button class="btn-success-sm" onclick="validerOmra(&quot;' + d.num + '&quot;)">✅ Valider</button>';
       rows += '<button class="btn-danger-sm" onclick="refuserOmra(&quot;' + d.num + '&quot;)">❌ Refuser</button>';
     }
+    rows += '<button class="btn-view-sm" title="Bon d\'inscription" onclick="toggleBonOmra(&quot;' + d.num + '&quot;)">' + (d.bonRecu ? '📄✔ Bon reçu' : '📄 Bon non reçu') + '</button>';
     rows += '<button class="btn-pdf-sm" onclick="genererPDFOmra(&quot;' + d.num + '&quot;)">🖨 Imprimer</button>';
     rows += '<button class="btn-del-sm" onclick="supprimerOmra(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
     rows += '</div></td></tr>';
   });
   tbody.innerHTML = rows;
+}
+
+function toggleBonOmra(num) {
+  var d = omra.find(function(x){ return x.num === num; });
+  if (!d) return;
+  d.bonRecu = !d.bonRecu;
+  persistOmraLocal(d);
+  renderTableauOmra(); renderStatsOmra();
+  if (typeof window.fbUpdateOmra === 'function') {
+    window.fbUpdateOmra(num, { bonRecu: d.bonRecu }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (bon omra) :', err); });
+  }
 }
 
 function validerOmra(num) {
@@ -4700,7 +4932,7 @@ function supprimerOmra(num) {
   marquerOmraSupprime(num);
   renderTableauOmra(); renderStatsOmra();
   if (typeof window.fbDeleteOmra === 'function') {
-    window.fbDeleteOmra(num, d.trackingCode || '')
+    window.fbDeleteOmra(num, d.trackingCode || '', d._key || num)
       .catch(function(err){
         console.warn('Synchronisation Firebase échouée (omra) :', err);
         alert("L'inscription a bien été supprimée de votre affichage, mais la suppression n'a pas pu être synchronisée avec la base en ligne (règles Firebase manquantes ou insuffisantes pour le chemin 'omra'). Elle ne réapparaîtra plus ici, mais pensez à vérifier/ajouter les règles d'écriture pour ce chemin dans la console Firebase pour une suppression complète sur tous les appareils.");
@@ -4722,7 +4954,10 @@ function voirDetailOmra(num) {
   body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service||'—') + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Pèlerin</div><div class="detail-val">' + esc(d.pnom) + ' ' + esc(d.pprenom) + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Date de naissance</div><div class="detail-val">' + esc(d.naissance||'—') + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">N° passeport / CIN</div><div class="detail-val">' + esc(d.passeport||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">N° passeport</div><div class="detail-val">' + esc(d.passeport||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Expiration passeport</div><div class="detail-val">' + esc(d.passeportExp||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Heure d\'inscription</div><div class="detail-val">' + esc(d.heure||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Bon d\'inscription</div><div class="detail-val">' + (d.bonRecu ? '<span class="badge b-ok">📄 Reçu</span>' : '<span class="badge b-att">Non reçu</span>') + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Adresse</div><div class="detail-val">' + esc(d.adresse||'—') + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Code de suivi</div><div class="detail-val" style="font-family:monospace;">' + esc(d.trackingCode || '—') + '</div></div>';
   if (d.resultatTirage) {
@@ -4735,6 +4970,7 @@ function voirDetailOmra(num) {
     body += '<button class="btn btn-primary" onclick="validerOmra(&quot;' + d.num + '&quot;);closeModal()">✅ Valider</button>';
     body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="refuserOmra(&quot;' + d.num + '&quot;);closeModal()">❌ Refuser</button>';
   }
+  body += '<button class="btn btn-outline" onclick="toggleBonOmra(&quot;' + d.num + '&quot;);closeModal()">' + (d.bonRecu ? '↩️ Annuler « bon reçu »' : '📄 Marquer le bon reçu') + '</button>';
   body += '<button class="btn btn-outline" onclick="genererPDFOmra(&quot;' + d.num + '&quot;)">🖨 Imprimer le bon</button>';
   body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerOmra(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer l\'inscription</button>';
   body += '</div>';
@@ -4759,7 +4995,10 @@ function exporterExcelOmra() {
       'Nom pèlerin': d.pnom || '',
       'Prénom pèlerin': d.pprenom || '',
       'Date de naissance': d.naissance || '',
-      'N° passeport / CIN': d.passeport || '',
+      'N° passeport': d.passeport || '',
+      'Expiration passeport': d.passeportExp || '',
+      'Heure inscription': d.heure || '',
+      'Bon reçu': d.bonRecu ? 'Oui' : 'Non',
       'Adresse': d.adresse || '',
       'Date validation': d.dateValidation || '',
       'Résultat tirage': d.resultatTirage || '',
@@ -4767,7 +5006,7 @@ function exporterExcelOmra() {
     };
   });
   var ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:16},{wch:26},{wch:16},{wch:14},{wch:14}];
+  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14},{wch:14},{wch:16},{wch:16},{wch:12},{wch:10},{wch:26},{wch:16},{wch:14},{wch:14}];
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Omra');
   var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
@@ -4803,7 +5042,7 @@ function renderTableauSport() {
   var st = statusEl.value || '';
   var an = (anneeEl && anneeEl.value) || '';
   var disc = (discEl && discEl.value) || '';
-  var filtered = sport.filter(function(d){
+  var filtered = triRecent(sport).filter(function(d){
     var matchQ = !q || (d.nom+d.prenom+d.mat+(d.discipline||'')).toLowerCase().indexOf(q) >= 0;
     var matchSt = !st || d.statut === st;
     var matchAn = !an || String(getAnnee(d)) === an;
@@ -5282,7 +5521,7 @@ async function changerMotDePasseAdmin() {
 }
 
 // ===== BON D'INSCRIPTION OMRA (PDF) =====
-function dessinerBonOmra(doc, d, W, M) {
+function dessinerBonOmra(doc, d, W, M, avecCachet) {
   doc.setFillColor(255,255,255);
   doc.rect(0,0,W,297,'F');
   doc.setFillColor(242,169,59);
@@ -5341,6 +5580,10 @@ function dessinerBonOmra(doc, d, W, M) {
   doc.text('Service / Direction :', M, y);
   doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0,0,0);
   doc.text(d.service || '—', M+45, y);
+  doc.setFont('helvetica','bold'); doc.setTextColor(14,58,83);
+  doc.text("Date / heure :", M+95, y);
+  doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
+  doc.text(((d.date||'—') + (d.heure ? ' (' + d.heure + ')' : '')).replace(' à ', ' '), M+125, y);
 
   y += 16;
   doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(14,58,83);
@@ -5359,9 +5602,15 @@ function dessinerBonOmra(doc, d, W, M) {
   doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0,0,0);
   doc.text(d.naissance || '—', M+45, y);
   doc.setFont('helvetica','bold'); doc.setTextColor(14,58,83);
-  doc.text('N° passeport / CIN :', M+95, y);
+  doc.text('N° passeport :', M+95, y);
   doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
-  doc.text(d.passeport || '—', M+140, y);
+  doc.text(d.passeport || '—', M+125, y);
+  y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
+  doc.text('Expiration du passeport :', M, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(0,0,0);
+  doc.text(d.passeportExp || '—', M+45, y);
   y += 10;
 
   doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(14,58,83);
@@ -5401,7 +5650,7 @@ function dessinerBonOmra(doc, d, W, M) {
   doc.text("(Signature de l'adhérent)", (M+mid)/2, y+30, {align:'center'});
 
   var cx = (mid+W-M)/2;
-  if (d.statut === 'Validé') {
+  if (d.statut === 'Validé' || avecCachet) {
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(14,58,83);
     doc.text('KHELALI Yakoub', cx, y+9, {align:'center'});
     doc.setFont('helvetica','normal'); doc.setFontSize(8);
@@ -5430,7 +5679,7 @@ function genererPDFOmra(num) {
   if (!d) return;
   var jsPDF = window.jspdf.jsPDF;
   var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  dessinerBonOmra(doc, d, 210, 14);
+  dessinerBonOmra(doc, d, 210, 14, true);
   doc.save('Omra_' + d.num + '_' + d.nom + '.pdf');
 }
 
@@ -5452,7 +5701,7 @@ function genererPDFOmraLot() {
   var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   filtered.forEach(function(d, i){
     if (i > 0) doc.addPage();
-    dessinerBonOmra(doc, d, 210, 14);
+    dessinerBonOmra(doc, d, 210, 14, true);
   });
   var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
   doc.save('SCHB_Bons_Omra_' + (an || 'toutes-annees') + '_' + dateExp + '.pdf');
@@ -5472,11 +5721,13 @@ function lancerTirage() {
   if (!annee) { alert('Veuillez choisir une année de campagne.'); return; }
   if (!nbPlaces || nbPlaces < 1) { alert('Veuillez indiquer un nombre de places valide.'); return; }
 
-  var pool = omra.filter(function(d){ return getAnnee(d) === annee && d.statut === 'Validé' && !d.resultatTirage; });
+  var pool = omra.filter(function(d){ return getAnnee(d) === annee && d.statut === 'Validé' && d.bonRecu && !d.resultatTirage; });
+  var sansBon = omra.filter(function(d){ return getAnnee(d) === annee && d.statut === 'Validé' && !d.bonRecu && !d.resultatTirage; }).length;
   if (!pool.length) {
-    alert("Aucun candidat éligible (statut « Validé », sans résultat de tirage) trouvé pour l'année " + annee + '.');
+    alert("Aucun candidat éligible (statut « Validé » ET bon d'inscription reçu, sans résultat de tirage) trouvé pour l'année " + annee + '.');
     return;
   }
+  if (sansBon > 0 && !confirm(sansBon + " inscription(s) validée(s) sans bon d'inscription reçu seront EXCLUES du tirage. Continuer ?")) return;
   if (!confirm('Lancer le tirage au sort pour ' + annee + ' parmi ' + pool.length + ' candidat(s) validé(s), pour ' + nbPlaces + ' place(s) ? Cette action est irréversible (sauf réinitialisation).')) return;
 
   // Mélange aléatoire (Fisher-Yates)
@@ -6126,7 +6377,9 @@ var I18N_AR = {
   'omra.pelerin.nom': 'اسم المعتمر',
   'omra.pelerin.prenom': 'الاسم الشخصي للمعتمر',
   'omra.naissance': 'تاريخ الميلاد',
-  'omra.passeport': 'رقم جواز السفر / بطاقة التعريف',
+  'omra.passeport': 'رقم جواز السفر',
+  'omra.passeportExp': 'تاريخ انتهاء صلاحية جواز السفر',
+  'omra.heure': 'ساعة التسجيل',
   'omra.adresse': 'العنوان',
   'idees.eyebrow': 'استمارة إلكترونية',
   'idees.title': '📬 صندوق الأفكار',
