@@ -600,6 +600,23 @@
         delete _saisonRefs[cle]; delete _saisonHandlers[cle];
       };
 
+      // ===== CONVENTIONS MÉDICALES (fin / reprise d'une convention par l'admin) =====
+      // Stockées sous meta/conventionsFin/{idConvention} = true quand la convention est TERMINÉE
+      // (absence de la clé = convention en marche). Lecture publique (comme les saisons),
+      // écriture réservée à l'administrateur connecté.
+      var _convRef = null;
+      var _convHandler = null;
+      window.fbSetConventionTerminee = function(id, terminee) {
+        var ref = _fbDb.ref('meta/conventionsFin/' + id);
+        return terminee ? ref.set(true) : ref.remove();
+      };
+      window.fbListenConventions = function(callback, errorCallback) {
+        if (_convRef && _convHandler) _convRef.off('value', _convHandler);
+        _convRef = _fbDb.ref('meta/conventionsFin');
+        _convHandler = function(snapshot) { callback(snapshot.val() || {}); };
+        _convRef.on('value', _convHandler, errorCallback || function(err){ console.error(err); });
+      };
+
       window.dispatchEvent(new Event('firebase-sdk-ready'));
     } catch (e) {
       console.error("Erreur d'initialisation Firebase :", e);
@@ -650,6 +667,17 @@ main{max-width:1100px;margin:0 auto;padding:36px 24px 80px;}
 .sec-title{font-size:26px;font-weight:700;color:var(--bleu);margin-bottom:6px;}
 .sec-desc{color:#5C5142;font-size:14px;max-width:660px;line-height:1.6;}
 .grid-spec{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:32px;}
+.card-spec.conv-terminee{opacity:.6;filter:grayscale(1);border-style:dashed;}
+.conv-badge{display:inline-block;margin-top:6px;background:#FEE2E2;color:#991B1B;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;}
+.conv-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 4px;border-bottom:1px solid var(--ligne);}
+.conv-row:last-child{border-bottom:none;}
+.conv-row .conv-info{flex:1;min-width:220px;}
+.conv-row .conv-nom{font-weight:700;color:var(--bleu);font-size:14.5px;}
+.conv-row .conv-sub{font-size:12px;color:#7A6F58;margin-top:2px;}
+.btn-conv-fin{background:var(--rouge);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;}
+.btn-conv-fin:hover{opacity:.9;}
+.btn-conv-reprise{background:var(--vert);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;}
+.btn-conv-reprise:hover{opacity:.9;}
 .card-spec{background:white;border:1.5px solid var(--ligne);border-radius:14px;padding:20px;box-shadow:var(--ombre);display:flex;align-items:flex-start;gap:14px;transition:.2s;}
 .card-spec:hover{border-color:var(--or);transform:translateY(-2px);}
 .grid-activites{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-bottom:32px;}
@@ -1949,6 +1977,7 @@ footer strong{color:var(--or-clair);}
       <button class="btn-admin-tab" id="tab-btn-idees" onclick="showAdminTab('idees')" data-i18n="admtab.idees">📬 Boîte à idées</button>
       <button class="btn-admin-tab" id="tab-btn-doleances" onclick="showAdminTab('doleances')" data-i18n="admtab.doleances">📝 Doléances</button>
       <button class="btn-admin-tab" id="tab-btn-annonces" onclick="showAdminTab('annonces')" data-i18n="admtab.annonces">📢 Annonces</button>
+      <button class="btn-admin-tab" id="tab-btn-conventions" onclick="showAdminTab('conventions')" data-i18n="admtab.conventions">🤝 Conventions</button>
       <button class="btn-admin-tab" id="tab-btn-stats" onclick="showAdminTab('stats')" data-i18n="admtab.stats">📊 Statistiques par établissement</button>
       <button class="btn-admin-tab" id="tab-btn-rapport" onclick="showAdminTab('rapport')" data-i18n="admtab.rapport">📈 Rapport global</button>
       <button class="btn-admin-tab" id="tab-btn-effectifs" onclick="showAdminTab('effectifs')" data-i18n="admtab.effectifs">🧑‍💼 Effectifs</button>
@@ -2179,6 +2208,15 @@ footer strong{color:var(--or-clair);}
         <h3 class="serif" style="color:var(--bleu);margin-bottom:14px;font-size:16px;" data-i18n="annonces.admin.list.title">📋 Annonces publiées</h3>
         <div id="admin-annonces-grid" class="grid-annonces"></div>
         <div id="admin-annonces-empty" style="display:none;text-align:center;color:#7A6F58;padding:20px;" data-i18n="annonces.vide">Aucune annonce publiée pour le moment.</div>
+      </div>
+    </div>
+
+    <div id="admin-tab-conventions" style="display:none;">
+      <div class="panneau">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:8px;font-size:17px;" data-i18n="conv.admin.title">🤝 Conventions médicales</h3>
+        <p style="font-size:13.5px;color:#5C5142;margin-bottom:14px;line-height:1.6;" data-i18n="conv.admin.desc">Mettez fin à une convention ou remettez-la en marche. Une convention terminée est grisée pour les travailleurs et son établissement n'est plus sélectionnable dans le formulaire de prise en charge. Les dossiers déjà déposés ne sont pas modifiés.</p>
+        <div id="conv-admin-resume" style="margin-bottom:10px;font-size:13px;font-weight:600;"></div>
+        <div id="conv-admin-list"></div>
       </div>
     </div>
 
@@ -2817,6 +2855,12 @@ async function soumettreDemande() {
   if (!nom || !prenom || !mat || !tel || !etab || !acte) {
     msg.className = 'msg err'; msg.style.display = 'flex';
     msg.textContent = '⚠️ Veuillez remplir tous les champs obligatoires.'; return;
+  }
+  if (conventionsFin[convSlug(etab)]) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = (LANG_STATE.current === 'ar')
+      ? '⛔ انتهت الاتفاقية مع هذه المؤسسة. يرجى اختيار مؤسسة أخرى.'
+      : "⛔ La convention avec cet établissement est terminée. Veuillez choisir un autre établissement."; return;
   }
   if (benefVal !== 'l_adherent' && (!bnNom || !bnPrenom)) {
     msg.className = 'msg err'; msg.style.display = 'flex';
@@ -3993,6 +4037,9 @@ function showAdminTab(id) {
   document.getElementById('admin-tab-idees').style.display = (id === 'idees') ? 'block' : 'none';
   document.getElementById('admin-tab-doleances').style.display = (id === 'doleances') ? 'block' : 'none';
   document.getElementById('admin-tab-annonces').style.display = (id === 'annonces') ? 'block' : 'none';
+  document.getElementById('admin-tab-conventions').style.display = (id === 'conventions') ? 'block' : 'none';
+  document.getElementById('tab-btn-conventions').classList.toggle('actif', id === 'conventions');
+  if (id === 'conventions') { try { renderAdminConventions(); } catch(e) { console.warn(e); } }
   document.getElementById('admin-tab-stats').style.display = (id === 'stats') ? 'block' : 'none';
   document.getElementById('admin-tab-rapport').style.display = (id === 'rapport') ? 'block' : 'none';
   document.getElementById('admin-tab-effectifs').style.display = (id === 'effectifs') ? 'block' : 'none';
@@ -5471,6 +5518,123 @@ function demarrerEcouteSaisonsPubliques() {
     appliquerEtatSaisonPublic(ouverte, 'sport-saison-fermee', 'sport-form-wrap');
     refreshBoutonSaison('sportOuverte', ouverte);
   });
+  if (typeof window.fbListenConventions === 'function') {
+    window.fbListenConventions(function(etat) {
+      conventionsFin = etat || {};
+      appliquerEtatConventions();
+    }, function(err) {
+      console.warn('Lecture des conventions indisponible pour le moment (Firebase) :', err);
+    });
+  }
+}
+
+// ===== CONVENTIONS MÉDICALES : fin / reprise par l'admin =====
+// L'identifiant d'une convention = slug du libellé de l'établissement (valeur de l'<option> du formulaire).
+var conventionsFin = {};   // { idConvention: true } => convention TERMINÉE
+
+function convSlug(str) {
+  return String(str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+}
+function convAr() { return (typeof LANG_STATE !== 'undefined' && LANG_STATE.current === 'ar'); }
+
+// Liste des conventions = options du formulaire (même ordre que les cartes « Établissements conventionnés »)
+function getConventions() {
+  var sel = document.getElementById('f-etab');
+  var cartes = document.querySelectorAll('.grid-spec .card-spec');
+  var liste = [];
+  if (!sel) return liste;
+  var i = 0;
+  Array.prototype.forEach.call(sel.options, function(o) {
+    if (!o.value) return;
+    if (o.dataset.label === undefined) o.dataset.label = o.textContent;
+    var carte = cartes[i] || null;
+    var id = convSlug(o.value);
+    if (carte) carte.dataset.conv = id;
+    liste.push({
+      id: id, option: o, carte: carte, label: o.dataset.label,
+      nom: carte ? (carte.querySelector('.spec-name') || {}).textContent : o.value,
+      adresse: carte ? (carte.querySelector('.spec-addr') || {}).textContent : '',
+      type: carte ? (carte.querySelector('.spec-type') || {}).textContent : ''
+    });
+    i++;
+  });
+  return liste;
+}
+
+// Applique l'état (en marche / terminée) au formulaire public, aux cartes et à l'onglet admin
+function appliquerEtatConventions() {
+  var sel = document.getElementById('f-etab');
+  var ar = convAr();
+  getConventions().forEach(function(c) {
+    var fin = !!conventionsFin[c.id];
+    c.option.disabled = fin;
+    c.option.textContent = c.label + (fin ? (ar ? ' — الاتفاقية منتهية' : ' — convention terminée') : '');
+    if (fin && sel && sel.value === c.option.value) sel.value = '';
+    if (c.carte) {
+      c.carte.classList.toggle('conv-terminee', fin);
+      var zone = c.carte.querySelector('.spec-type');
+      var badge = c.carte.querySelector('.conv-badge');
+      if (fin && !badge && zone) {
+        badge = document.createElement('span');
+        badge.className = 'conv-badge';
+        zone.parentNode.appendChild(badge);
+      }
+      if (badge) {
+        if (fin) badge.textContent = ar ? '⛔ الاتفاقية منتهية' : '⛔ Convention terminée';
+        else badge.remove();
+      }
+    }
+  });
+  try { renderAdminConventions(); } catch (e) {}
+}
+
+function renderAdminConventions() {
+  var box = document.getElementById('conv-admin-list');
+  if (!box) return;
+  var ar = convAr();
+  var liste = getConventions();
+  var nbFin = liste.filter(function(c){ return conventionsFin[c.id]; }).length;
+  var resume = document.getElementById('conv-admin-resume');
+  if (resume) {
+    resume.innerHTML = ar
+      ? '<span class="badge b-ok">✅ ' + (liste.length - nbFin) + ' سارية</span> &nbsp; <span class="badge b-clo">⛔ ' + nbFin + ' منتهية</span>'
+      : '<span class="badge b-ok">✅ ' + (liste.length - nbFin) + ' en marche</span> &nbsp; <span class="badge b-clo">⛔ ' + nbFin + ' terminée(s)</span>';
+  }
+  box.innerHTML = liste.map(function(c) {
+    var fin = !!conventionsFin[c.id];
+    return '<div class="conv-row">' +
+      '<div class="conv-info"><div class="conv-nom">' + esc(c.nom) + '</div>' +
+      '<div class="conv-sub">' + esc(c.adresse) + (c.type ? ' · ' + esc(c.type) : '') + '</div></div>' +
+      '<div>' + (fin
+        ? '<span class="badge b-clo">⛔ ' + (ar ? 'منتهية' : 'Terminée') + '</span>'
+        : '<span class="badge b-ok">✅ ' + (ar ? 'سارية' : 'En marche') + '</span>') + '</div>' +
+      '<button class="' + (fin ? 'btn-conv-reprise' : 'btn-conv-fin') + '" onclick="toggleConvention(\'' + c.id + '\')">' +
+      (fin ? (ar ? '🔓 إعادة تشغيل الاتفاقية' : '🔓 Remettre en marche') : (ar ? '⛔ إنهاء الاتفاقية' : '⛔ Mettre fin à la convention')) +
+      '</button></div>';
+  }).join('');
+}
+
+function toggleConvention(id) {
+  var c = getConventions().filter(function(x){ return x.id === id; })[0];
+  if (!c) return;
+  var ar = convAr();
+  var nouvelleFin = !conventionsFin[id];
+  var question = nouvelleFin
+    ? (ar ? 'هل تريد إنهاء الاتفاقية مع « ' + c.nom + ' » ؟ لن يتمكن العمال من اختيار هذه المؤسسة.'
+          : 'Mettre fin à la convention avec « ' + c.nom + ' » ?\nLes travailleurs ne pourront plus sélectionner cet établissement.')
+    : (ar ? 'هل تريد إعادة تشغيل الاتفاقية مع « ' + c.nom + ' » ؟'
+          : 'Remettre en marche la convention avec « ' + c.nom + ' » ?');
+  if (!confirm(question)) return;
+  if (typeof window.fbSetConventionTerminee === 'function') {
+    // L'écoute temps réel (fbListenConventions) mettra l'interface à jour pour tout le monde.
+    window.fbSetConventionTerminee(id, nouvelleFin).catch(function(err) {
+      alert("Impossible de modifier la convention : " + (err && err.message || 'erreur inconnue'));
+    });
+  } else {
+    if (nouvelleFin) conventionsFin[id] = true; else delete conventionsFin[id];
+    appliquerEtatConventions();
+  }
 }
 
 // ===== ADMIN : BOÎTE À IDÉES =====
@@ -6595,6 +6759,9 @@ var I18N_AR = {
   'annonces.admin.list.title': '📋 الإعلانات المنشورة',
   'btn.publier.annonce': '✅ نشر الإعلان',
   'admtab.annonces': '📢 الإعلانات',
+  'admtab.conventions': '🤝 الاتفاقيات',
+  'conv.admin.title': '🤝 الاتفاقيات الطبية',
+  'conv.admin.desc': 'أنهِ اتفاقية مع مؤسسة أو أعد تشغيلها. تظهر الاتفاقية المنتهية باللون الرمادي للعمال ولا يمكن اختيار مؤسستها في استمارة التكفل الطبي. الملفات المودعة سابقًا لا تتغير.',
   'demande.spec.eyebrow': 'المؤسسات المتعاقدة',
   'demande.spec.title': 'التخصصات الطبية المعتمدة',
   'demande.spec.desc': 'يغطي التكفل العلاجات في المؤسسات المذكورة أدناه. الاستشارات البسيطة وعلاجات الأسنان العادية غير مؤهلة. الوصفة الطبية إلزامية.',
@@ -6744,6 +6911,7 @@ function applyLang(lang) {
   // Registre interne : libellés dynamiques (tableaux, badges, messages calculés)
   try { interneMajLangue(); } catch(e) {}
   try { renderVueGlobale(); } catch(e) {}
+  try { appliquerEtatConventions(); } catch(e) {}
 }
 
 function toggleLang() {
