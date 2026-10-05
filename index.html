@@ -667,6 +667,36 @@ main{max-width:1100px;margin:0 auto;padding:36px 24px 80px;}
 .sec-title{font-size:26px;font-weight:700;color:var(--bleu);margin-bottom:6px;}
 .sec-desc{color:#5C5142;font-size:14px;max-width:660px;line-height:1.6;}
 .grid-spec{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:32px;}
+
+#tir-show{position:fixed;inset:0;z-index:99999;background:radial-gradient(ellipse at top,#14506f 0%,#0a2a3d 60%,#061a27 100%);color:#fff;display:none;flex-direction:column;font-family:'Inter',sans-serif;overflow:hidden;}
+#tir-show.on{display:flex;}
+#tir-show .t-top{display:flex;align-items:center;gap:20px;padding:18px 32px;border-bottom:2px solid rgba(212,175,55,.5);}
+#tir-show .t-top h1{font-family:'Fraunces',serif;font-size:clamp(22px,3vw,48px);margin:0;flex:1;color:#F5D77A;}
+#tir-show .t-cpt{font-size:clamp(20px,2.6vw,42px);font-weight:800;}
+#tir-show .t-x{background:rgba(255,255,255,.12);border:none;color:#fff;font-size:26px;border-radius:10px;padding:6px 16px;cursor:pointer;}
+#tir-show .t-body{flex:1;display:grid;grid-template-columns:1fr 27%;gap:22px;padding:22px 32px;min-height:0;}
+#tir-show .t-left{display:flex;flex-direction:column;gap:16px;min-height:0;}
+#tir-show .t-stage{flex:0 0 auto;min-height:22vh;border:3px solid #F5D77A;border-radius:24px;background:rgba(0,0,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;box-shadow:0 0 60px rgba(245,215,122,.25) inset;}
+#tir-show .t-name{font-family:'Fraunces',serif;font-weight:800;font-size:clamp(26px,3.6vw,64px);line-height:1.1;width:100%;overflow:hidden;}
+#tir-show .t-name.spin{opacity:.85;filter:blur(1.2px);}
+#tir-show .t-name.win{color:#F5D77A;text-shadow:0 0 40px rgba(245,215,122,.8);animation:tirPop .7s ease-out;}
+#tir-show .t-sub{font-size:clamp(16px,2vw,32px);opacity:.9;margin-top:10px;}
+@keyframes tirPop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+#tir-show .t-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+#tir-show .t-btn{background:linear-gradient(135deg,#F5D77A,#D4AF37);color:#06304a;border:none;border-radius:14px;padding:16px 38px;font-size:clamp(18px,2vw,30px);font-weight:800;cursor:pointer;}
+#tir-show .t-btn.sec{background:rgba(255,255,255,.14);color:#fff;font-size:18px;padding:12px 22px;}
+#tir-show .t-btn:disabled{opacity:.4;cursor:wait;}
+#tir-show .t-wall{flex:1;overflow:hidden;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;padding:4px;min-height:0;border:2px solid rgba(255,255,255,.18);border-radius:16px;background:rgba(0,0,0,.18);}
+#tir-show .t-chip{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:.25em .8em;transition:.3s;white-space:nowrap;}
+#tir-show .t-chip.out{background:#D4AF37;color:#06304a;font-weight:800;border-color:#F5D77A;}
+#tir-show .t-chip.cur{background:#fff;color:#06304a;box-shadow:0 0 18px #fff;}
+#tir-show .t-chip.out{box-shadow:0 0 14px rgba(245,215,122,.9);}
+#tir-show .t-right{background:rgba(0,0,0,.3);border:2px solid rgba(255,255,255,.2);border-radius:20px;padding:18px;overflow:auto;min-height:0;}
+#tir-show .t-right h2{margin:0 0 12px;color:#F5D77A;font-family:'Fraunces',serif;font-size:clamp(18px,2vw,32px);}
+#tir-show .t-ret{display:flex;gap:12px;align-items:center;padding:9px 6px;border-bottom:1px solid rgba(255,255,255,.15);font-size:clamp(14px,1.6vw,26px);animation:tirPop .6s;}
+#tir-show .t-ret b{background:#F5D77A;color:#06304a;border-radius:50%;min-width:2em;height:2em;display:flex;align-items:center;justify-content:center;}
+#tir-show .t-audit{font-size:clamp(11px,1vw,15px);opacity:.8;line-height:1.6;word-break:break-all;margin-top:10px;}
+#tir-show canvas{position:absolute;inset:0;pointer-events:none;}
 .card-spec.conv-terminee{opacity:.6;filter:grayscale(1);border-style:dashed;}
 .conv-badge{display:inline-block;margin-top:6px;background:#FEE2E2;color:#991B1B;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;}
 .conv-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 4px;border-bottom:1px solid var(--ligne);}
@@ -2072,12 +2102,12 @@ footer strong{color:var(--or-clair);}
         <button id="btn-toggle-saison-omra" class="btn btn-primary" onclick="toggleSaisonOmra()">…</button>
       </div>
       <div class="panneau" style="margin-bottom:16px;">
-        <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:16px;">🎲 Tirage au sort — places limitées</h3>
-        <p style="font-size:13px;color:#5C5142;margin-bottom:14px;">Le tirage sélectionne aléatoirement les places parmi les inscriptions <strong>Validées</strong> de l'année choisie qui n'ont pas encore de résultat.</p>
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:10px;font-size:16px;">🎲 Tirage au sort — nombre de gagnants limité</h3>
+        <p style="font-size:13px;color:#5C5142;margin-bottom:14px;">Le tirage désigne les gagnants parmi <strong>toutes les inscriptions</strong> de l'année choisie.</p>
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;">
           <div class="grp" style="margin-bottom:0;"><label>Année de la campagne</label><select id="tirage-annee" style="min-width:140px;"></select></div>
-          <div class="grp" style="margin-bottom:0;"><label>Nombre de places</label><input id="tirage-places" type="number" min="1" value="10" style="width:110px;"></div>
-          <button class="btn btn-primary" onclick="lancerTirage()">🎲 Lancer le tirage au sort</button>
+          <div class="grp" style="margin-bottom:0;"><label>Nombre de gagnants</label><input id="tirage-places" type="number" min="1" value="10" style="width:110px;"></div>
+          <button class="btn btn-primary" onclick="lancerTirage()">🎬 Lancer le tirage (mode écran géant)</button>
           <button class="btn-cloture" onclick="reinitialiserTirage()">↺ Réinitialiser le tirage de cette année</button>
         </div>
         <div id="tirage-resultat" style="margin-top:14px;"></div>
@@ -6125,45 +6155,194 @@ function lancerTirage() {
   var annee = Number(anneeEl && anneeEl.value);
   var nbPlaces = Number(placesEl && placesEl.value);
   if (!annee) { alert('Veuillez choisir une année de campagne.'); return; }
-  if (!nbPlaces || nbPlaces < 1) { alert('Veuillez indiquer un nombre de places valide.'); return; }
+  if (!nbPlaces || nbPlaces < 1) { alert('Veuillez indiquer un nombre de gagnants valide.'); return; }
 
-  var pool = omra.filter(function(d){ return getAnnee(d) === annee && d.statut === 'Validé' && d.bonRecu && !d.resultatTirage; });
-  var sansBon = omra.filter(function(d){ return getAnnee(d) === annee && d.statut === 'Validé' && !d.bonRecu && !d.resultatTirage; }).length;
-  if (!pool.length) {
-    alert("Aucun candidat éligible (statut « Validé » ET bon d'inscription reçu, sans résultat de tirage) trouvé pour l'année " + annee + '.');
-    return;
-  }
-  if (sansBon > 0 && !confirm(sansBon + " inscription(s) validée(s) sans bon d'inscription reçu seront EXCLUES du tirage. Continuer ?")) return;
-  if (!confirm('Lancer le tirage au sort pour ' + annee + ' parmi ' + pool.length + ' candidat(s) validé(s), pour ' + nbPlaces + ' place(s) ? Cette action est irréversible (sauf réinitialisation).')) return;
+  var pool = omra.filter(function(d){ return getAnnee(d) === annee; });   // tous les inscrits de l'année
+  var sansBon = 0;
+  if (!pool.length) { alert("Aucune inscription trouvée pour l'année " + annee + '.'); return; }
+  var dejaTires = pool.filter(function(d){ return d.resultatTirage; }).length;
+  if (dejaTires > 0 && !confirm(dejaTires + " inscrit(s) ont déjà un résultat de tirage pour " + annee + ".\nCe nouveau tirage inclut TOUS les inscrits et remplacera les anciens résultats à l'enregistrement.\n\nContinuer ?")) return;
+  if (pool.length < nbPlaces && !confirm('Seulement ' + pool.length + ' inscrit(s) pour ' + nbPlaces + ' gagnant(s) demandé(s). Continuer ?')) return;
+  ouvrirTirageSpectacle(pool, nbPlaces, annee, sansBon);
+}
 
-  // Mélange aléatoire (Fisher-Yates)
-  var shuffled = pool.slice();
-  for (var i = shuffled.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
+// ===== TIRAGE AU SORT OMRA — MODE SPECTACLE (écran géant, transparent) =====
+var TIR = null;
+function tirRand(n) {            // entier uniforme 0..n-1 (générateur cryptographique, sans biais)
+  var lim = Math.floor(4294967296 / n) * n, a = new Uint32Array(1), x;
+  do { crypto.getRandomValues(a); x = a[0]; } while (x >= lim);
+  return x % n;
+}
+function tirLabel(d) { return TIR && TIR.masque ? ('Matricule ' + d.mat) : (d.nom + ' ' + d.prenom); }
+function tirSha(txt) {
+  if (!(window.crypto && crypto.subtle)) return Promise.resolve('indisponible');
+  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)).then(function(b){
+    return Array.prototype.map.call(new Uint8Array(b), function(x){ return ('0' + x.toString(16)).slice(-2); }).join('');
+  });
+}
+function ouvrirTirageSpectacle(pool, nbPlaces, annee, sansBon) {
+  var nbPlacesDemandees = nbPlaces;
+  nbPlaces = Math.min(nbPlaces, pool.length);
+  TIR = { pool: pool.slice(), reste: pool.slice(), retenus: [], places: nbPlaces, annee: annee, sansBon: sansBon, masque: false, muet: false, busy: false, fin: false, empreinte: '…', t0: new Date() };
+  document.getElementById('tir-show').classList.add('on');
+  try { (document.documentElement.requestFullscreen || function(){}).call(document.documentElement); } catch (e) {}
+  document.getElementById('tir-titre').textContent = '🕋 Tirage au sort Omra ' + annee + ' — SCHB';
+  tirSha(pool.map(function(d){ return d.num; }).sort().join('|')).then(function(h){ TIR.empreinte = h; tirAudit(); });
+  tirDessiner(); setTimeout(tirAjuster, 60);
+  document.getElementById('tir-name').className = 't-name';
+  document.getElementById('tir-name').textContent = TIR.pool.length + ' candidats · ' + nbPlaces + ' gagnants';
+  document.getElementById('tir-sub').textContent = "Tous les candidats ci-dessous sont dans l'urne. Chaque gagnant est tiré en direct, un par un." + (pool.length < nbPlacesDemandees ? ' ⚠️ Moins de candidats que de gagnants demandés.' : '');
+  tirActions();
+}
+function tirAudit() {
+  var e = document.getElementById('tir-audit'); if (!e || !TIR) return;
+  e.innerHTML = '🔎 <b>Transparence</b><br>• Candidats éligibles : <b>' + TIR.pool.length + '</b> (tous les inscrits)' +
+    (TIR.sansBon ? '<br>• Exclus (sans bon reçu) : <b>' + TIR.sansBon + '</b>' : '') +
+    '<br>• Générateur cryptographique du navigateur (<i>crypto.getRandomValues</i>) : chaque candidat restant a exactement la même chance.' +
+    '<br>• Empreinte SHA-256 de la liste fermée avant le tirage :<br><span style="font-family:monospace">' + esc(TIR.empreinte) + '</span>' +
+    '<br>• Début : ' + TIR.t0.toLocaleTimeString('fr-DZ');
+}
+function tirDessiner() {
+  document.getElementById('tir-wall').innerHTML = TIR.pool.map(function(d){
+    return '<span class="t-chip' + (TIR.retenus.indexOf(d) > -1 ? ' out' : '') + '" id="tc-' + esc(d.num) + '">' + esc(tirLabel(d)) + '</span>';
+  }).join('');
+  document.getElementById('tir-liste').innerHTML = TIR.retenus.map(function(d, i){
+    return '<div class="t-ret"><b>' + (i + 1) + '</b><span>' + esc(tirLabel(d)) + '</span></div>';
+  }).join('');
+  document.getElementById('tir-cpt').textContent = TIR.retenus.length + ' / ' + TIR.places + ' gagnants';
+  tirAudit(); tirAjuster();
+}
+function tirAjuster() {
+  var w = document.getElementById('tir-wall'); if (!w || !w.clientHeight) return;
+  var chips = w.children, sz = 40;
+  for (; sz > 9; sz--) {
+    w.style.fontSize = sz + 'px';
+    if (w.scrollHeight <= w.clientHeight + 1) break;
   }
+}
+window.addEventListener('resize', function(){ if (TIR) tirAjuster(); });
+function tirPlaces(delta) {          // limite de places modifiable en direct
+  var n = TIR.places + delta;
+  if (n < Math.max(1, TIR.retenus.length) || n > TIR.pool.length || TIR.busy) return;
+  TIR.places = n; TIR.fin = TIR.retenus.length >= n;
+  tirDessiner(); tirActions();
+}
+function tirActions() {
+  var h = '';
+  if (!TIR.fin) {
+    h += '<button class="t-btn" id="tir-go" onclick="tirProchain()">🎲 Tirer ' + (TIR.retenus.length ? 'le suivant' : 'le premier gagnant') + ' (Espace)</button>';
+    h += '<button class="t-btn sec" onclick="TIR.masque=!TIR.masque;tirDessiner();">👁 Noms / Matricules</button>';
+    h += '<button class="t-btn sec" onclick="TIR.muet=!TIR.muet;this.textContent=TIR.muet?\'🔇 Musique coupée\':\'🔊 Musique\';">' + (TIR.muet ? '🔇 Musique coupée' : '🔊 Musique') + '</button>';
+    h += '<button class="t-btn sec" onclick="tirPlaces(-1)">− gagnant</button><button class="t-btn sec" onclick="tirPlaces(1)">+ gagnant</button>';
+  } else {
+    h += '<button class="t-btn sec" onclick="tirPlaces(1)">+ 1 gagnant (tirer encore)</button>';
+    h += '<button class="t-btn" onclick="tirEnregistrer()">✅ Enregistrer les résultats</button>';
+    h += '<button class="t-btn sec" onclick="fermerTirageSpectacle(true)">✖ Annuler (rien n\'est enregistré)</button>';
+  }
+  document.getElementById('tir-actions').innerHTML = h;
+}
+var TAUD = null;
+function tirCtx() {
+  if (!TAUD) { try { TAUD = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  if (TAUD && TAUD.state === 'suspended') TAUD.resume();
+  return TAUD;
+}
+function tirNote(f, dur, type, vol, when) {
+  var c = tirCtx(); if (!c || TIR.muet) return;
+  var o = c.createOscillator(), g = c.createGain(), t = c.currentTime + (when || 0);
+  o.type = type || 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(vol || .15, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + .02);
+}
+function tirDrone(sec) {         // nappe de suspense qui monte en tension
+  var c = tirCtx(); if (!c || TIR.muet) return;
+  var t = c.currentTime, g = c.createGain(), lp = c.createBiquadFilter(), o1 = c.createOscillator(), o2 = c.createOscillator();
+  o1.type = 'sawtooth'; o2.type = 'triangle';
+  o1.frequency.setValueAtTime(55, t); o1.frequency.exponentialRampToValueAtTime(110, t + sec);
+  o2.frequency.setValueAtTime(220, t); o2.frequency.exponentialRampToValueAtTime(900, t + sec);
+  g.gain.setValueAtTime(.01, t); g.gain.linearRampToValueAtTime(.09, t + sec); g.gain.linearRampToValueAtTime(.0001, t + sec + .15);
+  lp.type = 'lowpass'; lp.frequency.value = 1400;
+  o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(c.destination);
+  o1.start(t); o2.start(t); o1.stop(t + sec + .2); o2.stop(t + sec + .2);
+}
+function tirFanfare() {
+  [523, 659, 784, 1047].forEach(function(f, i){ tirNote(f, .7, 'triangle', .2, i * .12); tirNote(f / 2, .7, 'sine', .12, i * .12); });
+  tirNote(1047, 1.4, 'triangle', .22, .5); tirNote(1319, 1.4, 'triangle', .16, .5); tirNote(1568, 1.4, 'triangle', .14, .5);
+}
+function tirReel(buf) {
+  var sz = [.42, .62, 1, .62, .42];
+  return buf.map(function(t, i){ return '<div style="font-size:' + sz[i] + 'em;opacity:' + (i === 2 ? 1 : .4) + ';' + (i === 2 ? 'color:#fff;text-shadow:0 0 24px rgba(255,255,255,.6);' : '') + 'white-space:nowrap;line-height:1.15">' + esc(t) + '</div>'; }).join('');
+}
+function tirProchain() {
+  if (!TIR || TIR.busy || TIR.fin) return;
+  TIR.busy = true;
+  var go = document.getElementById('tir-go'); if (go) go.disabled = true;
+  var nameEl = document.getElementById('tir-name'), sub = document.getElementById('tir-sub');
+  var i = tirRand(TIR.reste.length), gagnant = TIR.reste[i];
+  sub.textContent = 'Tirage en cours… 🥁';
+  var t = 35, n = 0, N = 46, last = null, tot = 0, tt = 35, k, buf = ['', '', '', '', ''];
+  for (k = 0; k < N; k++) { tt *= 1.065; tot += tt; }
+  tirCtx(); tirDrone(tot / 1000);
+  (function tick() {
+    if (n < N) {
+      var d = TIR.reste[tirRand(TIR.reste.length)];
+      buf.shift(); buf.push(tirLabel(d));
+      nameEl.className = 't-name'; nameEl.innerHTML = tirReel(buf);
+      if (last) last.classList.remove('cur');
+      last = document.getElementById('tc-' + d.num); if (last) last.classList.add('cur');
+      tirNote(420 + n * 14, .06, 'square', .05);
+      n++; t *= 1.065; setTimeout(tick, t);
+    } else {
+      if (last) last.classList.remove('cur');
+      TIR.reste.splice(i, 1); TIR.retenus.push(gagnant);
+      nameEl.className = 't-name win'; nameEl.textContent = '🎉 ' + tirLabel(gagnant);
+      sub.textContent = 'Gagnant N° ' + TIR.retenus.length + ' — Matricule ' + gagnant.mat + (TIR.masque ? '' : ' — Pèlerin : ' + gagnant.pnom + ' ' + gagnant.pprenom);
+      tirFanfare(); tirConfetti(); tirDessiner();
+      TIR.busy = false;
+      if (TIR.retenus.length >= TIR.places) {
+        TIR.fin = true;
+        setTimeout(function(){ sub.textContent = 'Tirage terminé : ' + TIR.places + ' gagnant(s), ' + TIR.reste.length + ' non retenu(s). Félicitations !'; }, 2500);
+      }
+      tirActions();
+    }
+  })();
+}
+function tirConfetti() {
+  var c = document.getElementById('tir-confetti'); c.width = innerWidth; c.height = innerHeight;
+  var g = c.getContext('2d'), P = [], k, f = 0;
+  for (k = 0; k < 160; k++) P.push({ x: c.width / 2, y: c.height * .35, vx: (Math.random() - .5) * 18, vy: -Math.random() * 16 - 4, r: 4 + Math.random() * 6, col: ['#F5D77A', '#fff', '#D4AF37', '#1F7A5C'][k % 4] });
+  (function an() {
+    g.clearRect(0, 0, c.width, c.height);
+    P.forEach(function(p){ p.x += p.vx; p.y += p.vy; p.vy += .35; g.fillStyle = p.col; g.fillRect(p.x, p.y, p.r, p.r * .6); });
+    if (++f < 130) requestAnimationFrame(an); else g.clearRect(0, 0, c.width, c.height);
+  })();
+}
+function tirEnregistrer() {
   var dateT = new Date().toLocaleDateString('fr-DZ');
-  var retenus = [], nonRetenus = [];
-  shuffled.forEach(function(d, idx){
-    d.resultatTirage = (idx < nbPlaces) ? 'Retenu' : 'Non retenu';
+  TIR.pool.forEach(function(d){
+    d.resultatTirage = TIR.retenus.indexOf(d) > -1 ? 'Retenu' : 'Non retenu';
     d.dateTirage = dateT;
     persistOmraLocal(d);
     if (typeof window.fbUpdateOmra === 'function') {
       window.fbUpdateOmra(d.num, { resultatTirage: d.resultatTirage, dateTirage: dateT }, d.trackingCode || '')
         .catch(function(err){ console.warn('Synchronisation Firebase échouée (tirage omra) :', err); });
     }
-    (idx < nbPlaces ? retenus : nonRetenus).push(d);
   });
-
+  var nr = TIR.retenus.length, nn = TIR.reste.length;
   renderTableauOmra(); renderStatsOmra();
-
-  var html = '<div class="panneau" style="background:var(--creme2);margin-top:6px;">';
-  html += '<h4 style="color:var(--vert);margin-bottom:10px;">🎉 ' + retenus.length + ' candidat(s) retenu(s) sur ' + shuffled.length + ' — Campagne ' + annee + '</h4>';
-  html += '<ol style="padding-left:20px;font-size:13.5px;line-height:1.9;">';
-  retenus.forEach(function(d){ html += '<li><strong>' + esc(d.nom) + ' ' + esc(d.prenom) + '</strong> (' + esc(d.mat) + ') — pèlerin : ' + esc(d.pnom) + ' ' + esc(d.pprenom) + '</li>'; });
-  html += '</ol></div>';
-  resDiv.innerHTML = html;
+  fermerTirageSpectacle(true);
+  alert('Résultats enregistrés : ' + nr + ' retenus, ' + nn + ' non retenus.');
 }
+function fermerTirageSpectacle(force) {
+  if (!force && TIR && !TIR.fin && TIR.retenus.length && !confirm('Quitter le tirage en cours ? Rien ne sera enregistré.')) return;
+  document.getElementById('tir-show').classList.remove('on');
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
+}
+document.addEventListener('keydown', function(e){
+  if (!document.getElementById('tir-show').classList.contains('on')) return;
+  if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); if (TIR && !TIR.fin) tirProchain(); }
+  else if (e.key === 'Escape') fermerTirageSpectacle();
+});
 
 function reinitialiserTirage() {
   var anneeEl = document.getElementById('tirage-annee');
@@ -7969,5 +8148,15 @@ try { interneInfoProfil(); } catch (e) {}
 
 </script>
 <script src='https://cdn.jotfor.ms/agent/embedjs/01a0e49e981070008693f9103644938e97ab/embed.js'></script>
+<div id="tir-show"><canvas id="tir-confetti"></canvas>
+  <div class="t-top"><h1 id="tir-titre"></h1><div class="t-cpt" id="tir-cpt"></div><button class="t-x" onclick="fermerTirageSpectacle()" title="Quitter (Échap)">✕</button></div>
+  <div class="t-body">
+    <div class="t-left">
+      <div class="t-stage"><div class="t-name" id="tir-name"></div><div class="t-sub" id="tir-sub"></div></div>
+      <div class="t-actions" id="tir-actions"></div>
+      <div class="t-wall" id="tir-wall"></div>
+    </div>
+    <div class="t-right"><h2>🎉 Gagnants de la Omra</h2><div id="tir-liste"></div><div class="t-audit" id="tir-audit"></div></div>
+  </div></div>
 </body>
 </html>
