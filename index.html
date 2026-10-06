@@ -578,6 +578,142 @@
         return _fbDb.ref().update(updates);
       };
 
+
+      // ===== Électroménagers (inscriptions ouvertes / fermées par l'administrateur) =====
+      var _adminRefElectro = null;
+      var _adminValueHandlerElectro = null;
+
+      window.fbCreateElectro = function(d, suiviPublic) {
+        var updates = {};
+        updates['electro/' + d.num] = d;
+        updates['suiviElectro/' + d.trackingCode] = suiviPublic;
+        return _fbDb.ref().update(updates);
+      };
+      window.fbReadSuiviElectro = function(code) {
+        return _fbDb.ref('suiviElectro/' + code).once('value').then(function(snapshot) {
+          return snapshot.val();
+        });
+      };
+      window.fbListenAdminElectro = function(callback, errorCallback) {
+        if (_adminRefElectro && _adminValueHandlerElectro) _adminRefElectro.off('value', _adminValueHandlerElectro);
+        _adminRefElectro = _fbDb.ref('electro');
+        _adminValueHandlerElectro = function(snapshot) {
+          var data = snapshot.val();
+          callback(data ? Object.values(data) : []);
+        };
+        _adminRefElectro.on('value', _adminValueHandlerElectro, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopAdminListenElectro = function() {
+        if (_adminRefElectro && _adminValueHandlerElectro) _adminRefElectro.off('value', _adminValueHandlerElectro);
+        _adminRefElectro = null; _adminValueHandlerElectro = null;
+      };
+      window.fbUpdateElectro = function(num, patch, trackingCode) {
+        var updates = {};
+        Object.keys(patch).forEach(function(k){ updates['electro/' + num + '/' + k] = patch[k]; });
+        if (trackingCode) {
+          ['statut','dateValidation'].forEach(function(k){
+            if (Object.prototype.hasOwnProperty.call(patch, k)) updates['suiviElectro/' + trackingCode + '/' + k] = patch[k];
+          });
+        }
+        return _fbDb.ref().update(updates);
+      };
+      window.fbDeleteElectro = function(num, trackingCode) {
+        var updates = {};
+        updates['electro/' + num] = null;
+        if (trackingCode) updates['suiviElectro/' + trackingCode] = null;
+        return _fbDb.ref().update(updates);
+      };
+
+      // ===== Loisirs (inscriptions ouvertes / fermées par l'administrateur) =====
+      var _adminRefLoisirs = null;
+      var _adminValueHandlerLoisirs = null;
+
+      window.fbCreateLoisirs = function(d, suiviPublic) {
+        var updates = {};
+        updates['loisirs/' + d.num] = d;
+        updates['suiviLoisirs/' + d.trackingCode] = suiviPublic;
+        return _fbDb.ref().update(updates);
+      };
+      window.fbReadSuiviLoisirs = function(code) {
+        return _fbDb.ref('suiviLoisirs/' + code).once('value').then(function(snapshot) {
+          return snapshot.val();
+        });
+      };
+      window.fbListenAdminLoisirs = function(callback, errorCallback) {
+        if (_adminRefLoisirs && _adminValueHandlerLoisirs) _adminRefLoisirs.off('value', _adminValueHandlerLoisirs);
+        _adminRefLoisirs = _fbDb.ref('loisirs');
+        _adminValueHandlerLoisirs = function(snapshot) {
+          var data = snapshot.val();
+          callback(data ? Object.values(data) : []);
+        };
+        _adminRefLoisirs.on('value', _adminValueHandlerLoisirs, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopAdminListenLoisirs = function() {
+        if (_adminRefLoisirs && _adminValueHandlerLoisirs) _adminRefLoisirs.off('value', _adminValueHandlerLoisirs);
+        _adminRefLoisirs = null; _adminValueHandlerLoisirs = null;
+      };
+      window.fbUpdateLoisirs = function(num, patch, trackingCode) {
+        var updates = {};
+        Object.keys(patch).forEach(function(k){ updates['loisirs/' + num + '/' + k] = patch[k]; });
+        if (trackingCode) {
+          ['statut','dateValidation'].forEach(function(k){
+            if (Object.prototype.hasOwnProperty.call(patch, k)) updates['suiviLoisirs/' + trackingCode + '/' + k] = patch[k];
+          });
+        }
+        return _fbDb.ref().update(updates);
+      };
+      window.fbDeleteLoisirs = function(num, trackingCode) {
+        var updates = {};
+        updates['loisirs/' + num] = null;
+        if (trackingCode) updates['suiviLoisirs/' + trackingCode] = null;
+        return _fbDb.ref().update(updates);
+      };
+
+      // ===== Crèches (inscriptions ouvertes / fermées par l'administrateur) =====
+      var _adminRefCreches = null;
+      var _adminValueHandlerCreches = null;
+
+      window.fbCreateCreches = function(d, suiviPublic) {
+        var updates = {};
+        updates['creches/' + d.num] = d;
+        updates['suiviCreches/' + d.trackingCode] = suiviPublic;
+        return _fbDb.ref().update(updates);
+      };
+      window.fbReadSuiviCreches = function(code) {
+        return _fbDb.ref('suiviCreches/' + code).once('value').then(function(snapshot) {
+          return snapshot.val();
+        });
+      };
+      window.fbListenAdminCreches = function(callback, errorCallback) {
+        if (_adminRefCreches && _adminValueHandlerCreches) _adminRefCreches.off('value', _adminValueHandlerCreches);
+        _adminRefCreches = _fbDb.ref('creches');
+        _adminValueHandlerCreches = function(snapshot) {
+          var data = snapshot.val();
+          callback(data ? Object.values(data) : []);
+        };
+        _adminRefCreches.on('value', _adminValueHandlerCreches, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopAdminListenCreches = function() {
+        if (_adminRefCreches && _adminValueHandlerCreches) _adminRefCreches.off('value', _adminValueHandlerCreches);
+        _adminRefCreches = null; _adminValueHandlerCreches = null;
+      };
+      window.fbUpdateCreches = function(num, patch, trackingCode) {
+        var updates = {};
+        Object.keys(patch).forEach(function(k){ updates['creches/' + num + '/' + k] = patch[k]; });
+        if (trackingCode) {
+          ['statut','dateValidation'].forEach(function(k){
+            if (Object.prototype.hasOwnProperty.call(patch, k)) updates['suiviCreches/' + trackingCode + '/' + k] = patch[k];
+          });
+        }
+        return _fbDb.ref().update(updates);
+      };
+      window.fbDeleteCreches = function(num, trackingCode) {
+        var updates = {};
+        updates['creches/' + num] = null;
+        if (trackingCode) updates['suiviCreches/' + trackingCode] = null;
+        return _fbDb.ref().update(updates);
+      };
+
       // ===== SAISONS (ouverture/fermeture des inscriptions par l'admin : Omra, Sport & Travail) =====
       // Stockées sous meta/{cle}, lisibles par tous (pour afficher l'état aux travailleurs),
       // écriture réservée à l'administrateur connecté.
@@ -1058,6 +1194,9 @@ footer strong{color:var(--or-clair);}
   <button onclick="showVue('pret',this)" data-i18n="nav.pret">💰 Prêt social</button>
   <button onclick="showVue('omra',this)" data-i18n="nav.omra">🕋 Omra</button>
   <button onclick="showVue('sport',this)" data-i18n="nav.sport">⚽ Sport &amp; Travail</button>
+  <button onclick="showVue('electro',this)" data-i18n="nav.electro">🔌 Électroménagers</button>
+  <button onclick="showVue('loisirs',this)" data-i18n="nav.loisirs">🎭 Loisirs</button>
+  <button onclick="showVue('creches',this)" data-i18n="nav.creches">👶 Crèches</button>
   <button onclick="showVue('idees',this)" data-i18n="nav.idees">📬 Boîte à idées</button>
   <button onclick="showVue('doleances',this)" data-i18n="nav.doleances">📝 Registre de doléances</button>
   <button onclick="showVue('annonces',this)" data-i18n="nav.annonces">📢 Annonces</button>
@@ -1113,6 +1252,30 @@ footer strong{color:var(--or-clair);}
       <div class="act-body">
         <div class="act-title" data-i18n="accueil.card.sport.title">Sport &amp; Travail</div>
         <div class="act-desc" data-i18n="accueil.card.sport.desc">Inscrivez-vous aux disciplines sportives (Football à 7, Échecs, Pétanque…) lorsque la saison est ouverte.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('electro')">
+      <div class="act-icon" style="background:#FFF3E0;">🔌</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.electro.title">Électroménagers</div>
+        <div class="act-desc" data-i18n="accueil.card.electro.desc">Inscrivez-vous pour un appareil électroménager lorsque les inscriptions sont ouvertes.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('loisirs')">
+      <div class="act-icon" style="background:#FCE4EC;">🎭</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.loisirs.title">Loisirs</div>
+        <div class="act-desc" data-i18n="accueil.card.loisirs.desc">Inscrivez-vous aux voyages, excursions et activités de loisirs lorsque les inscriptions sont ouvertes.</div>
+      </div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="card-activite" onclick="goVue('creches')">
+      <div class="act-icon" style="background:#E1F5FE;">👶</div>
+      <div class="act-body">
+        <div class="act-title" data-i18n="accueil.card.creches.title">Crèches</div>
+        <div class="act-desc" data-i18n="accueil.card.creches.desc">Inscrivez votre enfant en crèche lorsque les inscriptions sont ouvertes.</div>
       </div>
       <div class="act-arrow">→</div>
     </div>
@@ -1610,6 +1773,232 @@ footer strong{color:var(--or-clair);}
   </div>
 </div>
 
+<!-- ===== ÉLECTROMÉNAGERS ===== -->
+<div id="vue-electro" class="vue">
+  <div class="sec-hdr">
+    <span class="eyebrow" data-i18n="omra.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="electro.title">🔌 Inscription — Électroménagers</h2>
+    <p class="sec-desc" data-i18n="electro.desc">Inscrivez-vous pour bénéficier d'un appareil électroménager proposé par le Comité de Participation de la SCHB. Les inscriptions ne sont possibles que lorsqu'elles sont ouvertes par l'administrateur.</p>
+  </div>
+
+  <div id="electro-saison-fermee" class="panneau" style="display:block;border:1.5px solid var(--or);">
+    <div style="display:flex;gap:12px;align-items:center;">
+      <div style="font-size:28px;">🔒</div>
+      <div>
+        <div class="serif" style="color:var(--bleu);font-weight:700;font-size:16px;margin-bottom:4px;" data-i18n="omra.fermee.titre">Inscriptions actuellement fermées</div>
+        <div style="font-size:13.5px;color:#5C5142;" data-i18n="electro.fermee.desc">Les inscriptions aux électroménagers n'ont pas encore été ouvertes par le Comité de Participation. Revenez consulter cette page dès l'annonce de l'ouverture.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="electro-form-wrap" style="display:none;">
+    <div class="panneau">
+      <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="sport.h.adherent">👤 Informations du travailleur</h3>
+      <div class="cols2">
+        <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="fe-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+        <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="fe-prenom" type="text" placeholder="Prénom"></div>
+      </div>
+      <div class="cols2">
+        <div class="grp"><label data-i18n="f.matricule">Matricule <span class="req">*</span></label><input id="fe-matricule" type="text" placeholder="N° matricule"></div>
+        <div class="grp"><label data-i18n="f.tel">Téléphone <span class="req">*</span></label><input id="fe-tel" type="tel" placeholder="05/06/07 xx xx xx xx"></div>
+      </div>
+      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="fe-service" type="text" placeholder="Ex: Direction Commerciale..."></div>
+    </div>
+
+    <div class="panneau">
+      <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="electro.h.detail">🔌 Appareil électroménager</h3>
+      <div class="cols2">
+        <div class="grp">
+          <label data-i18n="electro.choix">Appareil souhaité <span class="req">*</span></label>
+          <select id="fe-choix" onchange="document.getElementById('fe-choix-autre-grp').style.display = (this.value==='Autre') ? 'block' : 'none';"><option value="Réfrigérateur">Réfrigérateur</option><option value="Machine à laver">Machine à laver</option><option value="Téléviseur">Téléviseur</option><option value="Cuisinière / Four">Cuisinière / Four</option><option value="Climatiseur">Climatiseur</option><option value="Autre">Autre</option></select>
+        </div>
+        <div class="grp"><label data-i18n="sport.saison">Saison / Année <span class="req">*</span></label>
+          <select id="fe-annee"></select>
+        </div>
+      </div>
+      <div class="grp" id="fe-choix-autre-grp" style="display:none;"><label>Précisez</label><input id="fe-choix-autre" type="text" placeholder="Ex : Aspirateur"></div>
+    </div>
+
+    <div class="bar-actions">
+      <button class="btn btn-primary" onclick="soumettreElectro()" data-i18n="btn.soumettre.omra">✅ Soumettre l'inscription</button>
+      <button class="btn btn-outline" onclick="resetFormElectro()" data-i18n="btn.reset">🔄 Réinitialiser</button>
+    </div>
+    <div class="msg" id="msg-electro"></div>
+
+    <div class="ticket" id="ticket-confirm-electro">
+      <div class="ticket-hdr">
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7A6F58;margin-bottom:4px;" data-i18n="ticket.omra.saved">Inscription enregistrée</div>
+          <div class="ticket-num" id="tkelectro-num">EL-0001</div>
+        </div>
+        <div class="badge-att" data-i18n="ticket.enattente">En attente de validation</div>
+      </div>
+      <div class="ticket-rows">
+        <div class="trow"><div class="trow-lbl" data-i18n="ticket.adherent">Adhérent</div><div class="trow-val" id="tkelectro-adh"></div></div>
+        <div class="trow"><div class="trow-lbl">Appareil</div><div class="trow-val" id="tkelectro-choix"></div></div>
+        <div class="trow"><div class="trow-lbl" data-i18n="ticket.date">Date</div><div class="trow-val" id="tkelectro-date"></div></div>
+        <div class="trow" style="grid-column:1/-1;border:1.5px solid var(--or);"><div class="trow-lbl" data-i18n="ticket.code">Code de suivi confidentiel</div><div class="trow-val" id="tkelectro-code" style="font-family:monospace;font-size:14px;letter-spacing:.05em;word-break:break-all;"></div></div>
+      </div>
+      <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;" data-i18n="ticket.conserverCode">
+        🔐 <strong>Conservez votre code de suivi confidentiel.</strong> Il permet de consulter l'état de votre inscription depuis l'onglet Suivi.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LOISIRS ===== -->
+<div id="vue-loisirs" class="vue">
+  <div class="sec-hdr">
+    <span class="eyebrow" data-i18n="omra.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="loisirs.title">🎭 Inscription — Loisirs</h2>
+    <p class="sec-desc" data-i18n="loisirs.desc">Inscrivez-vous aux activités de loisirs (voyages, excursions, colonies, spectacles…) organisées par le Comité de Participation de la SCHB. Les inscriptions ne sont possibles que lorsqu'elles sont ouvertes par l'administrateur.</p>
+  </div>
+
+  <div id="loisirs-saison-fermee" class="panneau" style="display:block;border:1.5px solid var(--or);">
+    <div style="display:flex;gap:12px;align-items:center;">
+      <div style="font-size:28px;">🔒</div>
+      <div>
+        <div class="serif" style="color:var(--bleu);font-weight:700;font-size:16px;margin-bottom:4px;" data-i18n="omra.fermee.titre">Inscriptions actuellement fermées</div>
+        <div style="font-size:13.5px;color:#5C5142;" data-i18n="loisirs.fermee.desc">Les inscriptions aux loisirs n'ont pas encore été ouvertes par le Comité de Participation. Revenez consulter cette page dès l'annonce de l'ouverture.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loisirs-form-wrap" style="display:none;">
+    <div class="panneau">
+      <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="sport.h.adherent">👤 Informations du travailleur</h3>
+      <div class="cols2">
+        <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="flo-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+        <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="flo-prenom" type="text" placeholder="Prénom"></div>
+      </div>
+      <div class="cols2">
+        <div class="grp"><label data-i18n="f.matricule">Matricule <span class="req">*</span></label><input id="flo-matricule" type="text" placeholder="N° matricule"></div>
+        <div class="grp"><label data-i18n="f.tel">Téléphone <span class="req">*</span></label><input id="flo-tel" type="tel" placeholder="05/06/07 xx xx xx xx"></div>
+      </div>
+      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="flo-service" type="text" placeholder="Ex: Direction Commerciale..."></div>
+    </div>
+
+    <div class="panneau">
+      <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="loisirs.h.detail">🎭 Activité de loisirs</h3>
+      <div class="cols2">
+        <div class="grp">
+          <label data-i18n="loisirs.choix">Activité souhaitée <span class="req">*</span></label>
+          <select id="flo-choix" onchange="document.getElementById('flo-choix-autre-grp').style.display = (this.value==='Autre') ? 'block' : 'none';"><option value="Voyage / Excursion">Voyage / Excursion</option><option value="Colonie de vacances">Colonie de vacances</option><option value="Séjour balnéaire">Séjour balnéaire</option><option value="Spectacle / Cinéma">Spectacle / Cinéma</option><option value="Parc d'attractions">Parc d'attractions</option><option value="Autre">Autre</option></select>
+        </div>
+        <div class="grp"><label data-i18n="sport.saison">Saison / Année <span class="req">*</span></label>
+          <select id="flo-annee"></select>
+        </div>
+      </div>
+      <div class="grp" id="flo-choix-autre-grp" style="display:none;"><label>Précisez</label><input id="flo-choix-autre" type="text" placeholder="Ex : Randonnée"></div>
+      <div class="grp"><label data-i18n="loisirs.nbPers">Nombre de personnes (vous inclus) <span class="req">*</span></label><input id="flo-nbpers" type="number" placeholder="Ex : 4" min="1"></div>
+    </div>
+
+    <div class="bar-actions">
+      <button class="btn btn-primary" onclick="soumettreLoisirs()" data-i18n="btn.soumettre.omra">✅ Soumettre l'inscription</button>
+      <button class="btn btn-outline" onclick="resetFormLoisirs()" data-i18n="btn.reset">🔄 Réinitialiser</button>
+    </div>
+    <div class="msg" id="msg-loisirs"></div>
+
+    <div class="ticket" id="ticket-confirm-loisirs">
+      <div class="ticket-hdr">
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7A6F58;margin-bottom:4px;" data-i18n="ticket.omra.saved">Inscription enregistrée</div>
+          <div class="ticket-num" id="tkloisirs-num">LO-0001</div>
+        </div>
+        <div class="badge-att" data-i18n="ticket.enattente">En attente de validation</div>
+      </div>
+      <div class="ticket-rows">
+        <div class="trow"><div class="trow-lbl" data-i18n="ticket.adherent">Adhérent</div><div class="trow-val" id="tkloisirs-adh"></div></div>
+        <div class="trow"><div class="trow-lbl">Activité</div><div class="trow-val" id="tkloisirs-choix"></div></div>
+        <div class="trow"><div class="trow-lbl">Personnes</div><div class="trow-val" id="tkloisirs-extra"></div></div>
+        <div class="trow"><div class="trow-lbl" data-i18n="ticket.date">Date</div><div class="trow-val" id="tkloisirs-date"></div></div>
+        <div class="trow" style="grid-column:1/-1;border:1.5px solid var(--or);"><div class="trow-lbl" data-i18n="ticket.code">Code de suivi confidentiel</div><div class="trow-val" id="tkloisirs-code" style="font-family:monospace;font-size:14px;letter-spacing:.05em;word-break:break-all;"></div></div>
+      </div>
+      <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;" data-i18n="ticket.conserverCode">
+        🔐 <strong>Conservez votre code de suivi confidentiel.</strong> Il permet de consulter l'état de votre inscription depuis l'onglet Suivi.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CRÈCHES ===== -->
+<div id="vue-creches" class="vue">
+  <div class="sec-hdr">
+    <span class="eyebrow" data-i18n="omra.eyebrow">Formulaire en ligne</span>
+    <h2 class="sec-title" data-i18n="creches.title">👶 Inscription — Crèches</h2>
+    <p class="sec-desc" data-i18n="creches.desc">Inscrivez votre enfant en crèche grâce au Comité de Participation de la SCHB. Les inscriptions ne sont possibles que lorsqu'elles sont ouvertes par l'administrateur.</p>
+  </div>
+
+  <div id="creches-saison-fermee" class="panneau" style="display:block;border:1.5px solid var(--or);">
+    <div style="display:flex;gap:12px;align-items:center;">
+      <div style="font-size:28px;">🔒</div>
+      <div>
+        <div class="serif" style="color:var(--bleu);font-weight:700;font-size:16px;margin-bottom:4px;" data-i18n="omra.fermee.titre">Inscriptions actuellement fermées</div>
+        <div style="font-size:13.5px;color:#5C5142;" data-i18n="creches.fermee.desc">Les inscriptions en crèche n'ont pas encore été ouvertes par le Comité de Participation. Revenez consulter cette page dès l'annonce de l'ouverture.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="creches-form-wrap" style="display:none;">
+    <div class="panneau">
+      <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="sport.h.adherent">👤 Informations du travailleur</h3>
+      <div class="cols2">
+        <div class="grp"><label data-i18n="f.nom">Nom <span class="req">*</span></label><input id="fc-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+        <div class="grp"><label data-i18n="f.prenom">Prénom <span class="req">*</span></label><input id="fc-prenom" type="text" placeholder="Prénom"></div>
+      </div>
+      <div class="cols2">
+        <div class="grp"><label data-i18n="f.matricule">Matricule <span class="req">*</span></label><input id="fc-matricule" type="text" placeholder="N° matricule"></div>
+        <div class="grp"><label data-i18n="f.tel">Téléphone <span class="req">*</span></label><input id="fc-tel" type="tel" placeholder="05/06/07 xx xx xx xx"></div>
+      </div>
+      <div class="grp"><label data-i18n="f.service">Service / Direction</label><input id="fc-service" type="text" placeholder="Ex: Direction Commerciale..."></div>
+    </div>
+
+    <div class="panneau">
+      <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="creches.h.detail">👶 Enfant et mode d'accueil</h3>
+      <div class="cols2">
+        <div class="grp"><label data-i18n="creches.enfNom">Nom de l'enfant <span class="req">*</span></label><input id="fc-enf-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+        <div class="grp"><label data-i18n="creches.enfPrenom">Prénom de l'enfant <span class="req">*</span></label><input id="fc-enf-prenom" type="text" placeholder="Prénom"></div>
+      </div>
+      <div class="grp"><label data-i18n="creches.enfNaissance">Date de naissance de l'enfant <span class="req">*</span></label><input id="fc-enf-naissance" type="date" placeholder=""></div>
+      <div class="cols2">
+        <div class="grp">
+          <label data-i18n="creches.choix">Mode d'accueil souhaité <span class="req">*</span></label>
+          <select id="fc-choix"><option value="Temps plein">Temps plein</option><option value="Mi-temps">Mi-temps</option><option value="Garde occasionnelle">Garde occasionnelle</option></select>
+        </div>
+        <div class="grp"><label data-i18n="sport.saison">Saison / Année <span class="req">*</span></label>
+          <select id="fc-annee"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="bar-actions">
+      <button class="btn btn-primary" onclick="soumettreCreches()" data-i18n="btn.soumettre.omra">✅ Soumettre l'inscription</button>
+      <button class="btn btn-outline" onclick="resetFormCreches()" data-i18n="btn.reset">🔄 Réinitialiser</button>
+    </div>
+    <div class="msg" id="msg-creches"></div>
+
+    <div class="ticket" id="ticket-confirm-creches">
+      <div class="ticket-hdr">
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7A6F58;margin-bottom:4px;" data-i18n="ticket.omra.saved">Inscription enregistrée</div>
+          <div class="ticket-num" id="tkcreches-num">CR-0001</div>
+        </div>
+        <div class="badge-att" data-i18n="ticket.enattente">En attente de validation</div>
+      </div>
+      <div class="ticket-rows">
+        <div class="trow"><div class="trow-lbl" data-i18n="ticket.adherent">Adhérent</div><div class="trow-val" id="tkcreches-adh"></div></div>
+        <div class="trow"><div class="trow-lbl">Accueil</div><div class="trow-val" id="tkcreches-choix"></div></div>
+        <div class="trow"><div class="trow-lbl">Enfant</div><div class="trow-val" id="tkcreches-extra"></div></div>
+        <div class="trow"><div class="trow-lbl" data-i18n="ticket.date">Date</div><div class="trow-val" id="tkcreches-date"></div></div>
+        <div class="trow" style="grid-column:1/-1;border:1.5px solid var(--or);"><div class="trow-lbl" data-i18n="ticket.code">Code de suivi confidentiel</div><div class="trow-val" id="tkcreches-code" style="font-family:monospace;font-size:14px;letter-spacing:.05em;word-break:break-all;"></div></div>
+      </div>
+      <div style="background:var(--creme2);border-radius:8px;padding:12px 14px;font-size:13px;color:#5C5142;" data-i18n="ticket.conserverCode">
+        🔐 <strong>Conservez votre code de suivi confidentiel.</strong> Il permet de consulter l'état de votre inscription depuis l'onglet Suivi.
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== BOÎTE À IDÉES ===== -->
 <div id="vue-idees" class="vue">
   <div class="sec-hdr">
@@ -2004,6 +2393,9 @@ footer strong{color:var(--or-clair);}
       <button class="btn-admin-tab" id="tab-btn-prets" onclick="showAdminTab('prets')" data-i18n="admtab.prets">💰 Prêts sociaux</button>
       <button class="btn-admin-tab" id="tab-btn-omra" onclick="showAdminTab('omra')" data-i18n="admtab.omra">🕋 Omra</button>
       <button class="btn-admin-tab" id="tab-btn-sport" onclick="showAdminTab('sport')" data-i18n="admtab.sport">⚽ Sport &amp; Travail</button>
+      <button class="btn-admin-tab" id="tab-btn-electro" onclick="showAdminTab('electro')" data-i18n="admtab.electro">🔌 Électroménagers</button>
+      <button class="btn-admin-tab" id="tab-btn-loisirs" onclick="showAdminTab('loisirs')" data-i18n="admtab.loisirs">🎭 Loisirs</button>
+      <button class="btn-admin-tab" id="tab-btn-creches" onclick="showAdminTab('creches')" data-i18n="admtab.creches">👶 Crèches</button>
       <button class="btn-admin-tab" id="tab-btn-idees" onclick="showAdminTab('idees')" data-i18n="admtab.idees">📬 Boîte à idées</button>
       <button class="btn-admin-tab" id="tab-btn-doleances" onclick="showAdminTab('doleances')" data-i18n="admtab.doleances">📝 Doléances</button>
       <button class="btn-admin-tab" id="tab-btn-annonces" onclick="showAdminTab('annonces')" data-i18n="admtab.annonces">📢 Annonces</button>
@@ -2172,6 +2564,110 @@ footer strong{color:var(--or-clair);}
       </div>
     </div>
 
+    <div id="admin-tab-electro" style="display:none;">
+      <div class="admin-stats" id="electro-stats"></div>
+      <div class="panneau" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h3 class="serif" style="color:var(--bleu);margin-bottom:4px;font-size:16px;">🔌 Inscriptions Électroménagers</h3>
+          <div id="electro-saison-etat" style="font-size:13.5px;color:#5C5142;">Chargement de l'état des inscriptions…</div>
+        </div>
+        <button id="btn-toggle-saison-electro" class="btn btn-primary" onclick="toggleSaisonElectro()">…</button>
+      </div>
+      <div class="panneau">
+        <div class="filter-bar">
+          <input id="filter-search-electro" type="text" placeholder="🔍 Rechercher nom, matricule, appareil…" oninput="renderTableauElectro()" style="flex:1;min-width:200px;">
+          <select id="filter-annee-electro" onchange="renderTableauElectro()"></select>
+          <select id="filter-choix-electro" onchange="renderTableauElectro()">
+            <option value="">Tous les appareils</option>
+            <option value="Réfrigérateur">Réfrigérateur</option><option value="Machine à laver">Machine à laver</option><option value="Téléviseur">Téléviseur</option><option value="Cuisinière / Four">Cuisinière / Four</option><option value="Climatiseur">Climatiseur</option>
+          </select>
+          <select id="filter-status-electro" onchange="renderTableauElectro()">
+            <option value="" data-i18n="filter.tous">Tous les statuts</option>
+            <option value="En attente" data-i18n="statut.enattente">En attente</option>
+            <option value="Validé" data-i18n="statut.valide">Validé</option>
+            <option value="Refusé" data-i18n="statut.refuse">Refusé</option>
+            <option value="Clôturé" data-i18n="statut.cloture">Clôturé</option>
+          </select>
+          <button class="btn-excel" onclick="exporterExcelElectro()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
+        </div>
+        <div class="tableau-wrap">
+          <table class="tab">
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th>Appareil</th><th data-i18n="sport.saison">Saison</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
+            <tbody id="tbody-electro"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-tab-loisirs" style="display:none;">
+      <div class="admin-stats" id="loisirs-stats"></div>
+      <div class="panneau" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h3 class="serif" style="color:var(--bleu);margin-bottom:4px;font-size:16px;">🎭 Inscriptions Loisirs</h3>
+          <div id="loisirs-saison-etat" style="font-size:13.5px;color:#5C5142;">Chargement de l'état des inscriptions…</div>
+        </div>
+        <button id="btn-toggle-saison-loisirs" class="btn btn-primary" onclick="toggleSaisonLoisirs()">…</button>
+      </div>
+      <div class="panneau">
+        <div class="filter-bar">
+          <input id="filter-search-loisirs" type="text" placeholder="🔍 Rechercher nom, matricule, activité…" oninput="renderTableauLoisirs()" style="flex:1;min-width:200px;">
+          <select id="filter-annee-loisirs" onchange="renderTableauLoisirs()"></select>
+          <select id="filter-choix-loisirs" onchange="renderTableauLoisirs()">
+            <option value="">Toutes les activités</option>
+            <option value="Voyage / Excursion">Voyage / Excursion</option><option value="Colonie de vacances">Colonie de vacances</option><option value="Séjour balnéaire">Séjour balnéaire</option><option value="Spectacle / Cinéma">Spectacle / Cinéma</option><option value="Parc d'attractions">Parc d'attractions</option>
+          </select>
+          <select id="filter-status-loisirs" onchange="renderTableauLoisirs()">
+            <option value="" data-i18n="filter.tous">Tous les statuts</option>
+            <option value="En attente" data-i18n="statut.enattente">En attente</option>
+            <option value="Validé" data-i18n="statut.valide">Validé</option>
+            <option value="Refusé" data-i18n="statut.refuse">Refusé</option>
+            <option value="Clôturé" data-i18n="statut.cloture">Clôturé</option>
+          </select>
+          <button class="btn-excel" onclick="exporterExcelLoisirs()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
+        </div>
+        <div class="tableau-wrap">
+          <table class="tab">
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th>Activité</th><th>Pers.</th><th data-i18n="sport.saison">Saison</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
+            <tbody id="tbody-loisirs"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="admin-tab-creches" style="display:none;">
+      <div class="admin-stats" id="creches-stats"></div>
+      <div class="panneau" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h3 class="serif" style="color:var(--bleu);margin-bottom:4px;font-size:16px;">👶 Inscriptions Crèches</h3>
+          <div id="creches-saison-etat" style="font-size:13.5px;color:#5C5142;">Chargement de l'état des inscriptions…</div>
+        </div>
+        <button id="btn-toggle-saison-creches" class="btn btn-primary" onclick="toggleSaisonCreches()">…</button>
+      </div>
+      <div class="panneau">
+        <div class="filter-bar">
+          <input id="filter-search-creches" type="text" placeholder="🔍 Rechercher nom, matricule, enfant…" oninput="renderTableauCreches()" style="flex:1;min-width:200px;">
+          <select id="filter-annee-creches" onchange="renderTableauCreches()"></select>
+          <select id="filter-choix-creches" onchange="renderTableauCreches()">
+            <option value="">Tous les modes d'accueil</option>
+            <option value="Temps plein">Temps plein</option><option value="Mi-temps">Mi-temps</option><option value="Garde occasionnelle">Garde occasionnelle</option>
+          </select>
+          <select id="filter-status-creches" onchange="renderTableauCreches()">
+            <option value="" data-i18n="filter.tous">Tous les statuts</option>
+            <option value="En attente" data-i18n="statut.enattente">En attente</option>
+            <option value="Validé" data-i18n="statut.valide">Validé</option>
+            <option value="Refusé" data-i18n="statut.refuse">Refusé</option>
+            <option value="Clôturé" data-i18n="statut.cloture">Clôturé</option>
+          </select>
+          <button class="btn-excel" onclick="exporterExcelCreches()" data-i18n="btn.exportExcel">📊 Exporter Excel</button>
+        </div>
+        <div class="tableau-wrap">
+          <table class="tab">
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th>Accueil</th><th>Enfant</th><th data-i18n="sport.saison">Saison</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
+            <tbody id="tbody-creches"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
     <div id="admin-tab-idees" style="display:none;">
       <div class="admin-stats" id="idees-stats"></div>
       <div class="panneau">
@@ -2275,6 +2771,9 @@ footer strong{color:var(--or-clair);}
               <option value="prets">Prêt social</option>
               <option value="omra">Omra</option>
               <option value="sport">Sport &amp; Travail</option>
+              <option value="electro">Électroménagers</option>
+              <option value="loisirs">Loisirs</option>
+              <option value="creches">Crèches</option>
             </select></div>
           <div class="grp" style="margin:0;min-width:180px;"><label>Actes à clôturer</label>
             <select id="clo-statut" onchange="majApercuCloture()">
@@ -2571,6 +3070,111 @@ function mergeSport(fbArr) {
   return Object.values(map);
 }
 
+// ===== Électroménagers (local) =====
+function loadElectroLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_electro') || '[]'); } catch(e) { return []; }
+}
+function saveElectroLocal(arr) {
+  try { localStorage.setItem('schb_electro', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (electro):', e); }
+}
+function persistElectroLocal(d) {
+  var arr = loadElectroLocal();
+  var idx = arr.findIndex(function(x){ return x.num === d.num; });
+  if (idx >= 0) arr[idx] = d; else arr.push(d);
+  saveElectroLocal(arr);
+}
+function retirerElectroLocal(num) {
+  var arr = loadElectroLocal().filter(function(x){ return x.num !== num; });
+  saveElectroLocal(arr);
+}
+function loadElectroSupprimesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_electro_supprimes') || '[]'); } catch(e) { return []; }
+}
+function saveElectroSupprimesLocal(arr) {
+  try { localStorage.setItem('schb_electro_supprimes', JSON.stringify(arr)); } catch(e) {}
+}
+function marquerElectroSupprime(num) {
+  var arr = loadElectroSupprimesLocal();
+  if (arr.indexOf(num) === -1) { arr.push(num); saveElectroSupprimesLocal(arr); }
+}
+function mergeElectro(fbArr) {
+  var map = {};
+  loadElectroLocal().forEach(function(d){ map[d.num] = d; });
+  (fbArr||[]).forEach(function(d){ map[d.num] = d; });
+  loadElectroSupprimesLocal().forEach(function(num){ delete map[num]; });
+  return Object.values(map);
+}
+
+// ===== Loisirs (local) =====
+function loadLoisirsLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_loisirs') || '[]'); } catch(e) { return []; }
+}
+function saveLoisirsLocal(arr) {
+  try { localStorage.setItem('schb_loisirs', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (loisirs):', e); }
+}
+function persistLoisirsLocal(d) {
+  var arr = loadLoisirsLocal();
+  var idx = arr.findIndex(function(x){ return x.num === d.num; });
+  if (idx >= 0) arr[idx] = d; else arr.push(d);
+  saveLoisirsLocal(arr);
+}
+function retirerLoisirsLocal(num) {
+  var arr = loadLoisirsLocal().filter(function(x){ return x.num !== num; });
+  saveLoisirsLocal(arr);
+}
+function loadLoisirsSupprimesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_loisirs_supprimes') || '[]'); } catch(e) { return []; }
+}
+function saveLoisirsSupprimesLocal(arr) {
+  try { localStorage.setItem('schb_loisirs_supprimes', JSON.stringify(arr)); } catch(e) {}
+}
+function marquerLoisirsSupprime(num) {
+  var arr = loadLoisirsSupprimesLocal();
+  if (arr.indexOf(num) === -1) { arr.push(num); saveLoisirsSupprimesLocal(arr); }
+}
+function mergeLoisirs(fbArr) {
+  var map = {};
+  loadLoisirsLocal().forEach(function(d){ map[d.num] = d; });
+  (fbArr||[]).forEach(function(d){ map[d.num] = d; });
+  loadLoisirsSupprimesLocal().forEach(function(num){ delete map[num]; });
+  return Object.values(map);
+}
+
+// ===== Crèches (local) =====
+function loadCrechesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_creches') || '[]'); } catch(e) { return []; }
+}
+function saveCrechesLocal(arr) {
+  try { localStorage.setItem('schb_creches', JSON.stringify(arr)); } catch(e) { console.error('Erreur sauvegarde locale (creches):', e); }
+}
+function persistCrechesLocal(d) {
+  var arr = loadCrechesLocal();
+  var idx = arr.findIndex(function(x){ return x.num === d.num; });
+  if (idx >= 0) arr[idx] = d; else arr.push(d);
+  saveCrechesLocal(arr);
+}
+function retirerCrechesLocal(num) {
+  var arr = loadCrechesLocal().filter(function(x){ return x.num !== num; });
+  saveCrechesLocal(arr);
+}
+function loadCrechesSupprimesLocal() {
+  try { return JSON.parse(localStorage.getItem('schb_creches_supprimes') || '[]'); } catch(e) { return []; }
+}
+function saveCrechesSupprimesLocal(arr) {
+  try { localStorage.setItem('schb_creches_supprimes', JSON.stringify(arr)); } catch(e) {}
+}
+function marquerCrechesSupprime(num) {
+  var arr = loadCrechesSupprimesLocal();
+  if (arr.indexOf(num) === -1) { arr.push(num); saveCrechesSupprimesLocal(arr); }
+}
+function mergeCreches(fbArr) {
+  var map = {};
+  loadCrechesLocal().forEach(function(d){ map[d.num] = d; });
+  (fbArr||[]).forEach(function(d){ map[d.num] = d; });
+  loadCrechesSupprimesLocal().forEach(function(num){ delete map[num]; });
+  return Object.values(map);
+}
+
 // ===== BOÎTE À IDÉES (local) =====
 function loadIdeesLocal() {
   try { return JSON.parse(localStorage.getItem('schb_idees') || '[]'); } catch(e) { return []; }
@@ -2719,8 +3323,17 @@ var omra = loadOmraLocal();
 var suiviCacheOmra = {};
 var sport = loadSportLocal();
 var suiviCacheSport = {};
+var electro = loadElectroLocal();
+var suiviCacheElectro = {};
+var loisirs = loadLoisirsLocal();
+var suiviCacheLoisirs = {};
+var creches = loadCrechesLocal();
+var suiviCacheCreches = {};
 var saisonOmraOuverte = false;
 var saisonSportOuverte = false;
+var saisonElectroOuverte = false;
+var saisonLoisirsOuverte = false;
+var saisonCrechesOuverte = false;
 var idees = loadIdeesLocal();
 var doleances = loadDoleancesLocal();
 var effectifs = []; // fiches importées depuis le fichier Excel "État des effectifs" (voir onglet admin dédié)
@@ -3427,6 +4040,277 @@ function resetFormSport() {
   document.getElementById('msg-sport').style.display = 'none';
 }
 
+
+// ===== ÉLECTROMÉNAGERS =====
+function newElectroNumber(now) {
+  var y = String(now.getFullYear()).slice(-2);
+  var m = String(now.getMonth()+1).padStart(2,'0');
+  var d = String(now.getDate()).padStart(2,'0');
+  return 'EL-' + y + m + d + '-' + randomSecret(6);
+}
+function newTrackingCodeElectro() { return 'SCHB-EL-' + randomSecret(20); }
+
+function makeSuiviPublicElectro(d) {
+  return {
+    code: d.trackingCode, num: d.num, statut: d.statut, date: d.date, dateObj: d.dateObj, annee: d.annee,
+    nom: d.nom, prenom: d.prenom, mat: d.mat, tel: d.tel, service: d.service || '',
+    article: d.article, dateValidation: d.dateValidation || ''
+  };
+}
+
+function remplirAnneesElectroForm() {
+  var el = document.getElementById('fe-annee');
+  if (!el) return;
+  var cy = new Date().getFullYear();
+  var opts = [cy, cy+1];
+  el.innerHTML = opts.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
+}
+remplirAnneesElectroForm();
+
+async function soumettreElectro() {
+  if (!saisonElectroOuverte) {
+    alert("⚠️ Les inscriptions pour les électroménagers ne sont pas encore ouvertes par le Comité de Participation. Les inscriptions ne sont pas possibles pour le moment.");
+    return;
+  }
+  var nom = document.getElementById('fe-nom').value.trim().toUpperCase();
+  var prenom = document.getElementById('fe-prenom').value.trim();
+  var mat = document.getElementById('fe-matricule').value.trim();
+  var tel = document.getElementById('fe-tel').value.trim();
+  var service = document.getElementById('fe-service').value.trim();
+  var choixSel = document.getElementById('fe-choix').value;
+  var choixAutre = document.getElementById('fe-choix-autre').value.trim();
+  var choix = (choixSel === 'Autre' && choixAutre) ? choixAutre : choixSel;
+  var anneeInscription = Number(document.getElementById('fe-annee').value);
+  var msg = document.getElementById('msg-electro');
+  msg.className = 'msg';
+
+  if (!nom || !prenom || !mat || !tel || !choix || !anneeInscription) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez remplir tous les champs obligatoires.'; return;
+  }
+
+  var now = new Date();
+  var num = newElectroNumber(now);
+  var trackingCode = newTrackingCodeElectro();
+  var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
+
+  var d = {
+    num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
+    article: choix, date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: anneeInscription
+  };
+
+  persistElectroLocal(d);
+
+  document.getElementById('tkelectro-num').textContent = num;
+  document.getElementById('tkelectro-adh').textContent = nom + ' ' + prenom + ' (' + mat + ')';
+  document.getElementById('tkelectro-choix').textContent = choix;
+  document.getElementById('tkelectro-date').textContent = dateStr;
+  document.getElementById('tkelectro-code').textContent = trackingCode;
+  document.getElementById('ticket-confirm-electro').classList.add('visible');
+  msg.className = 'msg ok'; msg.style.display = 'flex';
+  msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
+
+  if (typeof window.fbCreateElectro === 'function') {
+    window.fbCreateElectro(d, makeSuiviPublicElectro(d)).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (electro, enregistrée localement) :', err);
+      msg.className = 'msg err'; msg.style.display = 'flex';
+      msg.innerHTML = "⚠️ Inscription <strong>" + esc(num) + "</strong> enregistrée sur cet appareil uniquement : la synchronisation avec le serveur a échoué (" + esc(err && err.message || 'erreur inconnue') + ").";
+    });
+  }
+}
+
+function resetFormElectro() {
+  ['fe-nom','fe-prenom','fe-matricule','fe-tel','fe-service','fe-choix-autre'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('fe-choix').value = 'Réfrigérateur';
+  document.getElementById('fe-choix-autre-grp').style.display = 'none';
+  remplirAnneesElectroForm();
+  document.getElementById('ticket-confirm-electro').classList.remove('visible');
+  document.getElementById('msg-electro').style.display = 'none';
+}
+
+// ===== LOISIRS =====
+function newLoisirsNumber(now) {
+  var y = String(now.getFullYear()).slice(-2);
+  var m = String(now.getMonth()+1).padStart(2,'0');
+  var d = String(now.getDate()).padStart(2,'0');
+  return 'LO-' + y + m + d + '-' + randomSecret(6);
+}
+function newTrackingCodeLoisirs() { return 'SCHB-LO-' + randomSecret(20); }
+
+function makeSuiviPublicLoisirs(d) {
+  return {
+    code: d.trackingCode, num: d.num, statut: d.statut, date: d.date, dateObj: d.dateObj, annee: d.annee,
+    nom: d.nom, prenom: d.prenom, mat: d.mat, tel: d.tel, service: d.service || '',
+    activite: d.activite, nbPers: d.nbPers, dateValidation: d.dateValidation || ''
+  };
+}
+
+function remplirAnneesLoisirsForm() {
+  var el = document.getElementById('flo-annee');
+  if (!el) return;
+  var cy = new Date().getFullYear();
+  var opts = [cy, cy+1];
+  el.innerHTML = opts.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
+}
+remplirAnneesLoisirsForm();
+
+async function soumettreLoisirs() {
+  if (!saisonLoisirsOuverte) {
+    alert("⚠️ Les inscriptions pour les loisirs ne sont pas encore ouvertes par le Comité de Participation. Les inscriptions ne sont pas possibles pour le moment.");
+    return;
+  }
+  var nom = document.getElementById('flo-nom').value.trim().toUpperCase();
+  var prenom = document.getElementById('flo-prenom').value.trim();
+  var mat = document.getElementById('flo-matricule').value.trim();
+  var tel = document.getElementById('flo-tel').value.trim();
+  var service = document.getElementById('flo-service').value.trim();
+  var choixSel = document.getElementById('flo-choix').value;
+  var choixAutre = document.getElementById('flo-choix-autre').value.trim();
+  var choix = (choixSel === 'Autre' && choixAutre) ? choixAutre : choixSel;
+  var nbPers = Number(document.getElementById('flo-nbpers').value);
+  var anneeInscription = Number(document.getElementById('flo-annee').value);
+  var msg = document.getElementById('msg-loisirs');
+  msg.className = 'msg';
+
+  if (!nom || !prenom || !mat || !tel || !choix || !anneeInscription || !nbPers) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez remplir tous les champs obligatoires.'; return;
+  }
+
+  var now = new Date();
+  var num = newLoisirsNumber(now);
+  var trackingCode = newTrackingCodeLoisirs();
+  var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
+
+  var d = {
+    num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
+    activite: choix, nbPers: nbPers, date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: anneeInscription
+  };
+
+  persistLoisirsLocal(d);
+
+  document.getElementById('tkloisirs-num').textContent = num;
+  document.getElementById('tkloisirs-adh').textContent = nom + ' ' + prenom + ' (' + mat + ')';
+  document.getElementById('tkloisirs-choix').textContent = choix;
+  document.getElementById('tkloisirs-extra').textContent = nbPers;
+  document.getElementById('tkloisirs-date').textContent = dateStr;
+  document.getElementById('tkloisirs-code').textContent = trackingCode;
+  document.getElementById('ticket-confirm-loisirs').classList.add('visible');
+  msg.className = 'msg ok'; msg.style.display = 'flex';
+  msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
+
+  if (typeof window.fbCreateLoisirs === 'function') {
+    window.fbCreateLoisirs(d, makeSuiviPublicLoisirs(d)).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (loisirs, enregistrée localement) :', err);
+      msg.className = 'msg err'; msg.style.display = 'flex';
+      msg.innerHTML = "⚠️ Inscription <strong>" + esc(num) + "</strong> enregistrée sur cet appareil uniquement : la synchronisation avec le serveur a échoué (" + esc(err && err.message || 'erreur inconnue') + ").";
+    });
+  }
+}
+
+function resetFormLoisirs() {
+  ['flo-nom','flo-prenom','flo-matricule','flo-tel','flo-service','flo-nbpers','flo-choix-autre'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('flo-choix').value = 'Voyage / Excursion';
+  document.getElementById('flo-choix-autre-grp').style.display = 'none';
+  remplirAnneesLoisirsForm();
+  document.getElementById('ticket-confirm-loisirs').classList.remove('visible');
+  document.getElementById('msg-loisirs').style.display = 'none';
+}
+
+// ===== CRÈCHES =====
+function newCrechesNumber(now) {
+  var y = String(now.getFullYear()).slice(-2);
+  var m = String(now.getMonth()+1).padStart(2,'0');
+  var d = String(now.getDate()).padStart(2,'0');
+  return 'CR-' + y + m + d + '-' + randomSecret(6);
+}
+function newTrackingCodeCreches() { return 'SCHB-CR-' + randomSecret(20); }
+
+function makeSuiviPublicCreches(d) {
+  return {
+    code: d.trackingCode, num: d.num, statut: d.statut, date: d.date, dateObj: d.dateObj, annee: d.annee,
+    nom: d.nom, prenom: d.prenom, mat: d.mat, tel: d.tel, service: d.service || '',
+    accueil: d.accueil, enfNom: d.enfNom, enfPrenom: d.enfPrenom, enfNaissance: d.enfNaissance, dateValidation: d.dateValidation || ''
+  };
+}
+
+function remplirAnneesCrechesForm() {
+  var el = document.getElementById('fc-annee');
+  if (!el) return;
+  var cy = new Date().getFullYear();
+  var opts = [cy, cy+1];
+  el.innerHTML = opts.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
+}
+remplirAnneesCrechesForm();
+
+async function soumettreCreches() {
+  if (!saisonCrechesOuverte) {
+    alert("⚠️ Les inscriptions pour les crèches ne sont pas encore ouvertes par le Comité de Participation. Les inscriptions ne sont pas possibles pour le moment.");
+    return;
+  }
+  var nom = document.getElementById('fc-nom').value.trim().toUpperCase();
+  var prenom = document.getElementById('fc-prenom').value.trim();
+  var mat = document.getElementById('fc-matricule').value.trim();
+  var tel = document.getElementById('fc-tel').value.trim();
+  var service = document.getElementById('fc-service').value.trim();
+  var choix = document.getElementById('fc-choix').value;
+  var enfNom = document.getElementById('fc-enf-nom').value.trim().toUpperCase();
+  var enfPrenom = document.getElementById('fc-enf-prenom').value.trim();
+  var enfNaissance = document.getElementById('fc-enf-naissance').value.trim();
+  var anneeInscription = Number(document.getElementById('fc-annee').value);
+  var msg = document.getElementById('msg-creches');
+  msg.className = 'msg';
+
+  if (!nom || !prenom || !mat || !tel || !choix || !anneeInscription || !enfNom || !enfPrenom || !enfNaissance) {
+    msg.className = 'msg err'; msg.style.display = 'flex';
+    msg.textContent = '⚠️ Veuillez remplir tous les champs obligatoires.'; return;
+  }
+
+  var now = new Date();
+  var num = newCrechesNumber(now);
+  var trackingCode = newTrackingCodeCreches();
+  var dateStr = now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'});
+
+  var d = {
+    num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
+    accueil: choix, enfNom: enfNom, enfPrenom: enfPrenom, enfNaissance: enfNaissance, date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: anneeInscription
+  };
+
+  persistCrechesLocal(d);
+
+  document.getElementById('tkcreches-num').textContent = num;
+  document.getElementById('tkcreches-adh').textContent = nom + ' ' + prenom + ' (' + mat + ')';
+  document.getElementById('tkcreches-choix').textContent = choix;
+  document.getElementById('tkcreches-extra').textContent = enfNom + ' ' + enfPrenom;
+  document.getElementById('tkcreches-date').textContent = dateStr;
+  document.getElementById('tkcreches-code').textContent = trackingCode;
+  document.getElementById('ticket-confirm-creches').classList.add('visible');
+  msg.className = 'msg ok'; msg.style.display = 'flex';
+  msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
+
+  if (typeof window.fbCreateCreches === 'function') {
+    window.fbCreateCreches(d, makeSuiviPublicCreches(d)).catch(function(err){
+      console.warn('Synchronisation Firebase échouée (creches, enregistrée localement) :', err);
+      msg.className = 'msg err'; msg.style.display = 'flex';
+      msg.innerHTML = "⚠️ Inscription <strong>" + esc(num) + "</strong> enregistrée sur cet appareil uniquement : la synchronisation avec le serveur a échoué (" + esc(err && err.message || 'erreur inconnue') + ").";
+    });
+  }
+}
+
+function resetFormCreches() {
+  ['fc-nom','fc-prenom','fc-matricule','fc-tel','fc-service','fc-enf-nom','fc-enf-prenom','fc-enf-naissance'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('fc-choix').value = 'Temps plein';
+  remplirAnneesCrechesForm();
+  document.getElementById('ticket-confirm-creches').classList.remove('visible');
+  document.getElementById('msg-creches').style.display = 'none';
+}
+
 // ===== BOÎTE À IDÉES =====
 function newIdeeNumber(now) {
   var y = String(now.getFullYear()).slice(-2);
@@ -3726,6 +4610,12 @@ async function rechercherSuivi() {
   if (matchLocalOmra) { res.innerHTML = renderSuiviOmra(matchLocalOmra); return; }
   var matchLocalSport = loadSportLocal().find(function(x){ return x.trackingCode === code; });
   if (matchLocalSport) { res.innerHTML = renderSuiviSport(matchLocalSport); return; }
+  var matchLocalElectro = loadElectroLocal().find(function(x){ return x.trackingCode === code; });
+  if (matchLocalElectro) { res.innerHTML = renderSuiviElectro(matchLocalElectro); return; }
+  var matchLocalLoisirs = loadLoisirsLocal().find(function(x){ return x.trackingCode === code; });
+  if (matchLocalLoisirs) { res.innerHTML = renderSuiviLoisirs(matchLocalLoisirs); return; }
+  var matchLocalCreches = loadCrechesLocal().find(function(x){ return x.trackingCode === code; });
+  if (matchLocalCreches) { res.innerHTML = renderSuiviCreches(matchLocalCreches); return; }
 
   // 2) Firebase (demandes médicales + livres + prêts + omra distants), si disponible
   if (typeof window.fbReadSuivi !== 'function') {
@@ -3749,6 +4639,18 @@ async function rechercherSuivi() {
     if (typeof window.fbReadSuiviSport === 'function') {
       var ds_ = await window.fbReadSuiviSport(code);
       if (ds_) { suiviCacheSport[code] = ds_; res.innerHTML = renderSuiviSport(ds_); return; }
+    }
+    if (typeof window.fbReadSuiviElectro === 'function') {
+      var d_electro = await window.fbReadSuiviElectro(code);
+      if (d_electro) { suiviCacheElectro[code] = d_electro; res.innerHTML = renderSuiviElectro(d_electro); return; }
+    }
+    if (typeof window.fbReadSuiviLoisirs === 'function') {
+      var d_loisirs = await window.fbReadSuiviLoisirs(code);
+      if (d_loisirs) { suiviCacheLoisirs[code] = d_loisirs; res.innerHTML = renderSuiviLoisirs(d_loisirs); return; }
+    }
+    if (typeof window.fbReadSuiviCreches === 'function') {
+      var d_creches = await window.fbReadSuiviCreches(code);
+      if (d_creches) { suiviCacheCreches[code] = d_creches; res.innerHTML = renderSuiviCreches(d_creches); return; }
     }
     res.innerHTML = '<div class="msg info" style="display:flex">ℹ️ Aucun dossier trouvé avec ce code. Vérifiez le code reçu lors du dépôt.</div>';
   } catch(err) {
@@ -3894,6 +4796,84 @@ function renderSuiviSport(d) {
   return html;
 }
 
+
+function renderSuiviElectro(d) {
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+  var html = '<div class="suivi-card">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">';
+  html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7A6F58;">Inscription Électroménagers — ' + esc(d.article) + '</div>';
+  html += '<div class="serif" style="font-size:22px;font-weight:700;color:var(--bleu);">' + esc(d.num) + '</div></div>';
+  html += '<span class="badge ' + bc + '">' + esc(d.statut) + '</span></div>';
+  html += '<div class="detail-grid">';
+  html += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Appareil</div><div class="detail-val">' + esc(d.article) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  html += '</div><div class="tl">';
+  html += '<div class="tl-item"><div class="tl-dot tl-done">✓</div><div class="tl-text"><div class="tl-title">Inscription soumise</div><div class="tl-sub">' + esc(d.date) + '</div></div></div>';
+  var dot2 = d.statut !== 'En attente' ? 'tl-done' : 'tl-pend';
+  var icon2 = d.statut !== 'En attente' ? '✓' : '⏳';
+  html += '<div class="tl-item"><div class="tl-dot ' + dot2 + '">' + icon2 + '</div><div class="tl-text"><div class="tl-title">Examen par le Comité</div><div class="tl-sub">' + (d.statut === 'En attente' ? 'En cours de traitement' : 'Traité') + '</div></div></div>';
+  var dot3 = d.statut === 'Validé' ? 'tl-done' : 'tl-empty';
+  var icon3 = d.statut === 'Validé' ? '✓' : d.statut === 'Refusé' ? '✗' : d.statut === 'Clôturé' ? '🔒' : '○';
+  var txt3 = d.statut === 'Validé' ? 'Inscription validée' : d.statut === 'Refusé' ? 'Inscription refusée' : d.statut === 'Clôturé' ? 'Saison clôturée' : 'Décision finale';
+  html += '<div class="tl-item"><div class="tl-dot ' + dot3 + '">' + icon3 + '</div><div class="tl-text"><div class="tl-title">' + txt3 + '</div><div class="tl-sub">' + (d.statut === 'Validé' ? 'Votre inscription est confirmée' : d.statut === 'Refusé' ? 'Contactez le Comité de Participation' : d.statut === 'Clôturé' ? 'La saison ' + esc(d.annee) + ' est close' : 'En attente') + '</div></div></div>';
+  html += '</div></div>';
+  return html;
+}
+
+function renderSuiviLoisirs(d) {
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+  var html = '<div class="suivi-card">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">';
+  html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7A6F58;">Inscription Loisirs — ' + esc(d.activite) + '</div>';
+  html += '<div class="serif" style="font-size:22px;font-weight:700;color:var(--bleu);">' + esc(d.num) + '</div></div>';
+  html += '<span class="badge ' + bc + '">' + esc(d.statut) + '</span></div>';
+  html += '<div class="detail-grid">';
+  html += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Activité</div><div class="detail-val">' + esc(d.activite) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Personnes</div><div class="detail-val">' + esc(d.nbPers) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  html += '</div><div class="tl">';
+  html += '<div class="tl-item"><div class="tl-dot tl-done">✓</div><div class="tl-text"><div class="tl-title">Inscription soumise</div><div class="tl-sub">' + esc(d.date) + '</div></div></div>';
+  var dot2 = d.statut !== 'En attente' ? 'tl-done' : 'tl-pend';
+  var icon2 = d.statut !== 'En attente' ? '✓' : '⏳';
+  html += '<div class="tl-item"><div class="tl-dot ' + dot2 + '">' + icon2 + '</div><div class="tl-text"><div class="tl-title">Examen par le Comité</div><div class="tl-sub">' + (d.statut === 'En attente' ? 'En cours de traitement' : 'Traité') + '</div></div></div>';
+  var dot3 = d.statut === 'Validé' ? 'tl-done' : 'tl-empty';
+  var icon3 = d.statut === 'Validé' ? '✓' : d.statut === 'Refusé' ? '✗' : d.statut === 'Clôturé' ? '🔒' : '○';
+  var txt3 = d.statut === 'Validé' ? 'Inscription validée' : d.statut === 'Refusé' ? 'Inscription refusée' : d.statut === 'Clôturé' ? 'Saison clôturée' : 'Décision finale';
+  html += '<div class="tl-item"><div class="tl-dot ' + dot3 + '">' + icon3 + '</div><div class="tl-text"><div class="tl-title">' + txt3 + '</div><div class="tl-sub">' + (d.statut === 'Validé' ? 'Votre inscription est confirmée' : d.statut === 'Refusé' ? 'Contactez le Comité de Participation' : d.statut === 'Clôturé' ? 'La saison ' + esc(d.annee) + ' est close' : 'En attente') + '</div></div></div>';
+  html += '</div></div>';
+  return html;
+}
+
+function renderSuiviCreches(d) {
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+  var html = '<div class="suivi-card">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px;">';
+  html += '<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7A6F58;">Inscription Crèches — ' + esc(d.accueil) + '</div>';
+  html += '<div class="serif" style="font-size:22px;font-weight:700;color:var(--bleu);">' + esc(d.num) + '</div></div>';
+  html += '<span class="badge ' + bc + '">' + esc(d.statut) + '</span></div>';
+  html += '<div class="detail-grid">';
+  html += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Accueil</div><div class="detail-val">' + esc(d.accueil) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Enfant</div><div class="detail-val">' + esc(d.enfNom) + ' ' + esc(d.enfPrenom) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  html += '</div><div class="tl">';
+  html += '<div class="tl-item"><div class="tl-dot tl-done">✓</div><div class="tl-text"><div class="tl-title">Inscription soumise</div><div class="tl-sub">' + esc(d.date) + '</div></div></div>';
+  var dot2 = d.statut !== 'En attente' ? 'tl-done' : 'tl-pend';
+  var icon2 = d.statut !== 'En attente' ? '✓' : '⏳';
+  html += '<div class="tl-item"><div class="tl-dot ' + dot2 + '">' + icon2 + '</div><div class="tl-text"><div class="tl-title">Examen par le Comité</div><div class="tl-sub">' + (d.statut === 'En attente' ? 'En cours de traitement' : 'Traité') + '</div></div></div>';
+  var dot3 = d.statut === 'Validé' ? 'tl-done' : 'tl-empty';
+  var icon3 = d.statut === 'Validé' ? '✓' : d.statut === 'Refusé' ? '✗' : d.statut === 'Clôturé' ? '🔒' : '○';
+  var txt3 = d.statut === 'Validé' ? 'Inscription validée' : d.statut === 'Refusé' ? 'Inscription refusée' : d.statut === 'Clôturé' ? 'Saison clôturée' : 'Décision finale';
+  html += '<div class="tl-item"><div class="tl-dot ' + dot3 + '">' + icon3 + '</div><div class="tl-text"><div class="tl-title">' + txt3 + '</div><div class="tl-sub">' + (d.statut === 'Validé' ? 'Votre inscription est confirmée' : d.statut === 'Refusé' ? 'Contactez le Comité de Participation' : d.statut === 'Clôturé' ? 'La saison ' + esc(d.annee) + ' est close' : 'En attente') + '</div></div></div>';
+  html += '</div></div>';
+  return html;
+}
+
 // ===== ADMIN =====
 async function loginAdmin() {
   var email = document.getElementById('admin-email').value.trim();
@@ -3999,6 +4979,42 @@ function applyAdminAuthState(user) {
         alert("Sport & Travail : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'sport'. Ajoutez les règles pour ce chemin dans la console Firebase.");
       });
     }
+    // Idem pour les inscriptions Électroménagers.
+    electro = loadElectroLocal();
+    renderTableauElectro(); renderStatsElectro();
+    if (typeof window.fbListenAdminElectro === 'function') {
+      window.fbListenAdminElectro(function(arr) {
+        electro = mergeElectro(arr);
+        renderTableauElectro(); renderStatsElectro(); renderRapportStats();
+      }, function(err) {
+        console.error('Admin database read error (electro):', err);
+        alert("Électroménagers : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'electro'. Ajoutez les règles pour ce chemin dans la console Firebase.");
+      });
+    }
+    // Idem pour les inscriptions Loisirs.
+    loisirs = loadLoisirsLocal();
+    renderTableauLoisirs(); renderStatsLoisirs();
+    if (typeof window.fbListenAdminLoisirs === 'function') {
+      window.fbListenAdminLoisirs(function(arr) {
+        loisirs = mergeLoisirs(arr);
+        renderTableauLoisirs(); renderStatsLoisirs(); renderRapportStats();
+      }, function(err) {
+        console.error('Admin database read error (loisirs):', err);
+        alert("Loisirs : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'loisirs'. Ajoutez les règles pour ce chemin dans la console Firebase.");
+      });
+    }
+    // Idem pour les inscriptions Crèches.
+    creches = loadCrechesLocal();
+    renderTableauCreches(); renderStatsCreches();
+    if (typeof window.fbListenAdminCreches === 'function') {
+      window.fbListenAdminCreches(function(arr) {
+        creches = mergeCreches(arr);
+        renderTableauCreches(); renderStatsCreches(); renderRapportStats();
+      }, function(err) {
+        console.error('Admin database read error (creches):', err);
+        alert("Crèches : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'creches'. Ajoutez les règles pour ce chemin dans la console Firebase.");
+      });
+    }
     // Idem pour la boîte à idées.
     idees = loadIdeesLocal();
     renderTableauIdees(); renderStatsIdees();
@@ -4046,6 +5062,9 @@ function applyAdminAuthState(user) {
     if (typeof window.fbStopAdminListenPret === 'function') window.fbStopAdminListenPret();
     if (typeof window.fbStopAdminListenOmra === 'function') window.fbStopAdminListenOmra();
     if (typeof window.fbStopAdminListenSport === 'function') window.fbStopAdminListenSport();
+    if (typeof window.fbStopAdminListenElectro === 'function') window.fbStopAdminListenElectro();
+    if (typeof window.fbStopAdminListenLoisirs === 'function') window.fbStopAdminListenLoisirs();
+    if (typeof window.fbStopAdminListenCreches === 'function') window.fbStopAdminListenCreches();
     if (typeof window.fbStopAdminListenIdees === 'function') window.fbStopAdminListenIdees();
     if (typeof window.fbStopAdminListenDoleances === 'function') window.fbStopAdminListenDoleances();
     demandes = []; adminLive = false;
@@ -4064,6 +5083,9 @@ function showAdminTab(id) {
   document.getElementById('admin-tab-prets').style.display = (id === 'prets') ? 'block' : 'none';
   document.getElementById('admin-tab-omra').style.display = (id === 'omra') ? 'block' : 'none';
   document.getElementById('admin-tab-sport').style.display = (id === 'sport') ? 'block' : 'none';
+  document.getElementById('admin-tab-electro').style.display = (id === 'electro') ? 'block' : 'none';
+  document.getElementById('admin-tab-loisirs').style.display = (id === 'loisirs') ? 'block' : 'none';
+  document.getElementById('admin-tab-creches').style.display = (id === 'creches') ? 'block' : 'none';
   document.getElementById('admin-tab-idees').style.display = (id === 'idees') ? 'block' : 'none';
   document.getElementById('admin-tab-doleances').style.display = (id === 'doleances') ? 'block' : 'none';
   document.getElementById('admin-tab-annonces').style.display = (id === 'annonces') ? 'block' : 'none';
@@ -4079,6 +5101,9 @@ function showAdminTab(id) {
   document.getElementById('tab-btn-prets').classList.toggle('actif', id === 'prets');
   document.getElementById('tab-btn-omra').classList.toggle('actif', id === 'omra');
   document.getElementById('tab-btn-sport').classList.toggle('actif', id === 'sport');
+  document.getElementById('tab-btn-electro').classList.toggle('actif', id === 'electro');
+  document.getElementById('tab-btn-loisirs').classList.toggle('actif', id === 'loisirs');
+  document.getElementById('tab-btn-creches').classList.toggle('actif', id === 'creches');
   document.getElementById('tab-btn-idees').classList.toggle('actif', id === 'idees');
   document.getElementById('tab-btn-doleances').classList.toggle('actif', id === 'doleances');
   document.getElementById('tab-btn-annonces').classList.toggle('actif', id === 'annonces');
@@ -4089,6 +5114,9 @@ function showAdminTab(id) {
   if (id === 'prets') { renderTableauPrets(); renderStatsPret(); }
   if (id === 'omra') { renderTableauOmra(); renderStatsOmra(); }
   if (id === 'sport') { renderTableauSport(); renderStatsSport(); }
+  if (id === 'electro') { renderTableauElectro(); renderStatsElectro(); }
+  if (id === 'loisirs') { renderTableauLoisirs(); renderStatsLoisirs(); }
+  if (id === 'creches') { renderTableauCreches(); renderStatsCreches(); }
   if (id === 'idees') { renderTableauIdees(); renderStatsIdees(); }
   if (id === 'doleances') { renderTableauDoleances(); renderStatsDoleances(); }
   if (id === 'annonces') renderAdminAnnonces();
@@ -4304,7 +5332,10 @@ function cloturerAnneesPassees(manuel) {
     { arr: function(){ return livres; }, upd: window.fbUpdateLivre, persist: persistLivreLocal, label: 'Livre scolaire' },
     { arr: function(){ return prets; }, upd: window.fbUpdatePret, persist: persistPretLocal, label: 'Prêt social' },
     { arr: function(){ return omra; }, upd: window.fbUpdateOmra, persist: persistOmraLocal, label: 'Omra' },
-    { arr: function(){ return sport; }, upd: window.fbUpdateSport, persist: persistSportLocal, label: 'Sport & Travail' }
+    { arr: function(){ return sport; }, upd: window.fbUpdateSport, persist: persistSportLocal, label: 'Sport & Travail' },
+    { arr: function(){ return electro; }, upd: window.fbUpdateElectro, persist: persistElectroLocal, label: 'Électroménagers' },
+    { arr: function(){ return loisirs; }, upd: window.fbUpdateLoisirs, persist: persistLoisirsLocal, label: 'Loisirs' },
+    { arr: function(){ return creches; }, upd: window.fbUpdateCreches, persist: persistCrechesLocal, label: 'Crèches' }
   ];
 
   var totalClotures = 0;
@@ -4399,7 +5430,10 @@ function _jeuxCloture() {
     { key: 'livres',   label: 'Livre scolaire',           arr: function(){ return livres; },   upd: viaFb('fbUpdateLivre'),   persist: persistLivreLocal },
     { key: 'prets',    label: 'Prêt social',              arr: function(){ return prets; },    upd: viaFb('fbUpdatePret'),    persist: persistPretLocal },
     { key: 'omra',     label: 'Omra',                     arr: function(){ return omra; },     upd: viaFb('fbUpdateOmra'),    persist: persistOmraLocal },
-    { key: 'sport',    label: 'Sport & Travail',          arr: function(){ return sport; },    upd: viaFb('fbUpdateSport'),   persist: persistSportLocal }
+    { key: 'sport',    label: 'Sport & Travail',          arr: function(){ return sport; },    upd: viaFb('fbUpdateSport'),   persist: persistSportLocal },
+    { key: 'electro', label: 'Électroménagers', arr: function(){ return electro; }, upd: viaFb('fbUpdateElectro'), persist: persistElectroLocal },
+    { key: 'loisirs', label: 'Loisirs', arr: function(){ return loisirs; }, upd: viaFb('fbUpdateLoisirs'), persist: persistLoisirsLocal },
+    { key: 'creches', label: 'Crèches', arr: function(){ return creches; }, upd: viaFb('fbUpdateCreches'), persist: persistCrechesLocal }
   ];
 }
 
@@ -4478,8 +5512,8 @@ function cloturerPeriode(type) {
   });
   saveData();
 
-  [renderTableau, renderTableauLivres, renderTableauPrets, renderTableauOmra, renderTableauSport,
-   renderStats, renderStatsPret, renderStatsOmra, renderStatsSport, renderRapportStats, renderStatsChart].forEach(function(fn) {
+  [renderTableau, renderTableauLivres, renderTableauPrets, renderTableauOmra, renderTableauSport, renderTableauElectro, renderTableauLoisirs, renderTableauCreches,
+   renderStats, renderStatsPret, renderStatsOmra, renderStatsSport, renderStatsElectro, renderStatsLoisirs, renderStatsCreches, renderRapportStats, renderStatsChart].forEach(function(fn) {
     try { fn(); } catch(e) { console.warn(e); }
   });
 
@@ -5490,10 +6524,531 @@ function exporterExcelSport() {
   XLSX.writeFile(wb, 'SCHB_Inscriptions_Sport_' + dateExp + '.xlsx');
 }
 
+function renderStatsElectro() {
+  var el = document.getElementById('electro-stats');
+  if (!el) return;
+  var total = electro.length;
+  var att = electro.filter(function(d){ return d.statut==='En attente'; }).length;
+  var val = electro.filter(wasValide).length;
+  var ref = electro.filter(function(d){ return d.statut==='Refusé'; }).length;
+  var clo = electro.filter(clotureSansValidation).length;
+  el.innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
+    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + att + '</div><div class="stat-lbl">En attente</div></div>' +
+    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + val + '</div><div class="stat-lbl">Validées</div></div>' +
+    '<div class="stat-card" style="border-color:var(--rouge);"><div class="stat-num" style="color:var(--rouge);">' + ref + '</div><div class="stat-lbl">Refusées</div></div>' +
+    '<div class="stat-card" style="border-color:#334155;"><div class="stat-num" style="color:#334155;">' + clo + '</div><div class="stat-lbl">Clôturées</div></div>';
+}
+
+function renderTableauElectro() {
+  remplirSelectAnnees('filter-annee-electro', electro);
+  var searchEl = document.getElementById('filter-search-electro');
+  var statusEl = document.getElementById('filter-status-electro');
+  var anneeEl = document.getElementById('filter-annee-electro');
+  var choixEl = document.getElementById('filter-choix-electro');
+  var tbody = document.getElementById('tbody-electro');
+  if (!searchEl || !statusEl || !tbody) return;
+  var q = (searchEl.value || '').toLowerCase();
+  var st = statusEl.value || '';
+  var an = (anneeEl && anneeEl.value) || '';
+  var ch = (choixEl && choixEl.value) || '';
+  var filtered = triRecent(electro).filter(function(d){
+    var matchQ = !q || (d.nom+d.prenom+d.mat+(d.article||'')).toLowerCase().indexOf(q) >= 0;
+    var matchSt = !st || d.statut === st;
+    var matchAn = !an || String(getAnnee(d)) === an;
+    var matchCh = !ch || d.article === ch;
+    return matchQ && matchSt && matchAn && matchCh;
+  });
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#7A6F58;padding:24px;">Aucune inscription trouvée</td></tr>'; return;
+  }
+  var rows = '';
+  filtered.forEach(function(d) {
+    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+    rows += '<tr>';
+    rows += '<td><strong>' + esc(d.num) + '</strong></td>';
+    rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
+    rows += '<td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td>';
+    rows += '<td>' + esc(d.mat) + '</td>';
+    rows += '<td>' + esc(d.article) + '</td>';
+    rows += '<td>' + esc(getAnnee(d)) + '</td>';
+    rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
+    rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+    rows += '<button class="btn-view-sm" onclick="voirDetailElectro(&quot;' + d.num + '&quot;)">👁 Voir</button>';
+    if (d.statut === 'En attente') {
+      rows += '<button class="btn-success-sm" onclick="validerElectro(&quot;' + d.num + '&quot;)">✅ Valider</button>';
+      rows += '<button class="btn-danger-sm" onclick="refuserElectro(&quot;' + d.num + '&quot;)">❌ Refuser</button>';
+    }
+    rows += '<button class="btn-del-sm" onclick="supprimerElectro(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
+    rows += '</div></td></tr>';
+  });
+  tbody.innerHTML = rows;
+}
+
+function validerElectro(num) {
+  var d = electro.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Valider l'inscription " + num + ' ?')) return;
+  d.statut = 'Validé';
+  d.dateValidation = new Date().toLocaleDateString('fr-DZ');
+  persistElectroLocal(d);
+  renderTableauElectro(); renderStatsElectro();
+  if (typeof window.fbUpdateElectro === 'function') {
+    window.fbUpdateElectro(num, { statut: d.statut, dateValidation: d.dateValidation }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (electro) :', err); });
+  }
+}
+
+function refuserElectro(num) {
+  var d = electro.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Refuser l'inscription " + num + ' ?')) return;
+  d.statut = 'Refusé';
+  persistElectroLocal(d);
+  renderTableauElectro(); renderStatsElectro();
+  if (typeof window.fbUpdateElectro === 'function') {
+    window.fbUpdateElectro(num, { statut: 'Refusé' }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (electro) :', err); });
+  }
+}
+
+function supprimerElectro(num) {
+  var d = electro.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Voulez-vous vraiment supprimer définitivement l'inscription " + num + ' (' + d.nom + ' ' + d.prenom + ') ? Cette action est irréversible.')) return;
+  electro = electro.filter(function(x){ return x.num !== num; });
+  retirerElectroLocal(num);
+  marquerElectroSupprime(num);
+  renderTableauElectro(); renderStatsElectro();
+  if (typeof window.fbDeleteElectro === 'function') {
+    window.fbDeleteElectro(num, d.trackingCode || '')
+      .catch(function(err){
+        console.warn('Synchronisation Firebase échouée (electro) :', err);
+        alert("L'inscription a bien été supprimée de votre affichage, mais la suppression n'a pas pu être synchronisée avec la base en ligne (règles Firebase manquantes ou insuffisantes pour le chemin 'electro'). Pensez à vérifier/ajouter les règles pour ce chemin dans la console Firebase.");
+      });
+  }
+}
+
+function voirDetailElectro(num) {
+  var d = electro.find(function(x){ return x.num === num; });
+  if (!d) return;
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+  var body = '<div class="detail-grid">';
+  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Saison</div><div class="detail-val">' + esc(getAnnee(d)) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Téléphone</div><div class="detail-val">' + esc(d.tel) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Appareil</div><div class="detail-val">' + esc(d.article) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Code de suivi</div><div class="detail-val" style="font-family:monospace;">' + esc(d.trackingCode || '—') + '</div></div>';
+  body += '</div>';
+  body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
+  if (d.statut === 'En attente') {
+    body += '<button class="btn btn-primary" onclick="validerElectro(&quot;' + d.num + '&quot;);closeModal()">✅ Valider</button>';
+    body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="refuserElectro(&quot;' + d.num + '&quot;);closeModal()">❌ Refuser</button>';
+  }
+  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerElectro(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer l\'inscription</button>';
+  body += '</div>';
+  document.getElementById('modal-title').textContent = 'Inscription Électroménagers ' + d.num;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function exporterExcelElectro() {
+  if (!electro.length) { alert('Aucune inscription à exporter.'); return; }
+  var data = electro.map(function(d){
+    return {
+      'N° Inscription': d.num,
+      'Saison': getAnnee(d),
+      'Date': d.date,
+      'Statut': d.statut,
+      'Nom': d.nom,
+      'Prénom': d.prenom,
+      'Matricule': d.mat,
+      'Téléphone': d.tel,
+      'Service': d.service || '',
+      'Appareil': d.article || '',
+      'Date validation': d.dateValidation || ''
+    };
+  });
+  var ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:20},{wch:18},{wch:16}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Electromenagers');
+  var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
+  XLSX.writeFile(wb, 'SCHB_Inscriptions_Electromenagers_' + dateExp + '.xlsx');
+}
+
+function toggleSaisonElectro() {
+  var nouvelEtat = !saisonElectroOuverte;
+  if (typeof window.fbSetSaison === 'function') {
+    window.fbSetSaison('electroOuverte', nouvelEtat).catch(function(err){
+      alert("Impossible de modifier l'état des inscriptions (Électroménagers) : " + (err && err.message || 'erreur inconnue'));
+    });
+  } else {
+    saisonElectroOuverte = nouvelEtat;
+    refreshBoutonSaison('electroOuverte', saisonElectroOuverte);
+    appliquerEtatSaisonPublic(saisonElectroOuverte, 'electro-saison-fermee', 'electro-form-wrap');
+  }
+}
+
+function renderStatsLoisirs() {
+  var el = document.getElementById('loisirs-stats');
+  if (!el) return;
+  var total = loisirs.length;
+  var att = loisirs.filter(function(d){ return d.statut==='En attente'; }).length;
+  var val = loisirs.filter(wasValide).length;
+  var ref = loisirs.filter(function(d){ return d.statut==='Refusé'; }).length;
+  var clo = loisirs.filter(clotureSansValidation).length;
+  el.innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
+    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + att + '</div><div class="stat-lbl">En attente</div></div>' +
+    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + val + '</div><div class="stat-lbl">Validées</div></div>' +
+    '<div class="stat-card" style="border-color:var(--rouge);"><div class="stat-num" style="color:var(--rouge);">' + ref + '</div><div class="stat-lbl">Refusées</div></div>' +
+    '<div class="stat-card" style="border-color:#334155;"><div class="stat-num" style="color:#334155;">' + clo + '</div><div class="stat-lbl">Clôturées</div></div>';
+}
+
+function renderTableauLoisirs() {
+  remplirSelectAnnees('filter-annee-loisirs', loisirs);
+  var searchEl = document.getElementById('filter-search-loisirs');
+  var statusEl = document.getElementById('filter-status-loisirs');
+  var anneeEl = document.getElementById('filter-annee-loisirs');
+  var choixEl = document.getElementById('filter-choix-loisirs');
+  var tbody = document.getElementById('tbody-loisirs');
+  if (!searchEl || !statusEl || !tbody) return;
+  var q = (searchEl.value || '').toLowerCase();
+  var st = statusEl.value || '';
+  var an = (anneeEl && anneeEl.value) || '';
+  var ch = (choixEl && choixEl.value) || '';
+  var filtered = triRecent(loisirs).filter(function(d){
+    var matchQ = !q || (d.nom+d.prenom+d.mat+(d.activite||'')+(d.nbPers||'')).toLowerCase().indexOf(q) >= 0;
+    var matchSt = !st || d.statut === st;
+    var matchAn = !an || String(getAnnee(d)) === an;
+    var matchCh = !ch || d.activite === ch;
+    return matchQ && matchSt && matchAn && matchCh;
+  });
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#7A6F58;padding:24px;">Aucune inscription trouvée</td></tr>'; return;
+  }
+  var rows = '';
+  filtered.forEach(function(d) {
+    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+    rows += '<tr>';
+    rows += '<td><strong>' + esc(d.num) + '</strong></td>';
+    rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
+    rows += '<td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td>';
+    rows += '<td>' + esc(d.mat) + '</td>';
+    rows += '<td>' + esc(d.activite) + '</td>';
+    rows += '<td>' + esc(d.nbPers) + '</td>';
+    rows += '<td>' + esc(getAnnee(d)) + '</td>';
+    rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
+    rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+    rows += '<button class="btn-view-sm" onclick="voirDetailLoisirs(&quot;' + d.num + '&quot;)">👁 Voir</button>';
+    if (d.statut === 'En attente') {
+      rows += '<button class="btn-success-sm" onclick="validerLoisirs(&quot;' + d.num + '&quot;)">✅ Valider</button>';
+      rows += '<button class="btn-danger-sm" onclick="refuserLoisirs(&quot;' + d.num + '&quot;)">❌ Refuser</button>';
+    }
+    rows += '<button class="btn-del-sm" onclick="supprimerLoisirs(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
+    rows += '</div></td></tr>';
+  });
+  tbody.innerHTML = rows;
+}
+
+function validerLoisirs(num) {
+  var d = loisirs.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Valider l'inscription " + num + ' ?')) return;
+  d.statut = 'Validé';
+  d.dateValidation = new Date().toLocaleDateString('fr-DZ');
+  persistLoisirsLocal(d);
+  renderTableauLoisirs(); renderStatsLoisirs();
+  if (typeof window.fbUpdateLoisirs === 'function') {
+    window.fbUpdateLoisirs(num, { statut: d.statut, dateValidation: d.dateValidation }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (loisirs) :', err); });
+  }
+}
+
+function refuserLoisirs(num) {
+  var d = loisirs.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Refuser l'inscription " + num + ' ?')) return;
+  d.statut = 'Refusé';
+  persistLoisirsLocal(d);
+  renderTableauLoisirs(); renderStatsLoisirs();
+  if (typeof window.fbUpdateLoisirs === 'function') {
+    window.fbUpdateLoisirs(num, { statut: 'Refusé' }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (loisirs) :', err); });
+  }
+}
+
+function supprimerLoisirs(num) {
+  var d = loisirs.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Voulez-vous vraiment supprimer définitivement l'inscription " + num + ' (' + d.nom + ' ' + d.prenom + ') ? Cette action est irréversible.')) return;
+  loisirs = loisirs.filter(function(x){ return x.num !== num; });
+  retirerLoisirsLocal(num);
+  marquerLoisirsSupprime(num);
+  renderTableauLoisirs(); renderStatsLoisirs();
+  if (typeof window.fbDeleteLoisirs === 'function') {
+    window.fbDeleteLoisirs(num, d.trackingCode || '')
+      .catch(function(err){
+        console.warn('Synchronisation Firebase échouée (loisirs) :', err);
+        alert("L'inscription a bien été supprimée de votre affichage, mais la suppression n'a pas pu être synchronisée avec la base en ligne (règles Firebase manquantes ou insuffisantes pour le chemin 'loisirs'). Pensez à vérifier/ajouter les règles pour ce chemin dans la console Firebase.");
+      });
+  }
+}
+
+function voirDetailLoisirs(num) {
+  var d = loisirs.find(function(x){ return x.num === num; });
+  if (!d) return;
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+  var body = '<div class="detail-grid">';
+  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Saison</div><div class="detail-val">' + esc(getAnnee(d)) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Téléphone</div><div class="detail-val">' + esc(d.tel) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Activité</div><div class="detail-val">' + esc(d.activite) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Nombre de personnes</div><div class="detail-val">' + esc(d.nbPers) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Code de suivi</div><div class="detail-val" style="font-family:monospace;">' + esc(d.trackingCode || '—') + '</div></div>';
+  body += '</div>';
+  body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
+  if (d.statut === 'En attente') {
+    body += '<button class="btn btn-primary" onclick="validerLoisirs(&quot;' + d.num + '&quot;);closeModal()">✅ Valider</button>';
+    body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="refuserLoisirs(&quot;' + d.num + '&quot;);closeModal()">❌ Refuser</button>';
+  }
+  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerLoisirs(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer l\'inscription</button>';
+  body += '</div>';
+  document.getElementById('modal-title').textContent = 'Inscription Loisirs ' + d.num;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function exporterExcelLoisirs() {
+  if (!loisirs.length) { alert('Aucune inscription à exporter.'); return; }
+  var data = loisirs.map(function(d){
+    return {
+      'N° Inscription': d.num,
+      'Saison': getAnnee(d),
+      'Date': d.date,
+      'Statut': d.statut,
+      'Nom': d.nom,
+      'Prénom': d.prenom,
+      'Matricule': d.mat,
+      'Téléphone': d.tel,
+      'Service': d.service || '',
+      'Activité': d.activite || '',
+      'Nb personnes': d.nbPers || '',
+      'Date validation': d.dateValidation || ''
+    };
+  });
+  var ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:20},{wch:18},{wch:12},{wch:16}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Loisirs');
+  var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
+  XLSX.writeFile(wb, 'SCHB_Inscriptions_Loisirs_' + dateExp + '.xlsx');
+}
+
+function toggleSaisonLoisirs() {
+  var nouvelEtat = !saisonLoisirsOuverte;
+  if (typeof window.fbSetSaison === 'function') {
+    window.fbSetSaison('loisirsOuverte', nouvelEtat).catch(function(err){
+      alert("Impossible de modifier l'état des inscriptions (Loisirs) : " + (err && err.message || 'erreur inconnue'));
+    });
+  } else {
+    saisonLoisirsOuverte = nouvelEtat;
+    refreshBoutonSaison('loisirsOuverte', saisonLoisirsOuverte);
+    appliquerEtatSaisonPublic(saisonLoisirsOuverte, 'loisirs-saison-fermee', 'loisirs-form-wrap');
+  }
+}
+
+function renderStatsCreches() {
+  var el = document.getElementById('creches-stats');
+  if (!el) return;
+  var total = creches.length;
+  var att = creches.filter(function(d){ return d.statut==='En attente'; }).length;
+  var val = creches.filter(wasValide).length;
+  var ref = creches.filter(function(d){ return d.statut==='Refusé'; }).length;
+  var clo = creches.filter(clotureSansValidation).length;
+  el.innerHTML =
+    '<div class="stat-card"><div class="stat-num">' + total + '</div><div class="stat-lbl">Total</div></div>' +
+    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + att + '</div><div class="stat-lbl">En attente</div></div>' +
+    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + val + '</div><div class="stat-lbl">Validées</div></div>' +
+    '<div class="stat-card" style="border-color:var(--rouge);"><div class="stat-num" style="color:var(--rouge);">' + ref + '</div><div class="stat-lbl">Refusées</div></div>' +
+    '<div class="stat-card" style="border-color:#334155;"><div class="stat-num" style="color:#334155;">' + clo + '</div><div class="stat-lbl">Clôturées</div></div>';
+}
+
+function renderTableauCreches() {
+  remplirSelectAnnees('filter-annee-creches', creches);
+  var searchEl = document.getElementById('filter-search-creches');
+  var statusEl = document.getElementById('filter-status-creches');
+  var anneeEl = document.getElementById('filter-annee-creches');
+  var choixEl = document.getElementById('filter-choix-creches');
+  var tbody = document.getElementById('tbody-creches');
+  if (!searchEl || !statusEl || !tbody) return;
+  var q = (searchEl.value || '').toLowerCase();
+  var st = statusEl.value || '';
+  var an = (anneeEl && anneeEl.value) || '';
+  var ch = (choixEl && choixEl.value) || '';
+  var filtered = triRecent(creches).filter(function(d){
+    var matchQ = !q || (d.nom+d.prenom+d.mat+(d.accueil||'')+(d.enfNom||'')+(d.enfPrenom||'')+(d.enfNaissance||'')).toLowerCase().indexOf(q) >= 0;
+    var matchSt = !st || d.statut === st;
+    var matchAn = !an || String(getAnnee(d)) === an;
+    var matchCh = !ch || d.accueil === ch;
+    return matchQ && matchSt && matchAn && matchCh;
+  });
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#7A6F58;padding:24px;">Aucune inscription trouvée</td></tr>'; return;
+  }
+  var rows = '';
+  filtered.forEach(function(d) {
+    var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+    rows += '<tr>';
+    rows += '<td><strong>' + esc(d.num) + '</strong></td>';
+    rows += '<td style="font-size:12px;">' + esc(d.date) + '</td>';
+    rows += '<td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td>';
+    rows += '<td>' + esc(d.mat) + '</td>';
+    rows += '<td>' + esc(d.accueil) + '</td>';
+    rows += '<td>' + esc(d.enfNom) + ' ' + esc(d.enfPrenom) + '</td>';
+    rows += '<td>' + esc(getAnnee(d)) + '</td>';
+    rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
+    rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
+    rows += '<button class="btn-view-sm" onclick="voirDetailCreches(&quot;' + d.num + '&quot;)">👁 Voir</button>';
+    if (d.statut === 'En attente') {
+      rows += '<button class="btn-success-sm" onclick="validerCreches(&quot;' + d.num + '&quot;)">✅ Valider</button>';
+      rows += '<button class="btn-danger-sm" onclick="refuserCreches(&quot;' + d.num + '&quot;)">❌ Refuser</button>';
+    }
+    rows += '<button class="btn-del-sm" onclick="supprimerCreches(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
+    rows += '</div></td></tr>';
+  });
+  tbody.innerHTML = rows;
+}
+
+function validerCreches(num) {
+  var d = creches.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Valider l'inscription " + num + ' ?')) return;
+  d.statut = 'Validé';
+  d.dateValidation = new Date().toLocaleDateString('fr-DZ');
+  persistCrechesLocal(d);
+  renderTableauCreches(); renderStatsCreches();
+  if (typeof window.fbUpdateCreches === 'function') {
+    window.fbUpdateCreches(num, { statut: d.statut, dateValidation: d.dateValidation }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (creches) :', err); });
+  }
+}
+
+function refuserCreches(num) {
+  var d = creches.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Refuser l'inscription " + num + ' ?')) return;
+  d.statut = 'Refusé';
+  persistCrechesLocal(d);
+  renderTableauCreches(); renderStatsCreches();
+  if (typeof window.fbUpdateCreches === 'function') {
+    window.fbUpdateCreches(num, { statut: 'Refusé' }, d.trackingCode || '')
+      .catch(function(err){ console.warn('Synchronisation Firebase échouée (creches) :', err); });
+  }
+}
+
+function supprimerCreches(num) {
+  var d = creches.find(function(x){ return x.num === num; });
+  if (!d) return;
+  if (!confirm("Voulez-vous vraiment supprimer définitivement l'inscription " + num + ' (' + d.nom + ' ' + d.prenom + ') ? Cette action est irréversible.')) return;
+  creches = creches.filter(function(x){ return x.num !== num; });
+  retirerCrechesLocal(num);
+  marquerCrechesSupprime(num);
+  renderTableauCreches(); renderStatsCreches();
+  if (typeof window.fbDeleteCreches === 'function') {
+    window.fbDeleteCreches(num, d.trackingCode || '')
+      .catch(function(err){
+        console.warn('Synchronisation Firebase échouée (creches) :', err);
+        alert("L'inscription a bien été supprimée de votre affichage, mais la suppression n'a pas pu être synchronisée avec la base en ligne (règles Firebase manquantes ou insuffisantes pour le chemin 'creches'). Pensez à vérifier/ajouter les règles pour ce chemin dans la console Firebase.");
+      });
+  }
+}
+
+function voirDetailCreches(num) {
+  var d = creches.find(function(x){ return x.num === num; });
+  if (!d) return;
+  var bc = d.statut === 'Validé' ? 'b-ok' : d.statut === 'Refusé' ? 'b-rej' : d.statut === 'Clôturé' ? 'b-clo' : 'b-att';
+  var body = '<div class="detail-grid">';
+  body += '<div class="detail-item"><div class="detail-lbl">Statut</div><div class="detail-val"><span class="badge ' + bc + '">' + esc(d.statut) + '</span></div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Saison</div><div class="detail-val">' + esc(getAnnee(d)) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Téléphone</div><div class="detail-val">' + esc(d.tel) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service||'—') + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Accueil</div><div class="detail-val">' + esc(d.accueil) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Enfant</div><div class="detail-val">' + esc(d.enfNom) + ' ' + esc(d.enfPrenom) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date de naissance</div><div class="detail-val">' + esc(d.enfNaissance) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Code de suivi</div><div class="detail-val" style="font-family:monospace;">' + esc(d.trackingCode || '—') + '</div></div>';
+  body += '</div>';
+  body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
+  if (d.statut === 'En attente') {
+    body += '<button class="btn btn-primary" onclick="validerCreches(&quot;' + d.num + '&quot;);closeModal()">✅ Valider</button>';
+    body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="refuserCreches(&quot;' + d.num + '&quot;);closeModal()">❌ Refuser</button>';
+  }
+  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerCreches(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer l\'inscription</button>';
+  body += '</div>';
+  document.getElementById('modal-title').textContent = 'Inscription Crèches ' + d.num;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function exporterExcelCreches() {
+  if (!creches.length) { alert('Aucune inscription à exporter.'); return; }
+  var data = creches.map(function(d){
+    return {
+      'N° Inscription': d.num,
+      'Saison': getAnnee(d),
+      'Date': d.date,
+      'Statut': d.statut,
+      'Nom': d.nom,
+      'Prénom': d.prenom,
+      'Matricule': d.mat,
+      'Téléphone': d.tel,
+      'Service': d.service || '',
+      'Accueil': d.accueil || '',
+      'Nom enfant': d.enfNom || '',
+      'Prénom enfant': d.enfPrenom || '',
+      'Naissance enfant': d.enfNaissance || '',
+      'Date validation': d.dateValidation || ''
+    };
+  });
+  var ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:20},{wch:18},{wch:16},{wch:16},{wch:16},{wch:16}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Creches');
+  var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
+  XLSX.writeFile(wb, 'SCHB_Inscriptions_Creches_' + dateExp + '.xlsx');
+}
+
+function toggleSaisonCreches() {
+  var nouvelEtat = !saisonCrechesOuverte;
+  if (typeof window.fbSetSaison === 'function') {
+    window.fbSetSaison('crechesOuverte', nouvelEtat).catch(function(err){
+      alert("Impossible de modifier l'état des inscriptions (Crèches) : " + (err && err.message || 'erreur inconnue'));
+    });
+  } else {
+    saisonCrechesOuverte = nouvelEtat;
+    refreshBoutonSaison('crechesOuverte', saisonCrechesOuverte);
+    appliquerEtatSaisonPublic(saisonCrechesOuverte, 'creches-saison-fermee', 'creches-form-wrap');
+  }
+}
+
+
 // ===== SAISONS (ouverture/fermeture par l'admin : Omra + Sport & Travail) =====
 function refreshBoutonSaison(cle, ouverte) {
-  var idBtn = cle === 'omraOuverte' ? 'btn-toggle-saison-omra' : 'btn-toggle-saison-sport';
-  var idEtat = cle === 'omraOuverte' ? 'omra-saison-etat' : 'sport-saison-etat';
+  var base = String(cle).replace(/Ouverte$/, '');
+  var idBtn = 'btn-toggle-saison-' + base;
+  var idEtat = base + '-saison-etat';
   var btn = document.getElementById(idBtn);
   var etat = document.getElementById(idEtat);
   if (btn) {
@@ -5547,6 +7102,21 @@ function demarrerEcouteSaisonsPubliques() {
     saisonSportOuverte = ouverte;
     appliquerEtatSaisonPublic(ouverte, 'sport-saison-fermee', 'sport-form-wrap');
     refreshBoutonSaison('sportOuverte', ouverte);
+  });
+  window.fbListenSaison('electroOuverte', function(ouverte) {
+    saisonElectroOuverte = ouverte;
+    appliquerEtatSaisonPublic(ouverte, 'electro-saison-fermee', 'electro-form-wrap');
+    refreshBoutonSaison('electroOuverte', ouverte);
+  });
+  window.fbListenSaison('loisirsOuverte', function(ouverte) {
+    saisonLoisirsOuverte = ouverte;
+    appliquerEtatSaisonPublic(ouverte, 'loisirs-saison-fermee', 'loisirs-form-wrap');
+    refreshBoutonSaison('loisirsOuverte', ouverte);
+  });
+  window.fbListenSaison('crechesOuverte', function(ouverte) {
+    saisonCrechesOuverte = ouverte;
+    appliquerEtatSaisonPublic(ouverte, 'creches-saison-fermee', 'creches-form-wrap');
+    refreshBoutonSaison('crechesOuverte', ouverte);
   });
   if (typeof window.fbListenConventions === 'function') {
     window.fbListenConventions(function(etat) {
@@ -6773,6 +8343,39 @@ var I18N_AR = {
   'hdr.badge': 'لجنة المشاركة',
   'hdr.credit': 'من إنجاز السيد خلالي يعقوب',
   'nav.accueil': '🏠 الرئيسية',
+  'nav.electro': '🔌 الأجهزة الكهرومنزلية',
+  'admtab.electro': '🔌 الأجهزة الكهرومنزلية',
+  'accueil.card.electro.title': 'الأجهزة الكهرومنزلية',
+  'accueil.card.electro.desc': 'سجّل للحصول على جهاز كهرومنزلي عندما يكون التسجيل مفتوحا.',
+  'electro.title': '🔌 التسجيل — الأجهزة الكهرومنزلية',
+  'electro.desc': 'سجّل للاستفادة من جهاز كهرومنزلي تقترحه لجنة المشاركة. لا يمكن التسجيل إلا عند فتحه من طرف المسؤول.',
+  'electro.fermee.desc': 'لم تفتح لجنة المشاركة التسجيل بعد. عاود زيارة هذه الصفحة عند الإعلان عن فتح التسجيل.',
+  'electro.h.detail': '🔌 الجهاز الكهرومنزلي',
+  'electro.choix': 'الجهاز المطلوب <span class="req">*</span>',
+  'nav.loisirs': '🎭 الترفيه',
+  'admtab.loisirs': '🎭 الترفيه',
+  'accueil.card.loisirs.title': 'الترفيه',
+  'accueil.card.loisirs.desc': 'سجّل في الرحلات والخرجات وأنشطة الترفيه عندما يكون التسجيل مفتوحا.',
+  'loisirs.title': '🎭 التسجيل — الترفيه',
+  'loisirs.desc': 'سجّل في أنشطة الترفيه (رحلات، خرجات، مخيمات، عروض…) التي تنظمها لجنة المشاركة. لا يمكن التسجيل إلا عند فتحه من طرف المسؤول.',
+  'loisirs.fermee.desc': 'لم تفتح لجنة المشاركة التسجيل بعد. عاود زيارة هذه الصفحة عند الإعلان عن فتح التسجيل.',
+  'loisirs.h.detail': '🎭 نشاط الترفيه',
+  'loisirs.choix': 'النشاط المطلوب <span class="req">*</span>',
+  'loisirs.nbPers': 'عدد الأشخاص (بما فيهم أنت) <span class="req">*</span>',
+  'nav.creches': '👶 دور الحضانة',
+  'admtab.creches': '👶 دور الحضانة',
+  'accueil.card.creches.title': 'دور الحضانة',
+  'accueil.card.creches.desc': 'سجّل طفلك في دار الحضانة عندما يكون التسجيل مفتوحا.',
+  'creches.title': '👶 التسجيل — دور الحضانة',
+  'creches.desc': 'سجّل طفلك في دار الحضانة عن طريق لجنة المشاركة. لا يمكن التسجيل إلا عند فتحه من طرف المسؤول.',
+  'creches.fermee.desc': 'لم تفتح لجنة المشاركة التسجيل بعد. عاود زيارة هذه الصفحة عند الإعلان عن فتح التسجيل.',
+  'creches.h.detail': '👶 الطفل ونمط الاستقبال',
+  'creches.choix': 'نمط الاستقبال المطلوب <span class="req">*</span>',
+  'creches.enfNom': 'لقب الطفل <span class="req">*</span>',
+  'creches.enfPrenom': 'اسم الطفل <span class="req">*</span>',
+  'creches.enfNaissance': 'تاريخ ميلاد الطفل <span class="req">*</span>',
+  'sport.saison': 'الموسم / السنة <span class="req">*</span>',
+  'sport.h.adherent': '👤 معلومات العامل',
   'nav.demande': '📋 التكفل الطبي',
   'nav.livre': '📚 الكتاب المدرسي',
   'nav.pret': '💰 القرض الاجتماعي',
@@ -7131,6 +8734,9 @@ function vgAncien(arr) {
   if (min === null) return null;
   return Math.max(0, Math.floor((Date.now() - min) / 86400000));
 }
+function vgSaisonRow(emo, lbl, ouverte, tab) {
+  return '<div class="vg-saison"><span>' + emo + ' ' + lbl + '</span><span>' + (ouverte ? '<span class="badge b-ok">🔓 ' + vgT('Ouverte','مفتوحة') + '</span>' : '<span class="badge b-clo">🔒 ' + vgT('Fermée','مغلقة') + '</span>') + ' <button class="btn-view-sm" onclick="vgGo(\'' + tab + '\')">' + vgT('Gérer','تسيير') + '</button></span></div>';
+}
 function vgGo(tab, selId, val) {
   showAdminTab(tab);
   if (selId) {
@@ -7179,7 +8785,16 @@ function renderVueGlobale() {
       d:vgT("Inscriptions à la campagne annuelle. Les places sont attribuées par tirage au sort parmi les dossiers validés avec bon reçu.","التسجيلات في الحملة السنوية. تُمنح الأماكن بالقرعة بين الملفات المقبولة التي سُلّم بونها.") },
     { key:'sport', tab:'sport', sel:'filter-status-sport', ic:'⚽', bg:'#E8F5E9',
       t:vgT('Sport & Travail','الرياضة والعمل'), arr:vgAnneeFiltre(sport, an),
-      d:vgT("Inscriptions aux disciplines sportives (football à 7, échecs, pétanque…) quand la saison est ouverte.","التسجيلات في الرياضات (كرة قدم، شطرنج، بيتانك…) عند فتح الموسم.") }
+      d:vgT("Inscriptions aux disciplines sportives (football à 7, échecs, pétanque…) quand la saison est ouverte.","التسجيلات في الرياضات (كرة قدم، شطرنج، بيتانك…) عند فتح الموسم.") },
+    { key:'electro', tab:'electro', sel:'filter-status-electro', ic:'🔌', bg:'#FFF3E0',
+      t:vgT('Électroménagers','الأجهزة الكهرومنزلية'), arr:vgAnneeFiltre(electro, an),
+      d:vgT("Inscriptions pour les appareils électroménagers quand elles sont ouvertes.","التسجيلات الخاصة بالأجهزة الكهرومنزلية عند فتحها.") },
+    { key:'loisirs', tab:'loisirs', sel:'filter-status-loisirs', ic:'🎭', bg:'#FCE4EC',
+      t:vgT('Loisirs','الترفيه'), arr:vgAnneeFiltre(loisirs, an),
+      d:vgT("Inscriptions aux activités de loisirs (voyages, excursions, colonies…) quand elles sont ouvertes.","التسجيلات في أنشطة الترفيه (رحلات، خرجات، مخيمات…) عند فتحها.") },
+    { key:'creches', tab:'creches', sel:'filter-status-creches', ic:'👶', bg:'#E1F5FE',
+      t:vgT('Crèches','دور الحضانة'), arr:vgAnneeFiltre(creches, an),
+      d:vgT("Inscriptions des enfants en crèche quand elles sont ouvertes.","تسجيلات الأطفال في دور الحضانة عند فتحها.") }
   ];
   acts.forEach(function(a){ a.s = vgStat(a.arr); });
 
@@ -7196,7 +8811,7 @@ function renderVueGlobale() {
   var montantPret = vgAnneeFiltre(prets, an).filter(wasValide).reduce(function(s,d){ return s + (d.montant||0); }, 0);
 
   // années disponibles
-  var all = [].concat(demandes, livres, prets, omra, sport, idees, doleances);
+  var all = [].concat(demandes, livres, prets, omra, sport, electro, loisirs, creches, idees, doleances);
   var years = anneesDisponibles(all);
   var h = '';
 
@@ -7257,6 +8872,13 @@ function renderVueGlobale() {
       a.arr.forEach(function(d){ var k = d.discipline || '—'; byD[k] = (byD[k] || 0) + 1; });
       var lst = Object.keys(byD).sort(function(x,y){ return byD[y] - byD[x]; }).slice(0, 4).map(function(k){ return esc(k) + ' <b>' + byD[k] + '</b>'; }).join(' · ');
       extra = (saisonSportOuverte ? '🔓 ' + vgT('Saison ouverte','الموسم مفتوح') : '🔒 ' + vgT('Saison fermée','الموسم مغلق')) + (lst ? '<br>🏅 ' + lst : '');
+    } else if (a.key === 'electro' || a.key === 'loisirs' || a.key === 'creches') {
+      var _ouv = a.key === 'electro' ? saisonElectroOuverte : a.key === 'loisirs' ? saisonLoisirsOuverte : saisonCrechesOuverte;
+      var _ck = a.key === 'electro' ? 'article' : a.key === 'loisirs' ? 'activite' : 'accueil';
+      var _by = {};
+      a.arr.forEach(function(d){ var k = d[_ck] || '—'; _by[k] = (_by[k] || 0) + 1; });
+      var _lst = Object.keys(_by).sort(function(x,y){ return _by[y] - _by[x]; }).slice(0, 4).map(function(k){ return esc(k) + ' <b>' + _by[k] + '</b>'; }).join(' · ');
+      extra = (_ouv ? '🔓 ' + vgT('Inscriptions ouvertes','التسجيلات مفتوحة') : '🔒 ' + vgT('Inscriptions fermées','التسجيلات مغلقة')) + (_lst ? '<br>📊 ' + _lst : '');
     } else {
       var par = {};
       a.arr.forEach(function(d){ var k = d.etab || '—'; par[k] = (par[k] || 0) + 1; });
@@ -7275,7 +8897,7 @@ function renderVueGlobale() {
   // --- évolution mensuelle + saisons / communication
   var yChart = an ? Number(an) : new Date().getFullYear();
   var mois = [0,0,0,0,0,0,0,0,0,0,0,0];
-  [].concat(demandes, livres, prets, omra, sport).forEach(function(d){
+  [].concat(demandes, livres, prets, omra, sport, electro, loisirs, creches).forEach(function(d){
     if (getAnnee(d) !== yChart) return;
     var m = getMois(d); if (m >= 0) mois[m]++;
   });
@@ -7288,6 +8910,9 @@ function renderVueGlobale() {
   h += '<div class="vg-box"><h4>' + vgT("Saisons d'inscription",'مواسم التسجيل') + '</h4>' +
     '<div class="vg-saison"><span>🕋 Omra</span><span>' + (saisonOmraOuverte ? '<span class="badge b-ok">🔓 ' + vgT('Ouverte','مفتوحة') + '</span>' : '<span class="badge b-clo">🔒 ' + vgT('Fermée','مغلقة') + '</span>') + ' <button class="btn-view-sm" onclick="vgGo(\'omra\')">' + vgT('Gérer','تسيير') + '</button></span></div>' +
     '<div class="vg-saison"><span>⚽ Sport &amp; Travail</span><span>' + (saisonSportOuverte ? '<span class="badge b-ok">🔓 ' + vgT('Ouverte','مفتوحة') + '</span>' : '<span class="badge b-clo">🔒 ' + vgT('Fermée','مغلقة') + '</span>') + ' <button class="btn-view-sm" onclick="vgGo(\'sport\')">' + vgT('Gérer','تسيير') + '</button></span></div>' +
+    vgSaisonRow('🔌', 'Électroménagers', saisonElectroOuverte, 'electro') +
+    vgSaisonRow('🎭', 'Loisirs', saisonLoisirsOuverte, 'loisirs') +
+    vgSaisonRow('👶', 'Crèches', saisonCrechesOuverte, 'creches') +
     '<h4 style="margin-top:16px;">' + vgT('Participation & communication','المشاركة والتواصل') + '</h4>' +
     '<div class="vg-line"><span>📬 ' + vgT('Idées reçues','الأفكار الواردة') + '</span><b>' + ideesF.length + ' <small style="font-weight:500;color:#7A6F58;">(' + idNouv + ' ' + vgT('nouvelles','جديدة') + ')</small></b></div>' +
     '<div class="vg-line"><span>📝 ' + vgT('Doléances reçues','التظلمات الواردة') + '</span><b>' + dolF.length + ' <small style="font-weight:500;color:#7A6F58;">(' + dolNouv + ' ' + vgT('nouvelles','جديدة') + ', ' + dolF.filter(function(d){ return d.statut === 'Traité'; }).length + ' ' + vgT('traitées','معالجة') + ')</small></b></div>' +
@@ -7303,6 +8928,9 @@ function renderVueGlobale() {
   pousse(prets, vgT('Prêt social','القرض'), function(d){ return d.nom + ' ' + d.prenom + ' — ' + (d.montant || 0).toLocaleString('fr-DZ') + ' DA'; });
   pousse(omra, 'Omra', function(d){ return d.nom + ' ' + d.prenom + ' — ' + vgT('pèlerin : ','المعتمر: ') + (d.pnom || '') + ' ' + (d.pprenom || ''); });
   pousse(sport, vgT('Sport','الرياضة'), function(d){ return d.nom + ' ' + d.prenom + ' — ' + (d.discipline || ''); });
+  pousse(electro, vgT('Électroménagers','الأجهزة الكهرومنزلية'), function(d){ return d.nom + ' ' + d.prenom + ' — ' + (d.article || ''); });
+  pousse(loisirs, vgT('Loisirs','الترفيه'), function(d){ return d.nom + ' ' + d.prenom + ' — ' + (d.activite || ''); });
+  pousse(creches, vgT('Crèches','دور الحضانة'), function(d){ return d.nom + ' ' + d.prenom + ' — ' + (d.enfNom || '') + ' ' + (d.enfPrenom || ''); });
   pousse(idees, vgT('Idée','فكرة'), function(d){ return d.nom + ' ' + d.prenom; });
   pousse(doleances, vgT('Doléance','تظلم'), function(d){ return d.nom + ' ' + d.prenom + ' — ' + (d.objet || ''); });
   recents = recents.filter(function(r){ return !an || (r.dt && String(new Date(r.dt).getFullYear()) === an); })
@@ -7334,7 +8962,7 @@ function vgSchedule() {
     if (tab && tab.style.display !== 'none') { try { renderVueGlobale(); } catch(e) { console.warn(e); } }
   }, 150);
 }
-['renderRapportStats','renderStats','renderStatsPret','renderStatsOmra','renderStatsSport','renderStatsIdees','renderStatsDoleances','renderTableauEffectifs','refreshBoutonSaison','renderAdminAnnonces'].forEach(function(nom){
+['renderRapportStats','renderStats','renderStatsPret','renderStatsOmra','renderStatsSport','renderStatsElectro','renderStatsLoisirs','renderStatsCreches','renderStatsIdees','renderStatsDoleances','renderTableauEffectifs','refreshBoutonSaison','renderAdminAnnonces'].forEach(function(nom){
   var orig = window[nom];
   if (typeof orig !== 'function') return;
   window[nom] = function() { var r = orig.apply(this, arguments); vgSchedule(); return r; };
