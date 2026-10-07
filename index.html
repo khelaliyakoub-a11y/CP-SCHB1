@@ -1063,9 +1063,39 @@ footer strong{color:var(--or-clair);}
 .vg-saison{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px dashed var(--ligne);font-size:13px;}
 .vg-saison:last-child{border-bottom:none;}
 @media(max-width:600px){.btn-admin-tab{padding:9px 12px;font-size:12.5px;}}
+
+/* ===== THÈMES PAR RUBRIQUE : l'apparence change selon la rubrique ouverte ===== */
+html{transition:background-color .4s ease;}
+#theme-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .5s ease;
+  background-image:var(--page-bg,none);background-size:var(--page-bg-size,cover);background-position:center;background-repeat:var(--page-bg-repeat,no-repeat);}
+html[data-theme] #theme-bg{opacity:var(--page-bg-opacity,.14);}
+html[data-theme] body{background:transparent;}
+html[data-theme] .vue.active > .sec-hdr:first-child{
+  position:relative;overflow:hidden;border-radius:20px;padding:38px 34px;margin-bottom:26px;
+  background:var(--hero-bg);background-size:cover;background-position:center;
+  box-shadow:0 10px 30px rgba(0,0,0,.18);min-height:150px;display:flex;flex-direction:column;justify-content:center;
+}
+html[data-theme] .vue.active > .sec-hdr:first-child::after{
+  content:var(--emo);position:absolute;right:26px;top:50%;transform:translateY(-50%);
+  font-size:92px;line-height:1;opacity:.9;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35));pointer-events:none;
+}
+html[dir="rtl"][data-theme] .vue.active > .sec-hdr:first-child::after{right:auto;left:26px;}
+html[data-theme] .vue.active > .sec-hdr:first-child .eyebrow{color:var(--or-clair);}
+html[data-theme] .vue.active > .sec-hdr:first-child .sec-title,
+html[data-theme] .vue.active > .sec-hdr:first-child .sec-desc{color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.45);}
+html[data-theme] .vue.active > .sec-hdr:first-child .sec-title{padding-inline-end:110px;}
+html[data-theme] .vue.active > .sec-hdr:first-child .sec-desc{padding-inline-end:110px;}
+html[data-theme] .panneau{border-top:4px solid var(--or);}
+@media(max-width:640px){
+  html[data-theme] .vue.active > .sec-hdr:first-child{padding:26px 20px;}
+  html[data-theme] .vue.active > .sec-hdr:first-child::after{font-size:54px;right:14px;top:18px;transform:none;}
+  html[data-theme] .vue.active > .sec-hdr:first-child .sec-title,
+  html[data-theme] .vue.active > .sec-hdr:first-child .sec-desc{padding-inline-end:56px;}
+}
 </style>
 </head>
 <body>
+<div id="theme-bg" aria-hidden="true"></div>
 <div class="bandeau"></div>
 <header>
   <div class="hdr-bg" aria-hidden="true">
@@ -3422,6 +3452,98 @@ function goVue(id) {
   showVue(id, btn);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+
+// ===== THÈMES_RUBRIQUES : chaque rubrique a son ambiance (couleurs, bannière, arrière-plan) =====
+// Pour mettre de VRAIES PHOTOS : indiquez le chemin/URL de l'image dans "photo" (ex: 'images/omra.jpg').
+// Elle sera utilisée comme bannière (avec voile de couleur) et comme arrière-plan léger de la page.
+var THEMES_RUBRIQUES = {
+  demande:   { emo:'🩺', c1:'#0B5C6B', c2:'#2EC4B6', or:'#2EC4B6', orc:'#B8F1EA', creme:'#EEF9F9', creme2:'#D8EEEE', pat:['🩺','💊','❤️','➕'], photo:'' },
+  livre:     { emo:'📚', c1:'#3B2A6B', c2:'#7C5CC4', or:'#F2A93B', orc:'#FBD896', creme:'#F5F2FF', creme2:'#E5DEF7', pat:['📚','✏️','🎒','📖'], photo:'' },
+  pret:      { emo:'💰', c1:'#12355B', c2:'#2F6DA3', or:'#C9A227', orc:'#F1DC8A', creme:'#F6F5EE', creme2:'#E8E4D2', pat:['💰','🪙','🏦','🤝'], photo:'' },
+  omra:      { emo:'🕋', c1:'#06281D', c2:'#147A55', or:'#D4AF37', orc:'#F2DE8C', creme:'#F2F8F0', creme2:'#DDEBD9', pat:['🕋','🕌','🌙','⭐'], photo:'', skyline:true },
+  sport:     { emo:'⚽', c1:'#14532D', c2:'#22A653', or:'#FF7A1A', orc:'#FFC999', creme:'#F0FAF1', creme2:'#D9EEDC', pat:['⚽','🏀','🏃','🏆'], photo:'' },
+  electro:   { emo:'🔌', c1:'#1E3A5F', c2:'#3E73B3', or:'#FFB300', orc:'#FFE199', creme:'#F2F6FB', creme2:'#DEE6F1', pat:['🧺','❄️','📺','🔌'], photo:'' },
+  loisirs:   { emo:'🎭', c1:'#8E1450', c2:'#E0457B', or:'#FFB400', orc:'#FFE08A', creme:'#FFF1F6', creme2:'#F6DCE6', pat:['🎭','🏖️','🎡','🎈'], photo:'' },
+  creches:   { emo:'👶', c1:'#0277BD', c2:'#4FC3F7', or:'#FF8FAB', orc:'#FFD0DC', creme:'#EEF8FF', creme2:'#D6EBF8', pat:['👶','🧸','⭐','☁️'], photo:'' },
+  idees:     { emo:'💡', c1:'#5B4A00', c2:'#C9A400', or:'#FFC400', orc:'#FFE585', creme:'#FFFBE8', creme2:'#F3EBC4', pat:['💡','✨','🧠','🚀'], photo:'' },
+  doleances: { emo:'📢', c1:'#7B1E1E', c2:'#C0504D', or:'#E57373', orc:'#F8C4C4', creme:'#FFF3F2', creme2:'#F3DAD8', pat:['📢','📝','⚖️','🤝'], photo:'' },
+  annonces:  { emo:'📣', c1:'#4A235A', c2:'#8E4FB8', or:'#F2A93B', orc:'#FBD896', creme:'#F8F2FD', creme2:'#E8DAF3', pat:['📣','📰','🗓️','🔔'], photo:'' },
+  suivi:     { emo:'🔎', c1:'#124E66', c2:'#1FA3A3', or:'#00B8B8', orc:'#A8F0F0', creme:'#EEF9FB', creme2:'#D4ECF0', pat:['🔎','📋','✅','⏳'], photo:'' }
+};
+
+function _themeSvgHero(t) {
+  var spots = [[60,70,46],[250,200,34],[430,90,40],[640,215,30],[820,80,44],[980,200,36],[1110,90,32]];
+  var txt = spots.map(function(p,i){
+    return '<text x="'+p[0]+'" y="'+p[1]+'" font-size="'+p[2]+'" opacity=".22">'+t.pat[i % t.pat.length]+'</text>';
+  }).join('');
+  var sky = '';
+  if (t.skyline) {
+    sky = '<g fill="#000" opacity=".38">'
+      + '<rect x="0" y="262" width="1200" height="38"/>'
+      + '<path d="M120 262v-92l9-26 9 26v92z M300 262v-110l9-30 9 30v110z"/>'
+      + '<path d="M470 262v-34a60 60 0 0 1 120 0v34z"/><rect x="527" y="150" width="6" height="40"/>'
+      + '<path d="M700 262v-100l10-28 10 28v100z M900 262v-84l9-24 9 24v84z"/>'
+      + '<path d="M1010 262v-30a46 46 0 0 1 92 0v30z"/>'
+      + '</g>'
+      + '<g fill="#D4AF37" opacity=".75"><path d="M1090 44a26 26 0 1 0 22 40a20 20 0 1 1 -22 -40z"/><circle cx="1128" cy="52" r="3.5"/><circle cx="60" cy="40" r="2.5"/><circle cx="210" cy="64" r="2"/><circle cx="800" cy="38" r="2.5"/></g>';
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid slice">'
+    + '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+t.c1+'"/><stop offset="1" stop-color="'+t.c2+'"/></linearGradient></defs>'
+    + '<rect width="1200" height="300" fill="url(#g)"/>' + txt + sky + '</svg>';
+}
+function _themeSvgPattern(t) {
+  var cells = [[30,50],[110,120],[40,170],[130,40]];
+  var txt = cells.map(function(p,i){ return '<text x="'+p[0]+'" y="'+p[1]+'" font-size="30">'+t.pat[i % t.pat.length]+'</text>'; }).join('');
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="190" height="200" viewBox="0 0 190 200">' + txt + '</svg>';
+}
+function _uri(svg) { return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")'; }
+
+function applyTheme(id) {
+  var root = document.documentElement;
+  var vars = ['--bleu','--bleu2','--or','--or-clair','--creme','--creme2','--hero-bg','--page-bg','--page-bg-size','--page-bg-repeat','--page-bg-opacity','--emo'];
+  var t = THEMES_RUBRIQUES[id];
+  if (!t) {
+    root.removeAttribute('data-theme');
+    vars.forEach(function(v){ root.style.removeProperty(v); });
+    return;
+  }
+  root.setAttribute('data-theme', id);
+  root.style.setProperty('--bleu', t.c1);
+  root.style.setProperty('--bleu2', t.c2);
+  root.style.setProperty('--or', t.or);
+  root.style.setProperty('--or-clair', t.orc);
+  root.style.setProperty('--creme', t.creme);
+  root.style.setProperty('--creme2', t.creme2);
+  root.style.setProperty('--emo', '"' + t.emo + '"');
+  if (t.photo) {
+    var ph = 'url("' + t.photo.replace(/"/g, '%22') + '")';
+    root.style.setProperty('--hero-bg', 'linear-gradient(120deg, ' + t.c1 + 'D9, ' + t.c2 + '8C), ' + ph);
+    root.style.setProperty('--page-bg', ph);
+    root.style.setProperty('--page-bg-size', 'cover');
+    root.style.setProperty('--page-bg-repeat', 'no-repeat');
+    root.style.setProperty('--page-bg-opacity', '.16');
+  } else {
+    root.style.setProperty('--hero-bg', _uri(_themeSvgHero(t)) + ', linear-gradient(120deg, ' + t.c1 + ', ' + t.c2 + ')');
+    root.style.setProperty('--page-bg', _uri(_themeSvgPattern(t)));
+    root.style.setProperty('--page-bg-size', '190px 200px');
+    root.style.setProperty('--page-bg-repeat', 'repeat');
+    root.style.setProperty('--page-bg-opacity', '.13');
+  }
+}
+(function initThemesRubriques() {
+  function current() {
+    var a = document.querySelector('.vue.active');
+    return a ? a.id.replace(/^vue-/, '') : '';
+  }
+  function go() { applyTheme(current()); }
+  function start() {
+    var obs = new MutationObserver(go);
+    document.querySelectorAll('.vue').forEach(function(v){ obs.observe(v, { attributes: true, attributeFilter: ['class'] }); });
+    go();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
 
 // ===== RADIO BENEFICIAIRE =====
 function onBenefChange() {
