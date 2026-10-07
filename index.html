@@ -1092,6 +1092,109 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
   html[data-theme] .vue.active > .sec-hdr:first-child .sec-title,
   html[data-theme] .vue.active > .sec-hdr:first-child .sec-desc{padding-inline-end:56px;}
 }
+
+/* ===== HERO MODERNE (haut de l'accueil) ===== */
+.hero-m{position:relative;overflow:hidden;border-radius:28px;padding:54px 44px 40px;margin-bottom:34px;color:#fff;isolation:isolate;
+  background:linear-gradient(135deg,#071E2D 0%,#0E3A53 48%,#12606E 100%);box-shadow:0 24px 60px rgba(7,30,45,.35);}
+.hero-blob{position:absolute;z-index:-1;border-radius:50%;filter:blur(60px);opacity:.55;animation:heroFloat 14s ease-in-out infinite;}
+.hero-blob.b1{width:380px;height:380px;background:#F2A93B;top:-120px;right:-80px;opacity:.38;}
+.hero-blob.b2{width:340px;height:340px;background:#2EC4B6;bottom:-140px;left:-60px;animation-delay:-5s;opacity:.35;}
+.hero-blob.b3{width:260px;height:260px;background:#7C5CC4;top:30%;left:48%;animation-delay:-9s;opacity:.28;}
+@keyframes heroFloat{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(30px,-24px) scale(1.12);}}
+.hero-grid{position:absolute;inset:0;z-index:-1;opacity:.12;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.7) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.7) 1px,transparent 1px);
+  background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 30% 20%,#000 0%,transparent 70%);mask-image:radial-gradient(ellipse at 30% 20%,#000 0%,transparent 70%);}
+.hero-content{max-width:760px;}
+.hero-pill{display:inline-flex;align-items:center;gap:9px;padding:7px 16px;border-radius:999px;font-size:12.5px;font-weight:600;letter-spacing:.03em;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#FBD896;}
+.hero-dot{width:8px;height:8px;border-radius:50%;background:#4ADE80;box-shadow:0 0 0 0 rgba(74,222,128,.7);animation:heroPulse 2s infinite;display:inline-block;}
+@keyframes heroPulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.65);}70%{box-shadow:0 0 0 10px rgba(74,222,128,0);}100%{box-shadow:0 0 0 0 rgba(74,222,128,0);}}
+.hero-h1{font-size:clamp(30px,5.2vw,56px);line-height:1.08;font-weight:800;margin:20px 0 16px;letter-spacing:-.02em;}
+.hero-h1 em{font-style:normal;background:linear-gradient(90deg,#FBD896,#F2A93B 50%,#7EE7DB);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;}
+.hero-p{font-size:clamp(14px,1.6vw,17px);line-height:1.7;color:#CFE0EA;max-width:640px;}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px;}
+.hero-btn{font-family:inherit;font-size:14.5px;font-weight:700;padding:13px 24px;border-radius:14px;cursor:pointer;border:1px solid transparent;transition:transform .2s,box-shadow .2s,background .2s;}
+.hero-btn.primary{background:linear-gradient(135deg,#F2A93B,#F6C26B);color:#2A1A00;box-shadow:0 10px 24px rgba(242,169,59,.4);}
+.hero-btn.ghost{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.3);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+.hero-btn:hover{transform:translateY(-2px);}
+.hero-btn.ghost:hover{background:rgba(255,255,255,.2);}
+.hero-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:38px;}
+.hero-tile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:start;font-family:inherit;color:#fff;cursor:pointer;
+  padding:16px 16px 14px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .25s,background .25s,border-color .25s,box-shadow .25s;overflow:hidden;}
+.hero-tile::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,var(--c1),var(--c2));opacity:0;transition:opacity .25s;z-index:-1;}
+.hero-tile:hover{transform:translateY(-5px);border-color:rgba(255,255,255,.4);box-shadow:0 16px 30px rgba(0,0,0,.28);}
+.hero-tile:hover::before{opacity:.75;}
+.ht-ico{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:25px;background:linear-gradient(135deg,var(--c1),var(--c2));box-shadow:0 8px 18px rgba(0,0,0,.28);}
+.ht-name{font-size:14.5px;font-weight:700;margin-top:6px;}
+.ht-st{font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;color:#CFE0EA;}
+.ht-st.ht-on{opacity:.8;}
+.ht-st::before{content:"";width:7px;height:7px;border-radius:50%;background:#94A3B8;display:inline-block;}
+.ht-st.open{color:#86EFAC;} .ht-st.open::before{background:#4ADE80;box-shadow:0 0 8px #4ADE80;}
+.ht-st.closed{color:#FCA5A5;} .ht-st.closed::before{background:#F87171;}
+.ht-st.ht-on::before{background:#7EE7DB;}
+@media(max-width:860px){.hero-tiles{grid-template-columns:repeat(2,1fr);} .hero-m{padding:38px 22px 28px;border-radius:22px;}}
+@media(prefers-reduced-motion:reduce){.hero-blob,.hero-dot{animation:none;}}
+
+/* ===== En-tête & navigation modernisés ===== */
+header{border-radius:0 0 28px 28px;box-shadow:0 12px 34px rgba(7,30,45,.22);}
+nav{background:rgba(255,255,255,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(14,58,83,.08);gap:6px;padding:10px 16px;justify-content:flex-start;}
+@media(min-width:1200px){nav{justify-content:center;}}
+nav button{border-bottom:none;border-radius:999px;padding:9px 16px;font-size:13px;}
+nav button:hover{background:rgba(14,58,83,.08);}
+nav button.actif{background:var(--bleu);color:#fff;box-shadow:0 6px 16px rgba(14,58,83,.28);border-bottom-color:transparent;}
+
+/* ===== ENTÊTE MODERNE & SOPHISTIQUÉ ===== */
+.bandeau{height:4px;background:linear-gradient(90deg,var(--or),#2EC4B6,#7C5CC4,var(--or));background-size:300% 100%;animation:hdrBand 9s linear infinite;}
+@keyframes hdrBand{to{background-position:300% 0;}}
+header{padding:34px 24px 0;background:linear-gradient(115deg,#050F17 0%,var(--bleu) 55%,var(--bleu2) 100%);border-radius:0 0 34px 34px;
+  box-shadow:0 18px 50px rgba(5,15,23,.38),inset 0 -1px 0 rgba(255,255,255,.08);}
+.hdr-bg{opacity:.5;filter:saturate(.75);-webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 45%,#000 100%);mask-image:linear-gradient(180deg,transparent 0%,#000 45%,#000 100%);}
+.hdr-overlay{background:
+  radial-gradient(620px 240px at 88% -10%,rgba(242,169,59,.32),transparent 70%),
+  radial-gradient(520px 260px at 6% 110%,rgba(46,196,182,.24),transparent 70%),
+  linear-gradient(100deg,rgba(4,14,22,.9) 0%,rgba(8,28,42,.74) 50%,rgba(14,58,83,.45) 100%);}
+header::before{content:"";position:absolute;inset:0;z-index:2;opacity:.14;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.8) 1px,transparent 1px);
+  background-size:42px 42px;-webkit-mask-image:radial-gradient(ellipse at 20% 30%,#000,transparent 72%);mask-image:radial-gradient(ellipse at 20% 30%,#000,transparent 72%);}
+header::after{background:radial-gradient(circle at 85% 18%,rgba(242,169,59,.2),transparent 50%);}
+.hdr-inner{gap:24px;padding-bottom:26px;}
+.hdr-logos{gap:14px;}
+.hdr-logos img{height:64px;background:#fff;border-radius:16px;padding:6px 10px;
+  box-shadow:0 10px 26px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.55),0 0 28px rgba(242,169,59,.28);filter:none;transition:transform .3s;}
+.hdr-logos img:hover{transform:translateY(-3px) scale(1.04);}
+.hdr-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:10.5px;letter-spacing:.14em;padding:5px 13px;border-radius:999px;margin-bottom:10px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+.hdr-eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--or);box-shadow:0 0 10px var(--or);}
+.hdr-title{font-family:'Fraunces',serif;font-size:clamp(26px,4.4vw,48px);font-weight:800;letter-spacing:-.015em;line-height:1.04;margin-bottom:8px;text-shadow:0 4px 24px rgba(0,0,0,.4);}
+.hdr-title span{background:linear-gradient(90deg,var(--or-clair),var(--or),#fff,var(--or-clair));background-size:220% 100%;-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent !important;animation:hdrShine 7s linear infinite;}
+@keyframes hdrShine{to{background-position:220% 0;}}
+.hdr-sub{font-size:13.5px;color:#C7D9E3;display:flex;align-items:center;gap:10px;}
+.hdr-sub::before{content:"";width:34px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--or),transparent);}
+.hdr-badge{position:relative;overflow:hidden;background:linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.28);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 8px 22px rgba(0,0,0,.25);letter-spacing:.04em;}
+.hdr-badge::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.4),transparent);transform:skewX(-20deg);animation:hdrSweep 5s ease-in-out infinite;}
+@keyframes hdrSweep{0%,60%{left:-60%;}100%{left:130%;}}
+.btn-lang{background:linear-gradient(135deg,var(--or),var(--or-clair));color:#2A1A00;border:none;box-shadow:0 8px 20px rgba(242,169,59,.38);}
+.btn-lang:hover{background:linear-gradient(135deg,var(--or-clair),var(--or));transform:translateY(-1px);}
+
+.hdr-ticker{position:relative;z-index:3;margin:0 -24px;overflow:hidden;direction:ltr;
+  background:rgba(0,0,0,.32);border-top:1px solid rgba(255,255,255,.12);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);}
+.hdr-track{display:flex;align-items:center;gap:18px;width:max-content;padding:11px 0;animation:hdrScroll 42s linear infinite;}
+.hdr-ticker:hover .hdr-track{animation-play-state:paused;}
+@keyframes hdrScroll{to{transform:translateX(-50%);}}
+.hdr-chip{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:#E6EFF4;letter-spacing:.04em;white-space:nowrap;}
+.hdr-chip b{font-size:16px;}
+.hdr-sep{font-style:normal;color:var(--or);opacity:.8;font-size:11px;}
+@media(max-width:700px){
+  header{padding:24px 16px 0;border-radius:0 0 26px 26px;}
+  .hdr-ticker{margin:0 -16px;}
+  .hdr-badge{display:none;}
+  .hdr-logos img{height:50px;}
+}
+@media(prefers-reduced-motion:reduce){.bandeau,.hdr-title span,.hdr-badge::after,.hdr-track{animation:none;}}
 </style>
 </head>
 <body>
@@ -1215,6 +1318,9 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
       <div class="hdr-credit" data-i18n="hdr.credit">Réalisé par M. KHELALI YAKOUB</div>
     </div>
   </div>
+  <div class="hdr-ticker" aria-hidden="true">
+    <div class="hdr-track"><span class="hdr-chip"><b>🏥</b><span data-i18n="hero.t.demande">Médical</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>📚</b><span data-i18n="hero.t.livre">Livre scolaire</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>💰</b><span data-i18n="hero.t.pret">Prêt social</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>🕋</b><span data-i18n="hero.t.omra">Omra</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>⚽</b><span data-i18n="hero.t.sport">Sport &amp; Travail</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>🔌</b><span data-i18n="hero.t.electro">Électroménagers</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>🥋</b><span data-i18n="hero.t.loisirs">Loisirs</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>👶</b><span data-i18n="hero.t.creches">Crèches</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>🏥</b><span data-i18n="hero.t.demande">Médical</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>📚</b><span data-i18n="hero.t.livre">Livre scolaire</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>💰</b><span data-i18n="hero.t.pret">Prêt social</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>🕋</b><span data-i18n="hero.t.omra">Omra</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>⚽</b><span data-i18n="hero.t.sport">Sport &amp; Travail</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>🔌</b><span data-i18n="hero.t.electro">Électroménagers</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>🥋</b><span data-i18n="hero.t.loisirs">Loisirs</span></span><i class="hdr-sep">✦</i><span class="hdr-chip"><b>👶</b><span data-i18n="hero.t.creches">Crèches</span></span><i class="hdr-sep">✦</i></div>
+  </div>
 </header>
 
 <nav>
@@ -1225,7 +1331,7 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
   <button onclick="showVue('omra',this)" data-i18n="nav.omra">🕋 Omra</button>
   <button onclick="showVue('sport',this)" data-i18n="nav.sport">⚽ Sport &amp; Travail</button>
   <button onclick="showVue('electro',this)" data-i18n="nav.electro">🔌 Électroménagers</button>
-  <button onclick="showVue('loisirs',this)" data-i18n="nav.loisirs">🎭 Loisirs</button>
+  <button onclick="showVue('loisirs',this)" data-i18n="nav.loisirs">🥋 Loisirs</button>
   <button onclick="showVue('creches',this)" data-i18n="nav.creches">👶 Crèches</button>
   <button onclick="showVue('idees',this)" data-i18n="nav.idees">📬 Boîte à idées</button>
   <button onclick="showVue('doleances',this)" data-i18n="nav.doleances">📝 Registre de doléances</button>
@@ -1239,6 +1345,61 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
 
 <!-- ===== ACCUEIL ===== -->
 <div id="vue-accueil" class="vue active">
+  <section class="hero-m" aria-label="Présentation">
+    <div class="hero-blob b1"></div><div class="hero-blob b2"></div><div class="hero-blob b3"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-content">
+      <span class="hero-pill"><i class="hero-dot"></i><span data-i18n="hero.pill">Comité de Participation · SCHB</span></span>
+      <h1 class="hero-h1"><span data-i18n="hero.h1a">Vos prestations sociales,</span> <em data-i18n="hero.h1b">simples et 100&nbsp;% en ligne.</em></h1>
+      <p class="hero-p" data-i18n="hero.p">Santé, scolarité, prêt social, Omra, sport, électroménagers, loisirs et crèches : inscrivez-vous en quelques clics et suivez votre dossier à tout moment.</p>
+      <div class="hero-cta">
+        <button class="hero-btn primary" onclick="var g=document.querySelector('#vue-accueil .grid-activites');if(g)g.scrollIntoView({behavior:'smooth',block:'start'});" data-i18n="hero.cta1">Découvrir les activités ↓</button>
+        <button class="hero-btn ghost" onclick="goVue('suivi')" data-i18n="hero.cta2">🔎 Suivre mon dossier</button>
+      </div>
+    </div>
+    <div class="hero-tiles">
+      <button class="hero-tile" style="--c1:#0B5C6B;--c2:#2EC4B6;" onclick="goVue('demande')">
+        <span class="ht-ico">🏥</span>
+        <span class="ht-name" data-i18n="hero.t.demande">Médical</span>
+        <span class="ht-st ht-on" data-i18n="hero.online">Formulaire en ligne</span>
+      </button>
+      <button class="hero-tile" style="--c1:#3B2A6B;--c2:#7C5CC4;" onclick="goVue('livre')">
+        <span class="ht-ico">📚</span>
+        <span class="ht-name" data-i18n="hero.t.livre">Livre scolaire</span>
+        <span class="ht-st ht-on" data-i18n="hero.online">Formulaire en ligne</span>
+      </button>
+      <button class="hero-tile" style="--c1:#12355B;--c2:#C9A227;" onclick="goVue('pret')">
+        <span class="ht-ico">💰</span>
+        <span class="ht-name" data-i18n="hero.t.pret">Prêt social</span>
+        <span class="ht-st ht-on" data-i18n="hero.online">Formulaire en ligne</span>
+      </button>
+      <button class="hero-tile" style="--c1:#06281D;--c2:#D4AF37;" onclick="goVue('omra')">
+        <span class="ht-ico">🕋</span>
+        <span class="ht-name" data-i18n="hero.t.omra">Omra</span>
+        <span class="ht-st" data-st="omra"></span>
+      </button>
+      <button class="hero-tile" style="--c1:#14532D;--c2:#FF7A1A;" onclick="goVue('sport')">
+        <span class="ht-ico">⚽</span>
+        <span class="ht-name" data-i18n="hero.t.sport">Sport &amp; Travail</span>
+        <span class="ht-st" data-st="sport"></span>
+      </button>
+      <button class="hero-tile" style="--c1:#1E3A5F;--c2:#FFB300;" onclick="goVue('electro')">
+        <span class="ht-ico">🔌</span>
+        <span class="ht-name" data-i18n="hero.t.electro">Électroménagers</span>
+        <span class="ht-st" data-st="electro"></span>
+      </button>
+      <button class="hero-tile" style="--c1:#8E1450;--c2:#FFB400;" onclick="goVue('loisirs')">
+        <span class="ht-ico">🥋</span>
+        <span class="ht-name" data-i18n="hero.t.loisirs">Loisirs</span>
+        <span class="ht-st" data-st="loisirs"></span>
+      </button>
+      <button class="hero-tile" style="--c1:#0277BD;--c2:#FF8FAB;" onclick="goVue('creches')">
+        <span class="ht-ico">👶</span>
+        <span class="ht-name" data-i18n="hero.t.creches">Crèches</span>
+        <span class="ht-st" data-st="creches"></span>
+      </button>
+    </div>
+  </section>
   <div class="sec-hdr">
     <span class="eyebrow" data-i18n="accueil.eyebrow">Comité de Participation</span>
     <h2 class="sec-title" data-i18n="accueil.title">Vos activités &amp; prestations</h2>
@@ -1294,10 +1455,10 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
       <div class="act-arrow">→</div>
     </div>
     <div class="card-activite" onclick="goVue('loisirs')">
-      <div class="act-icon" style="background:#FCE4EC;">🎭</div>
+      <div class="act-icon" style="background:#FCE4EC;">🥋</div>
       <div class="act-body">
         <div class="act-title" data-i18n="accueil.card.loisirs.title">Loisirs</div>
-        <div class="act-desc" data-i18n="accueil.card.loisirs.desc">Inscrivez-vous aux voyages, excursions et activités de loisirs lorsque les inscriptions sont ouvertes.</div>
+        <div class="act-desc" data-i18n="accueil.card.loisirs.desc">Inscrivez votre enfant en boxe, karaté, kickboxing, football ou natation (disciplines conventionnées).</div>
       </div>
       <div class="act-arrow">→</div>
     </div>
@@ -1880,8 +2041,8 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
 <div id="vue-loisirs" class="vue">
   <div class="sec-hdr">
     <span class="eyebrow" data-i18n="omra.eyebrow">Formulaire en ligne</span>
-    <h2 class="sec-title" data-i18n="loisirs.title">🎭 Inscription — Loisirs</h2>
-    <p class="sec-desc" data-i18n="loisirs.desc">Inscrivez-vous aux activités de loisirs (voyages, excursions, colonies, spectacles…) organisées par le Comité de Participation de la SCHB. Les inscriptions ne sont possibles que lorsqu'elles sont ouvertes par l'administrateur.</p>
+    <h2 class="sec-title" data-i18n="loisirs.title">🥋 Inscription — Loisirs</h2>
+    <p class="sec-desc" data-i18n="loisirs.desc">Inscrivez votre enfant à l'une des disciplines conventionnées avec le Comité de Participation de la SCHB : boxe, karaté, kickboxing, football ou natation. Les inscriptions ne sont possibles que lorsqu'elles sont ouvertes par l'administrateur.</p>
   </div>
 
   <div id="loisirs-saison-fermee" class="panneau" style="display:block;border:1.5px solid var(--or);">
@@ -1889,7 +2050,7 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
       <div style="font-size:28px;">🔒</div>
       <div>
         <div class="serif" style="color:var(--bleu);font-weight:700;font-size:16px;margin-bottom:4px;" data-i18n="omra.fermee.titre">Inscriptions actuellement fermées</div>
-        <div style="font-size:13.5px;color:#5C5142;" data-i18n="loisirs.fermee.desc">Les inscriptions aux loisirs n'ont pas encore été ouvertes par le Comité de Participation. Revenez consulter cette page dès l'annonce de l'ouverture.</div>
+        <div style="font-size:13.5px;color:#5C5142;" data-i18n="loisirs.fermee.desc">Les inscriptions aux disciplines conventionnées n'ont pas encore été ouvertes par le Comité de Participation. Revenez consulter cette page dès l'annonce de l'ouverture.</div>
       </div>
     </div>
   </div>
@@ -1909,18 +2070,21 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
     </div>
 
     <div class="panneau">
-      <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="loisirs.h.detail">🎭 Activité de loisirs</h3>
+      <h3 class="serif" style="color:var(--bleu);margin-bottom:18px;font-size:17px;" data-i18n="loisirs.h.detail">🥋 Enfant et discipline conventionnée</h3>
+      <div class="cols2">
+        <div class="grp"><label data-i18n="loisirs.enfNom">Nom de l'enfant <span class="req">*</span></label><input id="flo-enf-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+        <div class="grp"><label data-i18n="loisirs.enfPrenom">Prénom de l'enfant <span class="req">*</span></label><input id="flo-enf-prenom" type="text" placeholder="Prénom"></div>
+      </div>
+      <div class="grp"><label data-i18n="loisirs.enfNaissance">Date de naissance de l'enfant <span class="req">*</span></label><input id="flo-enf-naissance" type="date" placeholder=""></div>
       <div class="cols2">
         <div class="grp">
-          <label data-i18n="loisirs.choix">Activité souhaitée <span class="req">*</span></label>
-          <select id="flo-choix" onchange="document.getElementById('flo-choix-autre-grp').style.display = (this.value==='Autre') ? 'block' : 'none';"><option value="Voyage / Excursion">Voyage / Excursion</option><option value="Colonie de vacances">Colonie de vacances</option><option value="Séjour balnéaire">Séjour balnéaire</option><option value="Spectacle / Cinéma">Spectacle / Cinéma</option><option value="Parc d'attractions">Parc d'attractions</option><option value="Autre">Autre</option></select>
+          <label data-i18n="loisirs.choix">Discipline conventionnée <span class="req">*</span></label>
+          <select id="flo-choix"><option value="Boxe">Boxe</option><option value="Karaté">Karaté</option><option value="Kickboxing">Kickboxing</option><option value="Football">Football</option><option value="Natation">Natation</option></select>
         </div>
         <div class="grp"><label data-i18n="sport.saison">Saison / Année <span class="req">*</span></label>
           <select id="flo-annee"></select>
         </div>
       </div>
-      <div class="grp" id="flo-choix-autre-grp" style="display:none;"><label>Précisez</label><input id="flo-choix-autre" type="text" placeholder="Ex : Randonnée"></div>
-      <div class="grp"><label data-i18n="loisirs.nbPers">Nombre de personnes (vous inclus) <span class="req">*</span></label><input id="flo-nbpers" type="number" placeholder="Ex : 4" min="1"></div>
     </div>
 
     <div class="bar-actions">
@@ -1939,8 +2103,8 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
       </div>
       <div class="ticket-rows">
         <div class="trow"><div class="trow-lbl" data-i18n="ticket.adherent">Adhérent</div><div class="trow-val" id="tkloisirs-adh"></div></div>
-        <div class="trow"><div class="trow-lbl">Activité</div><div class="trow-val" id="tkloisirs-choix"></div></div>
-        <div class="trow"><div class="trow-lbl">Personnes</div><div class="trow-val" id="tkloisirs-extra"></div></div>
+        <div class="trow"><div class="trow-lbl">Discipline</div><div class="trow-val" id="tkloisirs-choix"></div></div>
+        <div class="trow"><div class="trow-lbl">Enfant</div><div class="trow-val" id="tkloisirs-extra"></div></div>
         <div class="trow"><div class="trow-lbl" data-i18n="ticket.date">Date</div><div class="trow-val" id="tkloisirs-date"></div></div>
         <div class="trow" style="grid-column:1/-1;border:1.5px solid var(--or);"><div class="trow-lbl" data-i18n="ticket.code">Code de suivi confidentiel</div><div class="trow-val" id="tkloisirs-code" style="font-family:monospace;font-size:14px;letter-spacing:.05em;word-break:break-all;"></div></div>
       </div>
@@ -2424,7 +2588,7 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
       <button class="btn-admin-tab" id="tab-btn-omra" onclick="showAdminTab('omra')" data-i18n="admtab.omra">🕋 Omra</button>
       <button class="btn-admin-tab" id="tab-btn-sport" onclick="showAdminTab('sport')" data-i18n="admtab.sport">⚽ Sport &amp; Travail</button>
       <button class="btn-admin-tab" id="tab-btn-electro" onclick="showAdminTab('electro')" data-i18n="admtab.electro">🔌 Électroménagers</button>
-      <button class="btn-admin-tab" id="tab-btn-loisirs" onclick="showAdminTab('loisirs')" data-i18n="admtab.loisirs">🎭 Loisirs</button>
+      <button class="btn-admin-tab" id="tab-btn-loisirs" onclick="showAdminTab('loisirs')" data-i18n="admtab.loisirs">🥋 Loisirs</button>
       <button class="btn-admin-tab" id="tab-btn-creches" onclick="showAdminTab('creches')" data-i18n="admtab.creches">👶 Crèches</button>
       <button class="btn-admin-tab" id="tab-btn-idees" onclick="showAdminTab('idees')" data-i18n="admtab.idees">📬 Boîte à idées</button>
       <button class="btn-admin-tab" id="tab-btn-doleances" onclick="showAdminTab('doleances')" data-i18n="admtab.doleances">📝 Doléances</button>
@@ -2633,18 +2797,18 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
       <div class="admin-stats" id="loisirs-stats"></div>
       <div class="panneau" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
         <div>
-          <h3 class="serif" style="color:var(--bleu);margin-bottom:4px;font-size:16px;">🎭 Inscriptions Loisirs</h3>
+          <h3 class="serif" style="color:var(--bleu);margin-bottom:4px;font-size:16px;">🥋 Inscriptions Loisirs (disciplines conventionnées)</h3>
           <div id="loisirs-saison-etat" style="font-size:13.5px;color:#5C5142;">Chargement de l'état des inscriptions…</div>
         </div>
         <button id="btn-toggle-saison-loisirs" class="btn btn-primary" onclick="toggleSaisonLoisirs()">…</button>
       </div>
       <div class="panneau">
         <div class="filter-bar">
-          <input id="filter-search-loisirs" type="text" placeholder="🔍 Rechercher nom, matricule, activité…" oninput="renderTableauLoisirs()" style="flex:1;min-width:200px;">
+          <input id="filter-search-loisirs" type="text" placeholder="🔍 Rechercher nom, matricule, enfant, discipline…" oninput="renderTableauLoisirs()" style="flex:1;min-width:200px;">
           <select id="filter-annee-loisirs" onchange="renderTableauLoisirs()"></select>
           <select id="filter-choix-loisirs" onchange="renderTableauLoisirs()">
-            <option value="">Toutes les activités</option>
-            <option value="Voyage / Excursion">Voyage / Excursion</option><option value="Colonie de vacances">Colonie de vacances</option><option value="Séjour balnéaire">Séjour balnéaire</option><option value="Spectacle / Cinéma">Spectacle / Cinéma</option><option value="Parc d'attractions">Parc d'attractions</option>
+            <option value="">Toutes les disciplines</option>
+            <option value="Boxe">Boxe</option><option value="Karaté">Karaté</option><option value="Kickboxing">Kickboxing</option><option value="Football">Football</option><option value="Natation">Natation</option>
           </select>
           <select id="filter-status-loisirs" onchange="renderTableauLoisirs()">
             <option value="" data-i18n="filter.tous">Tous les statuts</option>
@@ -2657,7 +2821,7 @@ html[data-theme] .panneau{border-top:4px solid var(--or);}
         </div>
         <div class="tableau-wrap">
           <table class="tab">
-            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th>Activité</th><th>Pers.</th><th data-i18n="sport.saison">Saison</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
+            <thead><tr><th>N°</th><th data-i18n="th.date">Date</th><th data-i18n="th.adherent">Adhérent</th><th data-i18n="th.matricule">Matricule</th><th>Discipline</th><th>Enfant</th><th data-i18n="sport.saison">Saison</th><th data-i18n="th.statut">Statut</th><th data-i18n="th.actions">Actions</th></tr></thead>
             <tbody id="tbody-loisirs"></tbody>
           </table>
         </div>
@@ -3464,7 +3628,7 @@ var THEMES_RUBRIQUES = {
   omra:      { emo:'🕋', c1:'#06281D', c2:'#147A55', or:'#D4AF37', orc:'#F2DE8C', creme:'#F2F8F0', creme2:'#DDEBD9', pat:['🕋','🕌','🌙','⭐'], photo:'', skyline:true },
   sport:     { emo:'⚽', c1:'#14532D', c2:'#22A653', or:'#FF7A1A', orc:'#FFC999', creme:'#F0FAF1', creme2:'#D9EEDC', pat:['⚽','🏀','🏃','🏆'], photo:'' },
   electro:   { emo:'🔌', c1:'#1E3A5F', c2:'#3E73B3', or:'#FFB300', orc:'#FFE199', creme:'#F2F6FB', creme2:'#DEE6F1', pat:['🧺','❄️','📺','🔌'], photo:'' },
-  loisirs:   { emo:'🎭', c1:'#8E1450', c2:'#E0457B', or:'#FFB400', orc:'#FFE08A', creme:'#FFF1F6', creme2:'#F6DCE6', pat:['🎭','🏖️','🎡','🎈'], photo:'' },
+  loisirs:   { emo:'🥋', c1:'#8E1450', c2:'#E0457B', or:'#FFB400', orc:'#FFE08A', creme:'#FFF1F6', creme2:'#F6DCE6', pat:['🥋','🥊','⚽','🏊'], photo:'' },
   creches:   { emo:'👶', c1:'#0277BD', c2:'#4FC3F7', or:'#FF8FAB', orc:'#FFD0DC', creme:'#EEF8FF', creme2:'#D6EBF8', pat:['👶','🧸','⭐','☁️'], photo:'' },
   idees:     { emo:'💡', c1:'#5B4A00', c2:'#C9A400', or:'#FFC400', orc:'#FFE585', creme:'#FFFBE8', creme2:'#F3EBC4', pat:['💡','✨','🧠','🚀'], photo:'' },
   doleances: { emo:'📢', c1:'#7B1E1E', c2:'#C0504D', or:'#E57373', orc:'#F8C4C4', creme:'#FFF3F2', creme2:'#F3DAD8', pat:['📢','📝','⚖️','🤝'], photo:'' },
@@ -3543,6 +3707,28 @@ function applyTheme(id) {
     go();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+
+// ===== HERO : état des inscriptions en direct =====
+(function heroStatuts() {
+  function ouvert(k) {
+    try {
+      return { omra: saisonOmraOuverte, sport: saisonSportOuverte, electro: saisonElectroOuverte,
+               loisirs: saisonLoisirsOuverte, creches: saisonCrechesOuverte }[k];
+    } catch (e) { return undefined; }
+  }
+  function maj() {
+    var ar = (typeof LANG_STATE !== 'undefined' && LANG_STATE.current === 'ar');
+    document.querySelectorAll('.ht-st[data-st]').forEach(function(el) {
+      var o = ouvert(el.getAttribute('data-st'));
+      el.classList.toggle('open', o === true);
+      el.classList.toggle('closed', o !== true);
+      el.textContent = o === true ? (ar ? 'التسجيل مفتوح' : 'Inscriptions ouvertes') : (ar ? 'التسجيل مغلق' : 'Inscriptions fermées');
+    });
+  }
+  maj();
+  setInterval(maj, 1500);
 })();
 
 // ===== RADIO BENEFICIAIRE =====
@@ -4265,7 +4451,7 @@ function makeSuiviPublicLoisirs(d) {
   return {
     code: d.trackingCode, num: d.num, statut: d.statut, date: d.date, dateObj: d.dateObj, annee: d.annee,
     nom: d.nom, prenom: d.prenom, mat: d.mat, tel: d.tel, service: d.service || '',
-    activite: d.activite, nbPers: d.nbPers, dateValidation: d.dateValidation || ''
+    activite: d.activite, enfNom: d.enfNom, enfPrenom: d.enfPrenom, enfNaissance: d.enfNaissance, dateValidation: d.dateValidation || ''
   };
 }
 
@@ -4280,7 +4466,7 @@ remplirAnneesLoisirsForm();
 
 async function soumettreLoisirs() {
   if (!saisonLoisirsOuverte) {
-    alert("⚠️ Les inscriptions pour les loisirs ne sont pas encore ouvertes par le Comité de Participation. Les inscriptions ne sont pas possibles pour le moment.");
+    alert("⚠️ Les inscriptions pour les disciplines conventionnées ne sont pas encore ouvertes par le Comité de Participation. Les inscriptions ne sont pas possibles pour le moment.");
     return;
   }
   var nom = document.getElementById('flo-nom').value.trim().toUpperCase();
@@ -4288,15 +4474,15 @@ async function soumettreLoisirs() {
   var mat = document.getElementById('flo-matricule').value.trim();
   var tel = document.getElementById('flo-tel').value.trim();
   var service = document.getElementById('flo-service').value.trim();
-  var choixSel = document.getElementById('flo-choix').value;
-  var choixAutre = document.getElementById('flo-choix-autre').value.trim();
-  var choix = (choixSel === 'Autre' && choixAutre) ? choixAutre : choixSel;
-  var nbPers = Number(document.getElementById('flo-nbpers').value);
+  var choix = document.getElementById('flo-choix').value;
+  var enfNom = document.getElementById('flo-enf-nom').value.trim().toUpperCase();
+  var enfPrenom = document.getElementById('flo-enf-prenom').value.trim();
+  var enfNaissance = document.getElementById('flo-enf-naissance').value.trim();
   var anneeInscription = Number(document.getElementById('flo-annee').value);
   var msg = document.getElementById('msg-loisirs');
   msg.className = 'msg';
 
-  if (!nom || !prenom || !mat || !tel || !choix || !anneeInscription || !nbPers) {
+  if (!nom || !prenom || !mat || !tel || !choix || !anneeInscription || !enfNom || !enfPrenom || !enfNaissance) {
     msg.className = 'msg err'; msg.style.display = 'flex';
     msg.textContent = '⚠️ Veuillez remplir tous les champs obligatoires.'; return;
   }
@@ -4308,7 +4494,7 @@ async function soumettreLoisirs() {
 
   var d = {
     num: num, trackingCode: trackingCode, nom: nom, prenom: prenom, mat: mat, tel: tel, service: service,
-    activite: choix, nbPers: nbPers, date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: anneeInscription
+    activite: choix, enfNom: enfNom, enfPrenom: enfPrenom, enfNaissance: enfNaissance, date: dateStr, statut: 'En attente', dateObj: now.toISOString(), annee: anneeInscription
   };
 
   persistLoisirsLocal(d);
@@ -4316,7 +4502,7 @@ async function soumettreLoisirs() {
   document.getElementById('tkloisirs-num').textContent = num;
   document.getElementById('tkloisirs-adh').textContent = nom + ' ' + prenom + ' (' + mat + ')';
   document.getElementById('tkloisirs-choix').textContent = choix;
-  document.getElementById('tkloisirs-extra').textContent = nbPers;
+  document.getElementById('tkcreches-extra').textContent = enfNom + ' ' + enfPrenom;
   document.getElementById('tkloisirs-date').textContent = dateStr;
   document.getElementById('tkloisirs-code').textContent = trackingCode;
   document.getElementById('ticket-confirm-loisirs').classList.add('visible');
@@ -4333,11 +4519,10 @@ async function soumettreLoisirs() {
 }
 
 function resetFormLoisirs() {
-  ['flo-nom','flo-prenom','flo-matricule','flo-tel','flo-service','flo-nbpers','flo-choix-autre'].forEach(function(id){
+  ['flo-nom','flo-prenom','flo-matricule','flo-tel','flo-service','flo-enf-nom','flo-enf-prenom','flo-enf-naissance'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
-  document.getElementById('flo-choix').value = 'Voyage / Excursion';
-  document.getElementById('flo-choix-autre-grp').style.display = 'none';
+  document.getElementById('flo-choix').value = 'Boxe';
   remplirAnneesLoisirsForm();
   document.getElementById('ticket-confirm-loisirs').classList.remove('visible');
   document.getElementById('msg-loisirs').style.display = 'none';
@@ -4954,8 +5139,8 @@ function renderSuiviLoisirs(d) {
   html += '<div class="detail-grid">';
   html += '<div class="detail-item"><div class="detail-lbl">Adhérent</div><div class="detail-val">' + esc(d.nom) + ' ' + esc(d.prenom) + '</div></div>';
   html += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
-  html += '<div class="detail-item"><div class="detail-lbl">Activité</div><div class="detail-val">' + esc(d.activite) + '</div></div>';
-  html += '<div class="detail-item"><div class="detail-lbl">Personnes</div><div class="detail-val">' + esc(d.nbPers) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Discipline</div><div class="detail-val">' + esc(d.activite) + '</div></div>';
+  html += '<div class="detail-item"><div class="detail-lbl">Enfant</div><div class="detail-val">' + esc(d.enfNom) + ' ' + esc(d.enfPrenom) + '</div></div>';
   html += '<div class="detail-item"><div class="detail-lbl">Date</div><div class="detail-val">' + esc(d.date) + '</div></div>';
   html += '</div><div class="tl">';
   html += '<div class="tl-item"><div class="tl-dot tl-done">✓</div><div class="tl-text"><div class="tl-title">Inscription soumise</div><div class="tl-sub">' + esc(d.date) + '</div></div></div>';
@@ -6845,7 +7030,7 @@ function renderTableauLoisirs() {
   var an = (anneeEl && anneeEl.value) || '';
   var ch = (choixEl && choixEl.value) || '';
   var filtered = triRecent(loisirs).filter(function(d){
-    var matchQ = !q || (d.nom+d.prenom+d.mat+(d.activite||'')+(d.nbPers||'')).toLowerCase().indexOf(q) >= 0;
+    var matchQ = !q || (d.nom+d.prenom+d.mat+(d.activite||'')+(d.enfNom||'')+(d.enfPrenom||'')+(d.enfNaissance||'')).toLowerCase().indexOf(q) >= 0;
     var matchSt = !st || d.statut === st;
     var matchAn = !an || String(getAnnee(d)) === an;
     var matchCh = !ch || d.activite === ch;
@@ -6863,7 +7048,7 @@ function renderTableauLoisirs() {
     rows += '<td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td>';
     rows += '<td>' + esc(d.mat) + '</td>';
     rows += '<td>' + esc(d.activite) + '</td>';
-    rows += '<td>' + esc(d.nbPers) + '</td>';
+    rows += '<td>' + esc(d.enfNom) + ' ' + esc(d.enfPrenom) + '</td>';
     rows += '<td>' + esc(getAnnee(d)) + '</td>';
     rows += '<td><span class="badge ' + bc + '">' + esc(d.statut) + '</span></td>';
     rows += '<td><div style="display:flex;gap:5px;flex-wrap:wrap;">';
@@ -6934,8 +7119,9 @@ function voirDetailLoisirs(num) {
   body += '<div class="detail-item"><div class="detail-lbl">Matricule</div><div class="detail-val">' + esc(d.mat) + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Téléphone</div><div class="detail-val">' + esc(d.tel) + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Service</div><div class="detail-val">' + esc(d.service||'—') + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Activité</div><div class="detail-val">' + esc(d.activite) + '</div></div>';
-  body += '<div class="detail-item"><div class="detail-lbl">Nombre de personnes</div><div class="detail-val">' + esc(d.nbPers) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Discipline</div><div class="detail-val">' + esc(d.activite) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Enfant</div><div class="detail-val">' + esc(d.enfNom) + ' ' + esc(d.enfPrenom) + '</div></div>';
+  body += '<div class="detail-item"><div class="detail-lbl">Date de naissance</div><div class="detail-val">' + esc(d.enfNaissance) + '</div></div>';
   body += '<div class="detail-item"><div class="detail-lbl">Code de suivi</div><div class="detail-val" style="font-family:monospace;">' + esc(d.trackingCode || '—') + '</div></div>';
   body += '</div>';
   body += '<div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">';
@@ -6963,13 +7149,15 @@ function exporterExcelLoisirs() {
       'Matricule': d.mat,
       'Téléphone': d.tel,
       'Service': d.service || '',
-      'Activité': d.activite || '',
-      'Nb personnes': d.nbPers || '',
+      'Discipline': d.activite || '',
+      'Nom enfant': d.enfNom || '',
+      'Prénom enfant': d.enfPrenom || '',
+      'Naissance enfant': d.enfNaissance || '',
       'Date validation': d.dateValidation || ''
     };
   });
   var ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:20},{wch:18},{wch:12},{wch:16}];
+  ws['!cols'] = [{wch:16},{wch:8},{wch:18},{wch:11},{wch:14},{wch:14},{wch:12},{wch:14},{wch:20},{wch:18},{wch:16},{wch:16},{wch:16},{wch:16}];
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Loisirs');
   var dateExp = new Date().toLocaleDateString('fr-DZ').replace(/\//g,'-');
@@ -8465,6 +8653,21 @@ var I18N_AR = {
   'hdr.badge': 'لجنة المشاركة',
   'hdr.credit': 'من إنجاز السيد خلالي يعقوب',
   'nav.accueil': '🏠 الرئيسية',
+  'hero.pill': 'لجنة المشاركة · شركة إسمنت حامة بوزيان',
+  'hero.h1a': 'خدماتكم الاجتماعية،',
+  'hero.h1b': 'بسيطة وعبر الإنترنت 100٪.',
+  'hero.p': 'الصحة، التمدرس، القرض الاجتماعي، العمرة، الرياضة، الأجهزة الكهرومنزلية، الترفيه ودور الحضانة: سجّلوا ببضع نقرات وتابعوا ملفكم في أي وقت.',
+  'hero.cta1': 'اكتشف الأنشطة ↓',
+  'hero.cta2': '🔎 تتبّع ملفي',
+  'hero.online': 'نموذج عبر الإنترنت',
+  'hero.t.demande': 'طبي',
+  'hero.t.livre': 'الكتاب المدرسي',
+  'hero.t.pret': 'القرض الاجتماعي',
+  'hero.t.omra': 'العمرة',
+  'hero.t.sport': 'الرياضة والعمل',
+  'hero.t.electro': 'الأجهزة الكهرومنزلية',
+  'hero.t.loisirs': 'الترفيه',
+  'hero.t.creches': 'دور الحضانة',
   'nav.electro': '🔌 الأجهزة الكهرومنزلية',
   'admtab.electro': '🔌 الأجهزة الكهرومنزلية',
   'accueil.card.electro.title': 'الأجهزة الكهرومنزلية',
@@ -8474,16 +8677,18 @@ var I18N_AR = {
   'electro.fermee.desc': 'لم تفتح لجنة المشاركة التسجيل بعد. عاود زيارة هذه الصفحة عند الإعلان عن فتح التسجيل.',
   'electro.h.detail': '🔌 الجهاز الكهرومنزلي',
   'electro.choix': 'الجهاز المطلوب <span class="req">*</span>',
-  'nav.loisirs': '🎭 الترفيه',
-  'admtab.loisirs': '🎭 الترفيه',
+  'nav.loisirs': '🥋 الترفيه',
+  'admtab.loisirs': '🥋 الترفيه',
   'accueil.card.loisirs.title': 'الترفيه',
-  'accueil.card.loisirs.desc': 'سجّل في الرحلات والخرجات وأنشطة الترفيه عندما يكون التسجيل مفتوحا.',
-  'loisirs.title': '🎭 التسجيل — الترفيه',
-  'loisirs.desc': 'سجّل في أنشطة الترفيه (رحلات، خرجات، مخيمات، عروض…) التي تنظمها لجنة المشاركة. لا يمكن التسجيل إلا عند فتحه من طرف المسؤول.',
+  'accueil.card.loisirs.desc': 'سجّل طفلك في الملاكمة أو الكاراتيه أو الكيك بوكسينغ أو كرة القدم أو السباحة (رياضات متفق عليها).',
+  'loisirs.title': '🥋 التسجيل — الترفيه',
+  'loisirs.desc': 'سجّل طفلك في إحدى الرياضات المتفق عليها مع لجنة المشاركة: الملاكمة، الكاراتيه، الكيك بوكسينغ، كرة القدم أو السباحة. لا يمكن التسجيل إلا عند فتحه من طرف المسؤول.',
   'loisirs.fermee.desc': 'لم تفتح لجنة المشاركة التسجيل بعد. عاود زيارة هذه الصفحة عند الإعلان عن فتح التسجيل.',
-  'loisirs.h.detail': '🎭 نشاط الترفيه',
-  'loisirs.choix': 'النشاط المطلوب <span class="req">*</span>',
-  'loisirs.nbPers': 'عدد الأشخاص (بما فيهم أنت) <span class="req">*</span>',
+  'loisirs.h.detail': '🥋 الطفل والرياضة المتفق عليها',
+  'loisirs.choix': 'الرياضة المتفق عليها <span class="req">*</span>',
+  'loisirs.enfNom': 'لقب الطفل <span class="req">*</span>',
+  'loisirs.enfPrenom': 'اسم الطفل <span class="req">*</span>',
+  'loisirs.enfNaissance': 'تاريخ ميلاد الطفل <span class="req">*</span>',
   'nav.creches': '👶 دور الحضانة',
   'admtab.creches': '👶 دور الحضانة',
   'accueil.card.creches.title': 'دور الحضانة',
@@ -8911,9 +9116,9 @@ function renderVueGlobale() {
     { key:'electro', tab:'electro', sel:'filter-status-electro', ic:'🔌', bg:'#FFF3E0',
       t:vgT('Électroménagers','الأجهزة الكهرومنزلية'), arr:vgAnneeFiltre(electro, an),
       d:vgT("Inscriptions pour les appareils électroménagers quand elles sont ouvertes.","التسجيلات الخاصة بالأجهزة الكهرومنزلية عند فتحها.") },
-    { key:'loisirs', tab:'loisirs', sel:'filter-status-loisirs', ic:'🎭', bg:'#FCE4EC',
+    { key:'loisirs', tab:'loisirs', sel:'filter-status-loisirs', ic:'🥋', bg:'#FCE4EC',
       t:vgT('Loisirs','الترفيه'), arr:vgAnneeFiltre(loisirs, an),
-      d:vgT("Inscriptions aux activités de loisirs (voyages, excursions, colonies…) quand elles sont ouvertes.","التسجيلات في أنشطة الترفيه (رحلات، خرجات، مخيمات…) عند فتحها.") },
+      d:vgT("Inscriptions des enfants aux disciplines conventionnées (boxe, karaté, kickboxing, football, natation).","تسجيلات الأطفال في الرياضات المتفق عليها (ملاكمة، كاراتيه، كيك بوكسينغ، كرة القدم، سباحة).") },
     { key:'creches', tab:'creches', sel:'filter-status-creches', ic:'👶', bg:'#E1F5FE',
       t:vgT('Crèches','دور الحضانة'), arr:vgAnneeFiltre(creches, an),
       d:vgT("Inscriptions des enfants en crèche quand elles sont ouvertes.","تسجيلات الأطفال في دور الحضانة عند فتحها.") }
@@ -9033,7 +9238,7 @@ function renderVueGlobale() {
     '<div class="vg-saison"><span>🕋 Omra</span><span>' + (saisonOmraOuverte ? '<span class="badge b-ok">🔓 ' + vgT('Ouverte','مفتوحة') + '</span>' : '<span class="badge b-clo">🔒 ' + vgT('Fermée','مغلقة') + '</span>') + ' <button class="btn-view-sm" onclick="vgGo(\'omra\')">' + vgT('Gérer','تسيير') + '</button></span></div>' +
     '<div class="vg-saison"><span>⚽ Sport &amp; Travail</span><span>' + (saisonSportOuverte ? '<span class="badge b-ok">🔓 ' + vgT('Ouverte','مفتوحة') + '</span>' : '<span class="badge b-clo">🔒 ' + vgT('Fermée','مغلقة') + '</span>') + ' <button class="btn-view-sm" onclick="vgGo(\'sport\')">' + vgT('Gérer','تسيير') + '</button></span></div>' +
     vgSaisonRow('🔌', 'Électroménagers', saisonElectroOuverte, 'electro') +
-    vgSaisonRow('🎭', 'Loisirs', saisonLoisirsOuverte, 'loisirs') +
+    vgSaisonRow('🥋', 'Loisirs', saisonLoisirsOuverte, 'loisirs') +
     vgSaisonRow('👶', 'Crèches', saisonCrechesOuverte, 'creches') +
     '<h4 style="margin-top:16px;">' + vgT('Participation & communication','المشاركة والتواصل') + '</h4>' +
     '<div class="vg-line"><span>📬 ' + vgT('Idées reçues','الأفكار الواردة') + '</span><b>' + ideesF.length + ' <small style="font-weight:500;color:#7A6F58;">(' + idNouv + ' ' + vgT('nouvelles','جديدة') + ')</small></b></div>' +
