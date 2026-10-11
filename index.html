@@ -3601,6 +3601,7 @@ var SIG_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAzMAAAHMCAIAAABukmE
 
 // ===== NAV =====
 function showVue(id, btn) {
+  if (id === 'annonces') ensureAnnoncesLoaded();
   document.querySelectorAll('.vue').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById('vue-' + id).classList.add('active');
   document.querySelectorAll('nav button').forEach(function(b){ b.classList.remove('actif'); });
@@ -4766,9 +4767,15 @@ function previewFileAnnonce(inp) {
         var dataUrl = canvas.toDataURL('image/jpeg', quality);
         // Réduit encore la qualité si le résultat reste volumineux (sécurité pour Firebase/localStorage).
         var essais = 0;
-        while (dataUrl.length > 900000 && quality > 0.35 && essais < 6) {
+        while (dataUrl.length > 350000 && quality > 0.35 && essais < 6) {
           quality -= 0.12; essais++;
           dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+        while (dataUrl.length > 350000 && canvas.width > 800) {
+          w = Math.round(canvas.width * 0.85); h = Math.round(canvas.height * 0.85);
+          canvas.width = w; canvas.height = h;
+          ctx.drawImage(tempImg, 0, 0, w, h);
+          dataUrl = canvas.toDataURL('image/jpeg', Math.max(quality, 0.4));
         }
         annonceBase64 = dataUrl;
       }
@@ -4817,18 +4824,24 @@ async function publierAnnonce() {
     dateObj: now.toISOString()
   };
 
-  persistAnnonceLocal(d);
-  annonces = loadAnnoncesLocal();
-  renderAnnonces(); renderAdminAnnonces();
-  resetFormAnnonce();
-  msg.className = 'msg ok'; msg.style.display = 'flex';
-  msg.textContent = "✅ Annonce publiée avec succès. Elle est désormais visible par les travailleurs.";
-
-  if (typeof window.fbAddAnnonce === 'function') {
-    window.fbAddAnnonce(d).catch(function(err){
-      console.warn('Synchronisation Firebase échouée (annonce, enregistrée localement) :', err);
-    });
+  msg.className = 'msg info'; msg.style.display = 'flex';
+  msg.textContent = '⏳ Enregistrement… / جارٍ الحفظ…';
+  try {
+    if (typeof window.fbAddAnnonce !== 'function') throw new Error('Firebase indisponible');
+    await window.fbAddAnnonce(d);
+    persistAnnonceLocal(d);
+    var idx = annonces.findIndex(function(a) { return a.id === d.id; });
+    if (idx >= 0) annonces[idx] = d; else annonces.push(d);
+    renderAnnonces(); renderAdminAnnonces();
+    resetFormAnnonce();
+    msg.className = 'msg ok';
+    msg.textContent = '✅ Annonce publiée et confirmée par le serveur. / تم نشر الإعلان وتأكيد حفظه.';
+  } catch(err) {
+    console.warn('Publication non confirmée :', err);
+    msg.className = 'msg err';
+    msg.textContent = '❌ Publication non confirmée. Le formulaire est conservé : vérifiez la connexion et réessayez. / لم يتأكد النشر؛ احتُفظ بالنموذج لإعادة المحاولة.';
   }
+
 }
 
 function resetFormAnnonce() {
@@ -4862,7 +4875,7 @@ function renderAnnonces() {
   if (empty) empty.style.display = 'none';
   grid.innerHTML = liste.map(function(a){
     return '<div class="card-annonce">' +
-      '<img src="' + esc(a.image) + '" alt="' + esc(a.titre) + '" onclick="ouvrirLightboxAnnonce(this.src)" onerror="this.style.display=\'none\'">' +
+      '<img loading="lazy" decoding="async" src="' + esc(a.image) + '" alt="' + esc(a.titre) + '" onclick="ouvrirLightboxAnnonce(this.src)" onerror="this.style.display=\'none\'">' +
       '<div class="card-annonce-body">' +
         '<div class="card-annonce-title">' + esc(a.titre) + '</div>' +
         (a.description ? '<div class="card-annonce-desc">' + esc(a.description) + '</div>' : '') +
@@ -4881,7 +4894,7 @@ function renderAdminAnnonces() {
   grid.innerHTML = liste.map(function(a){
     return '<div class="card-annonce">' +
       '<button class="btn-del-annonce" onclick="supprimerAnnonce(\'' + a.id + '\')" title="Supprimer">🗑️</button>' +
-      '<img src="' + esc(a.image) + '" alt="' + esc(a.titre) + '" onclick="ouvrirLightboxAnnonce(this.src)" onerror="this.style.display=\'none\'">' +
+      '<img loading="lazy" decoding="async" src="' + esc(a.image) + '" alt="' + esc(a.titre) + '" onclick="ouvrirLightboxAnnonce(this.src)" onerror="this.style.display=\'none\'">' +
       '<div class="card-annonce-body">' +
         '<div class="card-annonce-title">' + esc(a.titre) + '</div>' +
         (a.description ? '<div class="card-annonce-desc">' + esc(a.description) + '</div>' : '') +
@@ -5382,6 +5395,7 @@ function applyAdminAuthState(user) {
 }
 
 function showAdminTab(id) {
+  if (id === 'annonces') ensureAnnoncesLoaded();
   document.getElementById('admin-tab-vue').style.display = (id === 'vue') ? 'block' : 'none';
   document.getElementById('tab-btn-vue').classList.toggle('actif', id === 'vue');
   if (id === 'vue') { try { renderVueGlobale(); } catch(e) { console.warn(e); } }
@@ -9243,7 +9257,7 @@ function renderVueGlobale() {
     '<h4 style="margin-top:16px;">' + vgT('Participation & communication','المشاركة والتواصل') + '</h4>' +
     '<div class="vg-line"><span>📬 ' + vgT('Idées reçues','الأفكار الواردة') + '</span><b>' + ideesF.length + ' <small style="font-weight:500;color:#7A6F58;">(' + idNouv + ' ' + vgT('nouvelles','جديدة') + ')</small></b></div>' +
     '<div class="vg-line"><span>📝 ' + vgT('Doléances reçues','التظلمات الواردة') + '</span><b>' + dolF.length + ' <small style="font-weight:500;color:#7A6F58;">(' + dolNouv + ' ' + vgT('nouvelles','جديدة') + ', ' + dolF.filter(function(d){ return d.statut === 'Traité'; }).length + ' ' + vgT('traitées','معالجة') + ')</small></b></div>' +
-    '<div class="vg-line"><span>📢 ' + vgT('Annonces publiées','الإعلانات المنشورة') + '</span><b>' + (annonces || []).length + '</b></div>' +
+    '<div class="vg-line"><span>📢 ' + vgT('Annonces publiées','الإعلانات المنشورة') + '</span><b>' + (annoncesLiveReady ? (annonces || []).length : vgT('À consulter dans Annonces','يظهر العدد بعد فتح الإعلانات')) + '</b></div>' +
     '<div class="vg-line"><span>🧑‍💼 ' + vgT('Fiches effectifs importées','بطاقات القوى العاملة المستوردة') + '</span><b>' + (effectifs || []).length + '</b></div></div>';
   h += '</div>';
 
@@ -9322,22 +9336,62 @@ function saveData() {
   }
 })();
 
-// ===== ANNONCES : lecture publique, visible par tous les travailleurs sans connexion =====
-renderAnnonces();
-(function waitForFirebaseAnnonces(attempt) {
+// Announcements contain images: download only when their screen is opened.
+// Keep one listener per session so repeated navigation does not reattach it.
+var annoncesLiveReady = false;
+var annoncesLoadStarted = false;
+var annoncesRetryTimer = null;
+function ensureAnnoncesLoaded(attempt) {
   attempt = attempt || 0;
-  if (typeof window.fbListenAnnonces === 'function') {
-    window.fbListenAnnonces(function(arr) {
-      annonces = mergeAnnonces(arr);
-      renderAnnonces();
-      renderAdminAnnonces();
-    }, function(err) {
-      console.warn('Lecture des annonces indisponible pour le moment (Firebase) :', err);
-    });
-  } else if (attempt < 125) {
-    setTimeout(function(){ waitForFirebaseAnnonces(attempt + 1); }, 200);
+  if (annoncesLoadStarted) return;
+  if (typeof window.fbListenAnnonces !== 'function') {
+    if (attempt < 125 && !annoncesRetryTimer) {
+      annoncesRetryTimer = setTimeout(function() {
+        annoncesRetryTimer = null;
+        ensureAnnoncesLoaded(attempt + 1);
+      }, 200);
+    } else if (attempt >= 125) {
+      setAnnoncesLoadMessage('Service indisponible. / الخدمة غير متاحة.', true);
+    }
+    return;
   }
-})();
+  clearTimeout(annoncesRetryTimer); annoncesRetryTimer = null;
+  annoncesLoadStarted = true;
+  setAnnoncesLoadMessage('Chargement des annonces… / جارٍ تحميل الإعلانات…', false);
+  window.fbListenAnnonces(function(arr) {
+    annoncesLiveReady = true;
+    annonces = mergeAnnonces(arr);
+    setAnnoncesLoadMessage('', false);
+    renderAnnonces(); renderAdminAnnonces();
+  }, function(err) {
+    annoncesLoadStarted = false;
+    annoncesLiveReady = false;
+    console.warn('Lecture des annonces indisponible :', err);
+    setAnnoncesLoadMessage('Connexion indisponible. Les données locales peuvent être anciennes. / الاتصال غير متاح؛ قد تكون البيانات المحلية قديمة.', true);
+  });
+}
+function setAnnoncesLoadMessage(message, retry) {
+  ['annonces-grid', 'admin-annonces-grid'].forEach(function(id) {
+    var grid = document.getElementById(id);
+    if (!grid) return;
+    var notice = document.getElementById(id + '-load-status');
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.id = id + '-load-status';
+      notice.setAttribute('role', 'status');
+      grid.parentNode.insertBefore(notice, grid);
+    }
+    notice.textContent = message;
+    notice.style.display = message ? 'block' : 'none';
+    if (retry) {
+      var button = document.createElement('button');
+      button.type = 'button'; button.textContent = 'Réessayer / إعادة المحاولة';
+      button.onclick = function() { ensureAnnoncesLoaded(); };
+      notice.appendChild(button);
+    }
+  });
+}
+renderAnnonces();
 
 // ===== SAISONS (Omra + Sport & Travail) : écoute publique, visible par tous sans connexion =====
 (function waitForFirebaseSaisons(attempt) {
