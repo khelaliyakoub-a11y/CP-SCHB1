@@ -5231,8 +5231,10 @@ function applyAdminAuthState(user) {
   var wrap = document.getElementById('admin-login-wrap');
   var board = document.getElementById('admin-board');
   var msg = document.getElementById('msg-login');
+  _adminAuthed = !!user;
   if (user) {
     wrap.style.display = 'none'; board.style.display = 'block';
+    setTimeout(function(){ ensureAnnoncesLoaded(); }, 2500); // nécessaire pour purger les annonces expirées
     document.getElementById('admin-user-email').textContent = user.email || 'Compte authentifié';
     if (msg) msg.style.display = 'none';
     // Affichage immédiat depuis le cache léger (sans ordonnances), puis remplacé par les données Firebase.
@@ -5245,6 +5247,7 @@ function applyAdminAuthState(user) {
       window.fbListenAdmin(function(arr) {
         demandes = arr; adminLive = true;
         scheduleAdminRender();
+        purgerAutomatique();
       }, function(err) {
         console.error('Admin database read error:', err);
         alert("Connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture. Appliquez les règles sécurisées fournies.");
@@ -5258,6 +5261,7 @@ function applyAdminAuthState(user) {
       window.fbListenAdminLivre(function(arr) {
         livres = mergeLivres(arr);
         renderTableauLivres(); renderRapportStats();
+        purgerAutomatique();
       }, function(err) {
         console.error('Admin database read error (livres):', err);
         alert("Livre scolaire : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'livres'. Ajoutez les règles pour ce chemin dans la console Firebase.");
@@ -5996,11 +6000,16 @@ function validerDemande(num) {
   if (!confirm('Valider la demande ' + num + ' ?')) return;
   d.statut = 'Validé';
   d.dateValidation = new Date().toLocaleDateString('fr-DZ');
+  d.validatedAt = Date.now();
   d.numPC = String(demandes.filter(wasValide).length).padStart(2,'0');
   saveData(); renderStats(); renderTableau();
   // Sync to Firebase
   if (typeof window.fbUpdateDemande === 'function') {
-    window.fbUpdateDemande(num, { statut: d.statut, dateValidation: d.dateValidation, numPC: d.numPC }, d.trackingCode || '')
+    window.fbUpdateDemande(num, { statut: d.statut, dateValidation: d.dateValidation, numPC: d.numPC, validatedAt: d.validatedAt }, d.trackingCode || '')
+      .catch(function(err){
+        console.warn('Firebase update (avec validatedAt) refusé, nouvel essai sans :', err);
+        return window.fbUpdateDemande(num, { statut: d.statut, dateValidation: d.dateValidation, numPC: d.numPC }, d.trackingCode || '');
+      })
       .catch(function(err){ console.error('Firebase update error:', err); });
   }
 }
@@ -6238,10 +6247,15 @@ function validerLivre(num) {
   if (!confirm("Valider l'inscription " + num + ' ?')) return;
   d.statut = 'Validé';
   d.dateValidation = new Date().toLocaleDateString('fr-DZ');
+  d.validatedAt = Date.now();
   persistLivreLocal(d);
   renderTableauLivres();
   if (typeof window.fbUpdateLivre === 'function') {
-    window.fbUpdateLivre(num, { statut: d.statut, dateValidation: d.dateValidation }, d.trackingCode || '')
+    window.fbUpdateLivre(num, { statut: d.statut, dateValidation: d.dateValidation, validatedAt: d.validatedAt }, d.trackingCode || '')
+      .catch(function(err){
+        console.warn('Firebase (avec validatedAt) refusé, nouvel essai sans :', err);
+        return window.fbUpdateLivre(num, { statut: d.statut, dateValidation: d.dateValidation }, d.trackingCode || '');
+      })
       .catch(function(err){ console.warn('Synchronisation Firebase échouée (livre) :', err); });
   }
 }
@@ -9311,6 +9325,77 @@ function vgSchedule() {
 
 // ===== SAVE =====
 var _saveTimer = null;
+// ===== SUPPRESSION AUTOMATIQUE =====
+// Prise en charge médicale : 24 h après la validation | Livre scolaire : 2 mois après la validation
+// Annonces : 1 semaine après la publication. Exécutée par l'administrateur connecté (démarrage, synchronisation, toutes les 10 min).
+var PURGE_DEMANDE_MS = 24 * 3600 * 1000;
+var PURGE_ANNONCE_MS = 7 * 24 * 3600 * 1000;
+var PURGE_LIVRE_MOIS = 2;
+var _adminAuthed = false;
+function _tsValidation(d) {
+  if (!d) return null;
+  if (d.validatedAt && isFinite(+d.validatedAt)) return +d.validatedAt;
+  var m = String(d.dateValidation || '').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{4})/);
+  if (!m) return null;
+  // Anciennes données (date sans heure) : on compte à partir de la fin du jour de validation.
+  return new Date(+m[3], +m[2] - 1, +m[1], 23, 59, 59).getTime();
+}
+function _annonceExpiree(a) {
+  var t = a && a.dateObj ? Date.parse(a.dateObj) : NaN;
+  if (isNaN(t)) { var m = a && /^AN-(\d+)$/.exec(a.id || ''); t = m ? +m[1] : NaN; }
+  return !isNaN(t) && Date.now() - t >= PURGE_ANNONCE_MS;
+}
+function _demandeExpiree(d) {
+  if (!wasValide(d)) return false;
+  var t = _tsValidation(d);
+  return t !== null && Date.now() - t >= PURGE_DEMANDE_MS;
+}
+function _livreExpire(d) {
+  if (!wasValide(d)) return false;
+  var t = _tsValidation(d);
+  if (t === null) return false;
+  var lim = new Date(t); lim.setMonth(lim.getMonth() + PURGE_LIVRE_MOIS);
+  return Date.now() >= lim.getTime();
+}
+function purgerAutomatique() {
+  if (!_adminAuthed) return;
+  try {
+    if (adminLive && Array.isArray(demandes)) {
+      var exp = demandes.filter(_demandeExpiree);
+      if (exp.length) {
+        demandes = demandes.filter(function(x){ return !_demandeExpiree(x); });
+        saveData(); renderStats(); renderTableau();
+        exp.forEach(function(d){
+          if (typeof window.fbDeleteDemande === 'function') window.fbDeleteDemande(d.num, d.trackingCode || '').catch(function(err){ console.warn('Purge auto (demande) :', err); });
+        });
+      }
+    }
+    if (Array.isArray(livres)) {
+      var expL = livres.filter(_livreExpire);
+      if (expL.length) {
+        livres = livres.filter(function(x){ return !_livreExpire(x); });
+        expL.forEach(function(d){
+          retirerLivreLocal(d.num);
+          if (typeof window.fbDeleteLivre === 'function') window.fbDeleteLivre(d.num, d.trackingCode || '').catch(function(err){ console.warn('Purge auto (livre) :', err); });
+        });
+        renderTableauLivres();
+      }
+    }
+    if (annoncesLiveReady && Array.isArray(annonces)) {
+      var expA = annonces.filter(_annonceExpiree);
+      if (expA.length) {
+        expA.forEach(function(a){
+          retirerAnnonceLocal(a.id);
+          if (typeof window.fbDeleteAnnonce === 'function') window.fbDeleteAnnonce(a.id).catch(function(err){ console.warn('Purge auto (annonce) :', err); });
+        });
+        annonces = annonces.filter(function(a){ return !_annonceExpiree(a); });
+        renderAnnonces(); renderAdminAnnonces();
+      }
+    }
+  } catch(e) { console.warn('Purge automatique :', e); }
+}
+setInterval(purgerAutomatique, 10 * 60 * 1000);
+
 function saveData() {
   // Cache léger (SANS les ordonnances base64) et différé : ne bloque plus l'interface.
   clearTimeout(_saveTimer);
@@ -9361,6 +9446,11 @@ function ensureAnnoncesLoaded(attempt) {
   window.fbListenAnnonces(function(arr) {
     annoncesLiveReady = true;
     annonces = mergeAnnonces(arr);
+    // Les annonces de plus d'une semaine ne sont plus affichées ; l'admin les supprime définitivement.
+    if (annonces.some(_annonceExpiree)) {
+      if (_adminAuthed) purgerAutomatique();
+      else annonces = annonces.filter(function(a){ return !_annonceExpiree(a); });
+    }
     setAnnoncesLoadMessage('', false);
     renderAnnonces(); renderAdminAnnonces();
   }, function(err) {
