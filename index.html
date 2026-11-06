@@ -525,6 +525,39 @@
         return _fbDb.ref().update(updates);
       };
 
+      // ===== BLOCAGE DES PRESTATIONS PAR MATRICULE =====
+      // Nœud "blocages/{matricule}" = { bloque:true, nom, prenom, date }. Absent = travailleur actif.
+      // Nœud séparé de "effectifsPublic" : un nouvel import Excel ne réinitialise donc pas les blocages.
+      // Règles Firebase : lecture d'un enfant précis autorisée à tous (jamais la liste complète),
+      // écriture réservée à l'administrateur connecté.
+      window.fbGetBlocage = function(mat) {
+        if (!mat) return Promise.resolve(null);
+        return _fbDb.ref('blocages/' + mat).once('value').then(function(s) { return s.val(); });
+      };
+      window.fbSetBlocages = function(liste, bloque) {
+        var updates = {};
+        var maintenant = new Date().toISOString();
+        liste.forEach(function(e) {
+          if (!e || !e.mat) return;
+          updates['blocages/' + e.mat] = bloque
+            ? { bloque: true, nom: e.nom || '', prenom: e.prenom || '', date: maintenant }
+            : null;
+        });
+        return _fbDb.ref().update(updates);
+      };
+      var _adminRefBlocages = null;
+      var _adminValueHandlerBlocages = null;
+      window.fbListenAdminBlocages = function(callback, errorCallback) {
+        if (_adminRefBlocages && _adminValueHandlerBlocages) _adminRefBlocages.off('value', _adminValueHandlerBlocages);
+        _adminRefBlocages = _fbDb.ref('blocages');
+        _adminValueHandlerBlocages = function(snapshot) { callback(snapshot.val() || {}); };
+        _adminRefBlocages.on('value', _adminValueHandlerBlocages, errorCallback || function(err){ console.error(err); });
+      };
+      window.fbStopAdminListenBlocages = function() {
+        if (_adminRefBlocages && _adminValueHandlerBlocages) _adminRefBlocages.off('value', _adminValueHandlerBlocages);
+        _adminRefBlocages = null; _adminValueHandlerBlocages = null;
+      };
+
       // ===== META (clôture automatique par année) =====
       window.fbSetMetaCloture = function(annee) {
         return _fbDb.ref('meta/derniereClotureAnnee').set(annee);
@@ -3110,12 +3143,35 @@ main{padding-top:30px;}
         </div>
         <div class="msg" id="msg-effectifs"></div>
         <div style="font-size:13px;color:#5C5142;margin:10px 0;"><b id="effectifs-total">0</b> fiche(s) actuellement enregistrée(s) dans Firebase.</div>
+
+        <div style="border:1.5px solid #E8C9C5;background:#FFF8F7;border-radius:12px;padding:16px;margin:14px 0;">
+          <h4 class="serif" style="color:var(--rouge);margin-bottom:6px;font-size:15px;">⛔ Blocage des prestations par matricule</h4>
+          <p style="font-size:13px;color:#5C5142;line-height:1.6;margin-bottom:12px;">
+            Un travailleur <b>bloqué</b> ne peut plus accéder aux prestations (prise en charge, livre scolaire, prêt social, Omra, sport, électroménager, loisirs, crèches)
+            ni envoyer une demande. Il voit le message : <i>« Le site est endommagé et en réparation »</i>.
+            Le blocage est lié au matricule de la fiche d'effectif et reste actif après un nouvel import Excel.
+          </p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+            <input id="blocage-mat" type="text" placeholder="Matricule(s) — séparés par virgule, espace ou retour" style="flex:1;min-width:220px;">
+            <button class="btn btn-danger-sm" style="padding:10px 16px;" onclick="blocageParSaisie(true)">⛔ Bloquer</button>
+            <button class="btn btn-primary" style="padding:10px 16px;font-size:13px;" onclick="blocageParSaisie(false)">✅ Débloquer</button>
+          </div>
+          <div style="font-size:13px;color:#5C5142;"><b id="blocages-total">0</b> travailleur(s) actuellement bloqué(s).</div>
+        </div>
+
         <div class="filter-bar">
           <input id="filter-search-effectifs" type="text" placeholder="🔍 Rechercher nom, matricule, service…" oninput="renderTableauEffectifs()" style="flex:1;min-width:200px;">
+          <select id="filter-statut-effectifs" onchange="renderTableauEffectifs()">
+            <option value="">Tous les statuts</option>
+            <option value="bloque">⛔ Bloqués</option>
+            <option value="actif">✅ Actifs</option>
+          </select>
+          <button class="btn btn-outline" style="padding:8px 14px;font-size:13px;" onclick="blocageListeFiltree(true)">⛔ Bloquer la liste affichée</button>
+          <button class="btn btn-outline" style="padding:8px 14px;font-size:13px;" onclick="blocageListeFiltree(false)">✅ Débloquer la liste affichée</button>
         </div>
         <div class="tableau-wrap">
           <table class="tab">
-            <thead><tr><th>Matricule</th><th>Nom</th><th>Prénom</th><th>Unité</th><th>Direction</th><th>Département</th><th>Service</th><th>Poste</th></tr></thead>
+            <thead><tr><th>Matricule</th><th>Nom</th><th>Prénom</th><th>Unité</th><th>Direction</th><th>Département</th><th>Service</th><th>Poste</th><th>Prestations</th></tr></thead>
             <tbody id="tbody-effectifs"></tbody>
           </table>
         </div>
@@ -3691,6 +3747,22 @@ var VUES_PROTEGEES = {
 var _accesCible = null;
 var _accesMem = null;
 
+// ----- Blocage des prestations (géré par l'admin, onglet Effectifs) -----
+// Rubriques concernées par le blocage : toutes les prestations (idées et doléances restent accessibles).
+var VUES_PRESTATIONS = ['demande', 'livre', 'pret', 'omra', 'sport', 'electro', 'loisirs', 'creches'];
+function _msgSiteRepare() {
+  return _acT('🔧 Le site est endommagé et en réparation.', '🔧 الموقع متضرر وهو قيد الإصلاح.');
+}
+// Renvoie true si le matricule est bloqué. En cas d'erreur de lecture (hors ligne, règles non publiées),
+// on ne bloque pas (false) afin de ne pas paralyser le site ; l'erreur est tracée en console.
+function _acEstBloque(mat) {
+  if (!mat || typeof window.fbGetBlocage !== 'function' || /[.#$\[\]\/]/.test(mat)) return Promise.resolve(false);
+  var m2 = /^0+\d/.test(mat) ? mat.replace(/^0+/, '') : null;
+  var lire = function(m) { return window.fbGetBlocage(m).then(function(b) { return !!(b && b.bloque); }); };
+  return lire(mat).then(function(b) { return b || (m2 ? lire(m2) : false); })
+    .catch(function(err) { console.warn('Lecture du blocage impossible :', err); return false; });
+}
+
 function _acT(fr, ar) { return (typeof vgT === 'function') ? vgT(fr, ar) : fr; }
 function _acNorm(s) {
   return (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -3775,13 +3847,18 @@ function accesValider() {
                   '❌ هذه المعلومات لا تطابق أي ملف في قائمة العمال. تحقق من اللقب والاسم ورقم التسجيل.'));
       return;
     }
-    _acSave({
-      mat: r.mat, nom: r.emp.nom || nom, prenom: r.emp.prenom || prenom,
-      service: r.emp.service || [r.emp.direction, r.emp.departement].filter(Boolean).join(' — ')
+    var cibleId = _accesCible ? _accesCible.id : null;
+    var verif = (cibleId && VUES_PRESTATIONS.indexOf(cibleId) !== -1) ? _acEstBloque(r.mat) : Promise.resolve(false);
+    verif.then(function(bloque) {
+      if (bloque) { _acMsg(_msgSiteRepare()); return; }
+      _acSave({
+        mat: r.mat, nom: r.emp.nom || nom, prenom: r.emp.prenom || prenom,
+        service: r.emp.service || [r.emp.direction, r.emp.departement].filter(Boolean).join(' — ')
+      });
+      document.getElementById('acces-overlay').classList.remove('open');
+      var cible = _accesCible; _accesCible = null;
+      if (cible) { showVue(cible.id, cible.btn); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     });
-    document.getElementById('acces-overlay').classList.remove('open');
-    var cible = _accesCible; _accesCible = null;
-    if (cible) { showVue(cible.id, cible.btn); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   }).catch(function(err) {
     console.warn('Vérification effectif impossible :', err);
     btn.disabled = false;
@@ -3800,6 +3877,29 @@ function _accesPrefill(id) {
   put('nom', s.nom); put('prenom', s.prenom); put('matricule', s.mat);
   put(p === 'fp' ? 'fonction' : 'service', s.service);
 }
+// Garde à l'envoi : le matricule saisi dans le formulaire est lui aussi contrôlé (il peut différer de la session).
+document.addEventListener('DOMContentLoaded', function() {
+  var FORMS = { soumettreDemande: ['f', 'demande'], soumettreLivre: ['fl', 'livre'], soumettrePret: ['fp', 'pret'],
+                soumettreOmra: ['fo', 'omra'], soumettreSport: ['fs', 'sport'], soumettreElectro: ['fe', 'electro'],
+                soumettreLoisirs: ['flo', 'loisirs'], soumettreCreches: ['fc', 'creches'] };
+  Object.keys(FORMS).forEach(function(nom) {
+    var original = window[nom];
+    if (typeof original !== 'function') return;
+    window[nom] = function() {
+      var self = this, args = arguments;
+      var champ = document.getElementById(FORMS[nom][0] + '-matricule');
+      var mat = champ ? champ.value.trim() : '';
+      return _acEstBloque(mat).then(function(bloque) {
+        if (bloque) {
+          var m = document.getElementById('msg-' + FORMS[nom][1]);
+          if (m) { m.className = 'msg err'; m.style.display = 'flex'; m.textContent = _msgSiteRepare(); }
+          return;
+        }
+        return original.apply(self, args);
+      });
+    };
+  });
+});
 document.addEventListener('DOMContentLoaded', function() {
   ['acces-nom', 'acces-prenom', 'acces-mat'].forEach(function(i) {
     var e = document.getElementById(i);
@@ -3810,8 +3910,22 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ===== NAV =====
-function showVue(id, btn) {
+function showVue(id, btn, _dejaVerifie) {
   if (_accesRequis(id)) { _accesDemander(id, btn); return; }
+  // Travailleur déjà identifié dans cet onglet : on revérifie qu'il n'a pas été bloqué entre-temps.
+  if (!_dejaVerifie && VUES_PRESTATIONS.indexOf(id) !== -1 && _acSession()) {
+    _acEstBloque(_acSession().mat).then(function(bloque) {
+      if (bloque) {
+        _accesMem = null;
+        try { sessionStorage.removeItem('schb_travailleur'); } catch (e) {}
+        _accesDemander(id, btn);
+        _acMsg(_msgSiteRepare());
+      } else {
+        showVue(id, btn, true);
+      }
+    });
+    return;
+  }
   if (id === 'annonces') ensureAnnoncesLoaded();
   document.querySelectorAll('.vue').forEach(function(v){ v.classList.remove('active'); });
   document.getElementById('vue-' + id).classList.add('active');
@@ -5587,11 +5701,22 @@ function applyAdminAuthState(user) {
         alert("Effectifs : connexion réussie, mais les règles Firebase n'autorisent pas encore la lecture du chemin 'effectifs'. Ajoutez les règles pour ce chemin dans la console Firebase.");
       });
     }
+    // Blocage des prestations (nœud « blocages », temps réel).
+    blocagesMap = {};
+    if (typeof window.fbListenAdminBlocages === 'function') {
+      window.fbListenAdminBlocages(function(m) {
+        blocagesMap = m || {};
+        renderTableauEffectifs();
+      }, function(err) {
+        console.error('Admin database read error (blocages):', err);
+      });
+    }
     showAdminTab('vue');
     renderRapportStats();
     // Clôture automatique par année : vérifie une fois par session si une nouvelle année a commencé.
     setTimeout(function(){ cloturerAnneesPassees(false); }, 1500);
   } else {
+    if (typeof window.fbStopAdminListenBlocages === 'function') window.fbStopAdminListenBlocages();
     if (typeof window.fbStopAdminListenEffectifs === 'function') window.fbStopAdminListenEffectifs();
     if (typeof window.fbStopAdminListen === 'function') window.fbStopAdminListen();
     if (typeof window.fbStopAdminListenLivre === 'function') window.fbStopAdminListenLivre();
@@ -5803,17 +5928,74 @@ function supprimerTousLesEffectifs() {
 function renderTableauEffectifs() {
   var tbody = document.getElementById('tbody-effectifs');
   if (!tbody) return;
-  var q = (document.getElementById('filter-search-effectifs') || {}).value || '';
-  q = q.toLowerCase().trim();
-  var liste = (effectifs || []).filter(function(e) {
+  var liste = effectifsFiltres();
+  var nb = Object.keys(blocagesMap || {}).length;
+  var tot = document.getElementById('blocages-total'); if (tot) tot.textContent = nb;
+  tbody.innerHTML = liste.map(function(e) {
+    var bloque = !!(blocagesMap && blocagesMap[e.mat]);
+    var statut = bloque
+      ? '<span class="badge" style="background:#FBEAE8;color:#A12622;">⛔ Bloqué</span>'
+      : '<span class="badge" style="background:#E8F5EC;color:#1B6B3A;">✅ Actif</span>';
+    var matJs = JSON.stringify(String(e.mat)).replace(/"/g, '&quot;');
+    var action = bloque
+      ? '<button class="btn-danger-sm" style="color:#1B6B3A;border-color:#1B6B3A;" onclick="basculerBlocage(' + matJs + ',false)">Débloquer</button>'
+      : '<button class="btn-danger-sm" onclick="basculerBlocage(' + matJs + ',true)">Bloquer</button>';
+    return '<tr' + (bloque ? ' style="background:#FFF8F7;"' : '') + '><td>' + esc(e.mat) + '</td><td>' + esc(e.nom) + '</td><td>' + esc(e.prenom) + '</td><td>' +
+      esc(e.unite) + '</td><td>' + esc(e.direction) + '</td><td>' + esc(e.departement) + '</td><td>' +
+      esc(e.service) + '</td><td>' + esc(e.poste) + '</td><td style="white-space:nowrap;">' + statut + ' ' + action + '</td></tr>';
+  }).join('') || '<tr><td colspan="9" style="text-align:center;color:#999;">Aucune fiche à afficher.</td></tr>';
+}
+
+// ----- Blocage / déblocage des prestations (référence = matricule de la fiche d'effectif) -----
+var blocagesMap = {}; // { matricule: { bloque:true, nom, prenom, date } } — synchronisé en temps réel avec Firebase
+
+function effectifsFiltres() {
+  var q = ((document.getElementById('filter-search-effectifs') || {}).value || '').toLowerCase().trim();
+  var st = (document.getElementById('filter-statut-effectifs') || {}).value || '';
+  return (effectifs || []).filter(function(e) {
+    var bloque = !!(blocagesMap && blocagesMap[e.mat]);
+    if (st === 'bloque' && !bloque) return false;
+    if (st === 'actif' && bloque) return false;
     if (!q) return true;
     return [e.mat, e.nom, e.prenom, e.service, e.direction, e.departement].join(' ').toLowerCase().indexOf(q) !== -1;
   });
-  tbody.innerHTML = liste.map(function(e) {
-    return '<tr><td>' + esc(e.mat) + '</td><td>' + esc(e.nom) + '</td><td>' + esc(e.prenom) + '</td><td>' +
-      esc(e.unite) + '</td><td>' + esc(e.direction) + '</td><td>' + esc(e.departement) + '</td><td>' +
-      esc(e.service) + '</td><td>' + esc(e.poste) + '</td></tr>';
-  }).join('') || '<tr><td colspan="8" style="text-align:center;color:#999;">Aucune fiche importée pour le moment.</td></tr>';
+}
+function _blocageMsg(texte, ok) {
+  var m = document.getElementById('msg-effectifs');
+  if (!m) return;
+  m.className = 'msg ' + (ok ? 'ok' : 'err'); m.style.display = 'block'; m.textContent = texte;
+}
+function _blocageAppliquer(liste, bloque) {
+  if (typeof window.fbSetBlocages !== 'function') { _blocageMsg('❌ Connexion à la base indisponible.', false); return; }
+  if (!liste.length) { _blocageMsg('⚠️ Aucun matricule à traiter.', false); return; }
+  window.fbSetBlocages(liste, bloque).then(function() {
+    _blocageMsg((bloque ? '⛔ ' : '✅ ') + liste.length + ' travailleur(s) ' + (bloque ? 'bloqué(s).' : 'débloqué(s).'), true);
+  }).catch(function(err) {
+    console.error('Blocage impossible :', err);
+    _blocageMsg("❌ Écriture refusée. Ajoutez les règles Firebase du chemin 'blocages' (voir documentation) puis réessayez.", false);
+  });
+}
+function basculerBlocage(mat, bloque) {
+  var e = (effectifs || []).filter(function(x) { return String(x.mat) === String(mat); })[0] || { mat: mat };
+  _blocageAppliquer([e], bloque);
+}
+function blocageParSaisie(bloque) {
+  var input = document.getElementById('blocage-mat');
+  var mats = (input.value || '').split(/[\s,;]+/).map(function(x) { return x.trim(); }).filter(Boolean);
+  var inconnus = [], liste = [];
+  mats.forEach(function(m) {
+    var e = (effectifs || []).filter(function(x) { return String(x.mat) === m || String(x.mat) === m.replace(/^0+/, ''); })[0];
+    if (e) liste.push(e); else inconnus.push(m);
+  });
+  if (inconnus.length) { _blocageMsg('⚠️ Matricule(s) absent(s) de l\'état des effectifs : ' + inconnus.join(', ') + '. Aucune modification effectuée.', false); return; }
+  _blocageAppliquer(liste, bloque);
+  if (liste.length) input.value = '';
+}
+function blocageListeFiltree(bloque) {
+  var liste = effectifsFiltres();
+  if (!liste.length) { _blocageMsg('⚠️ La liste affichée est vide.', false); return; }
+  if (!confirm((bloque ? 'Bloquer' : 'Débloquer') + ' les ' + liste.length + ' travailleur(s) actuellement affiché(s) ?')) return;
+  _blocageAppliquer(liste, bloque);
 }
 
 // ----- Pré-remplissage automatique des formulaires publics à partir du matricule -----
