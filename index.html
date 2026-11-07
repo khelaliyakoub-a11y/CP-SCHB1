@@ -3813,11 +3813,34 @@ function accesAnnuler() {
   document.getElementById('acces-overlay').classList.remove('open');
   _accesCible = null;
 }
+function _acLev(a, b) {
+  var m = a.length, n = b.length, i, j, prev = [], cur;
+  for (j = 0; j <= n; j++) prev[j] = j;
+  for (i = 1; i <= m; i++) {
+    cur = [i];
+    for (j = 1; j <= n; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+// Deux textes sont "proches" si leur distance d'édition reste faible (fautes de frappe tolérées).
+function _acProche(x, y) {
+  if (x === y) return true;
+  if (!x || !y) return false;
+  var L = Math.max(x.length, y.length);
+  var tol = L <= 3 ? 0 : (L <= 6 ? 1 : (L <= 12 ? 2 : 3));
+  return _acLev(x, y) <= tol;
+}
 function _acEmpOk(emp, nom, prenom) {
   var en = _acNorm(emp.nom), ep = _acNorm(emp.prenom), a = _acNorm(nom), b = _acNorm(prenom);
-  var prenomOk = function(x, y) { return x === y || (x.length >= 3 && y.length >= 3 && (x.indexOf(y) === 0 || y.indexOf(x) === 0)); };
-  // Tolère un prénom composé saisi en partie et l'inversion nom / prénom.
-  return (a === en && prenomOk(b, ep)) || (a === ep && prenomOk(b, en));
+  var prenomOk = function(x, y) { return _acProche(x, y) || (x.length >= 3 && y.length >= 3 && (x.indexOf(y) === 0 || y.indexOf(x) === 0)); };
+  // Tolère les fautes d'écriture, un prénom composé saisi en partie et l'inversion nom / prénom.
+  if ((_acProche(a, en) && prenomOk(b, ep)) || (_acProche(a, ep) && prenomOk(b, en))) return true;
+  // Ordre/espaces différents : comparaison sur "nom prénom" concaténé.
+  var full = en + ' ' + ep, full2 = ep + ' ' + en, t1 = a + ' ' + b, t2 = b + ' ' + a;
+  return _acProche(t1, full) || _acProche(t1, full2) || _acProche(t2, full);
 }
 function accesValider() {
   var nom = document.getElementById('acces-nom').value.trim();
@@ -3842,9 +3865,14 @@ function accesValider() {
     return emp ? { emp: emp, mat: mat } : null;
   }).then(function(r) {
     btn.disabled = false;
-    if (!r || !_acEmpOk(r.emp, nom, prenom)) {
-      _acMsg(_acT("❌ Ces informations ne correspondent à aucune fiche de l'effectif. Vérifiez votre nom, prénom et matricule.",
-                  '❌ هذه المعلومات لا تطابق أي ملف في قائمة العمال. تحقق من اللقب والاسم ورقم التسجيل.'));
+    if (!r) {
+      _acMsg(_acT("❌ Matricule incorrect : accès refusé. Vérifiez votre matricule.",
+                  '❌ رقم التسجيل غير صحيح : الدخول مرفوض. تحقق من رقم التسجيل.'));
+      return;
+    }
+    if (!_acEmpOk(r.emp, nom, prenom)) {
+      _acMsg(_acT("❌ Le nom et le prénom ne correspondent pas à ce matricule. Vérifiez votre saisie.",
+                  '❌ اللقب والاسم لا يطابقان رقم التسجيل هذا. تحقق من الإدخال.'));
       return;
     }
     var cibleId = _accesCible ? _accesCible.id : null;
