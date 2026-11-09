@@ -384,6 +384,32 @@
         updates['doleances/' + d.num] = d;
         return _fbDb.ref().update(updates);
       };
+      window.fbCreateMgmcObs = function(d) {
+        return _fbDb.ref('mgmcObservations/' + d.num).set(d);
+      };
+      window.fbMgmcFindAdherent = function(mat) {
+        return _fbDb.ref('mgmcAdherents/' + mat).once('value').then(function(s) { return s.val(); });
+      };
+      window.fbMgmcListAdherents = function() {
+        return _fbDb.ref('mgmcAdherents').once('value').then(function(s) { return Object.values(s.val() || {}); });
+      };
+      window.fbMgmcSetAdherents = function(list) {
+        var u = {}; list.forEach(function(a) { u['mgmcAdherents/' + a.mat] = a; });
+        return _fbDb.ref().update(u);
+      };
+      window.fbMgmcReplaceAdherents = function(list) {
+        var o = {}; list.forEach(function(a) { o[a.mat] = a; });
+        return _fbDb.ref('mgmcAdherents').set(list.length ? o : null);
+      };
+      window.fbMgmcDelAdherent = function(mat) { return _fbDb.ref('mgmcAdherents/' + mat).remove(); };
+      window.fbMgmcGetContenu = function() {
+        return _fbDb.ref('mgmcContenu').once('value').then(function(s) { return s.val() || {}; });
+      };
+      window.fbMgmcSetContenu = function(key, arr) { return _fbDb.ref('mgmcContenu/' + key).set(arr); };
+      window.fbMgmcListMsgs = function() {
+        return _fbDb.ref('mgmcObservations').once('value').then(function(s) { return Object.values(s.val() || {}); });
+      };
+      window.fbMgmcDelMsg = function(num) { return _fbDb.ref('mgmcObservations/' + num).remove(); };
       window.fbListenAdminDoleances = function(callback, errorCallback) {
         if (_adminRefDoleances && _adminValueHandlerDoleances) _adminRefDoleances.off('value', _adminValueHandlerDoleances);
         _adminRefDoleances = _fbDb.ref('doleances');
@@ -1284,6 +1310,53 @@ main{padding-top:30px;}
 @media(max-width:700px){nav button{padding:9px 13px;font-size:13px;}.card-activite,.card-spec{border-radius:16px;}}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important;}}
 </style>
+
+<style id="mgmc-style">
+/* ===== Espace MGMC : bleu & blanc ===== */
+nav button.nav-mgmc{background:#1A3FCB;color:#fff;border:1.5px solid #fff;font-weight:700;}
+nav button.nav-mgmc:hover,nav button.nav-mgmc.actif{background:#fff;color:#1A3FCB;border-color:#1A3FCB;}
+#mgmc-overlay{z-index:310;background:rgba(10,32,120,.65);}
+#mgmc-overlay .modal{max-width:420px;border-top:6px solid #1A3FCB;text-align:center;}
+#mgmc-overlay .mg-logo{width:96px;height:96px;border-radius:14px;margin:0 auto 10px;display:block;box-shadow:0 6px 18px rgba(26,63,203,.35);}
+#mgmc-overlay h2{color:#1A3FCB;margin:4px 0 6px;font-size:20px;}
+#mgmc-overlay p{font-size:13.5px;color:#44507a;line-height:1.55;margin-bottom:14px;}
+#mgmc-overlay input{width:100%;box-sizing:border-box;padding:12px;border:1.5px solid #B9C6F5;border-radius:10px;font-size:16px;text-align:center;letter-spacing:.08em;}
+#mgmc-overlay input:focus{outline:none;border-color:#1A3FCB;box-shadow:0 0 0 3px rgba(26,63,203,.18);}
+#mgmc-msg{display:none;margin:10px 0 0;padding:9px 12px;border-radius:8px;background:#FDECEA;color:#A12622;font-size:13px;}
+#mgmc-overlay .mg-actions{display:flex;gap:10px;margin-top:14px;}
+.mg-btn{flex:1;padding:11px 14px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;border:1.5px solid #1A3FCB;font-family:inherit;}
+.mg-btn.p{background:#1A3FCB;color:#fff;}.mg-btn.p:hover{background:#0B2A8F;}
+.mg-btn.o{background:#fff;color:#1A3FCB;}.mg-btn.o:hover{background:#EEF2FF;}
+.mg-btn:disabled{opacity:.5;cursor:not-allowed;}
+#vue-mgmc{background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(26,63,203,.22);border:1.5px solid #1A3FCB;}
+#vue-mgmc .mg-hero{background:linear-gradient(135deg,#0B2A8F,#1A3FCB 60%,#3F63E6);color:#fff;padding:26px 28px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;}
+#vue-mgmc .mg-hero img{width:92px;height:92px;border-radius:14px;border:3px solid #fff;background:#fff;}
+#vue-mgmc .mg-hero h2{margin:0;font-size:24px;color:#fff;line-height:1.25;}
+#vue-mgmc .mg-hero small{display:block;opacity:.85;font-size:13px;margin-top:4px;}
+#vue-mgmc .mg-who{margin-left:auto;text-align:right;font-size:13px;}
+#vue-mgmc .mg-who b{display:block;font-size:15px;}
+#vue-mgmc .mg-who button{margin-top:8px;background:#fff;color:#1A3FCB;border:none;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer;}
+#vue-mgmc .mg-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 20px 0;background:#EEF2FF;border-bottom:2px solid #1A3FCB;}
+#vue-mgmc .mg-tabs button{background:transparent;border:none;padding:10px 16px;font-weight:700;font-size:14px;color:#1A3FCB;cursor:pointer;border-radius:10px 10px 0 0;font-family:inherit;}
+#vue-mgmc .mg-tabs button.on{background:#1A3FCB;color:#fff;}
+#vue-mgmc .mg-body{padding:24px 28px;background:#fff;color:#14205c;}
+#vue-mgmc .mg-pan{display:none;}#vue-mgmc .mg-pan.on{display:block;}
+#vue-mgmc .mg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
+#vue-mgmc .mg-card{border:1.5px solid #C9D4F8;border-left:5px solid #1A3FCB;border-radius:12px;padding:16px;background:#F7F9FF;}
+#vue-mgmc .mg-card h4{margin:0 0 6px;color:#1A3FCB;font-size:15px;}
+#vue-mgmc .mg-card p{margin:0;font-size:13.5px;line-height:1.55;color:#33407a;}
+#vue-mgmc .mg-card .d{font-size:11.5px;font-weight:700;color:#fff;background:#1A3FCB;display:inline-block;padding:2px 8px;border-radius:20px;margin-bottom:8px;}
+#vue-mgmc .mg-vide{padding:30px;text-align:center;color:#6A77AA;border:2px dashed #C9D4F8;border-radius:12px;}
+#vue-mgmc table{width:100%;border-collapse:collapse;font-size:13.5px;}
+#vue-mgmc th{background:#1A3FCB;color:#fff;text-align:left;padding:10px;}
+#vue-mgmc td{padding:10px;border-bottom:1px solid #DCE3FA;vertical-align:top;}
+#vue-mgmc .st{font-weight:700;padding:2px 9px;border-radius:20px;font-size:12px;background:#EEF2FF;color:#1A3FCB;border:1px solid #1A3FCB;}
+#vue-mgmc .mg-f label{display:block;font-weight:700;font-size:13px;color:#1A3FCB;margin:12px 0 5px;}
+#vue-mgmc .mg-f input,#vue-mgmc .mg-f select,#vue-mgmc .mg-f textarea{width:100%;box-sizing:border-box;padding:11px;border:1.5px solid #B9C6F5;border-radius:10px;font-family:inherit;font-size:14px;}
+#vue-mgmc .mg-f input:focus,#vue-mgmc .mg-f select:focus,#vue-mgmc .mg-f textarea:focus{outline:none;border-color:#1A3FCB;box-shadow:0 0 0 3px rgba(26,63,203,.15);}
+#vue-mgmc .mg-ok{margin-top:12px;padding:10px 14px;border-radius:10px;font-size:13.5px;display:none;}
+#vue-mgmc .mg-ok.ok{background:#E7EEFF;color:#0B2A8F;display:block;}#vue-mgmc .mg-ok.ko{background:#FDECEA;color:#A12622;display:block;}
+</style>
 </head>
 <body>
 <div id="theme-bg" aria-hidden="true"></div>
@@ -1425,6 +1498,7 @@ main{padding-top:30px;}
   <button onclick="showVue('doleances',this)" data-i18n="nav.doleances">📝 Registre de doléances</button>
   <button onclick="showVue('annonces',this)" data-i18n="nav.annonces">📢 Annonces</button>
   <button onclick="showVue('suivi',this)" data-i18n="nav.suivi">🔍 Suivi</button>
+  <button class="nav-mgmc" onclick="showVue('mgmc',this)">&#128309; Espace MGMC</button>
   <button onclick="showVue('interne',this)" data-i18n="nav.interne">🛡️ Registre interne</button>
   <button onclick="showVue('admin',this)" data-i18n="nav.admin">🔐 Administration</button>
 </nav>
@@ -2653,6 +2727,54 @@ main{padding-top:30px;}
   </div>
 </div>
 
+
+<!-- ===== ESPACE MGMC (adhérents uniquement) ===== -->
+<div class="overlay" id="mgmc-overlay" role="dialog" aria-modal="true" aria-labelledby="mgmc-titre">
+  <div class="modal">
+    <img class="mg-logo" src="data:image/png;base64,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" alt="Logo MGMC">
+    <h2 id="mgmc-titre">Espace réservé aux adhérents MGMC</h2>
+    <p>Saisissez votre <b>numéro de matricule MGMC</b> pour accéder à cette rubrique.</p>
+    <input id="mgmc-mat" type="text" inputmode="text" autocomplete="off" placeholder="N° matricule MGMC">
+    <div id="mgmc-msg"></div>
+    <div class="mg-actions">
+      <button type="button" class="mg-btn o" onclick="mgmcAnnuler()">Annuler</button>
+      <button type="button" class="mg-btn p" id="mgmc-ok" onclick="mgmcValider()">Accéder</button>
+    </div>
+  </div>
+</div>
+
+<div id="vue-mgmc" class="vue">
+  <div class="mg-hero">
+    <img src="data:image/png;base64,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" alt="Logo MGMC">
+    <div>
+      <h2>Mutuelle Générale des Matériaux de Construction</h2>
+      <small>MGMC &nbsp;·&nbsp; Espace réservé aux adhérents de la SCHB</small>
+    </div>
+    <div class="mg-who">Adhérent connecté<b id="mg-who-nom">—</b><span id="mg-who-mat"></span><br><button type="button" onclick="mgmcSortir()">Se déconnecter</button></div>
+  </div>
+  <div class="mg-tabs">
+    <button type="button" class="on" data-t="act" onclick="mgmcTab('act')">📅 Activités</button>
+    <button type="button" data-t="pre" onclick="mgmcTab('pre')">🤝 Prestations</button>
+    <button type="button" data-t="obs" onclick="mgmcTab('obs')">🗒️ Observations &amp; problèmes</button>
+    <button type="button" data-t="sig" onclick="mgmcTab('sig')">✍️ Nous écrire</button>
+  </div>
+  <div class="mg-body">
+    <div class="mg-pan on" id="mg-act"></div>
+    <div class="mg-pan" id="mg-pre"></div>
+    <div class="mg-pan" id="mg-obs"></div>
+    <div class="mg-pan mg-f" id="mg-sig">
+      <label>Nature</label>
+      <select id="mg-type"><option>Observation</option><option>Problème rencontré</option><option>Suggestion</option></select>
+      <label>Objet *</label>
+      <input id="mg-objet" type="text" maxlength="120" placeholder="Objet de votre message">
+      <label>Description *</label>
+      <textarea id="mg-desc" rows="5" maxlength="2000" placeholder="Décrivez votre observation ou votre problème..."></textarea>
+      <div style="margin-top:16px"><button type="button" class="mg-btn p" id="mg-send" style="flex:none;padding:11px 26px" onclick="mgmcEnvoyer()">Envoyer à la MGMC</button></div>
+      <div class="mg-ok" id="mg-res"></div>
+    </div>
+  </div>
+</div>
+
 <div id="vue-admin" class="vue">
   <div id="admin-login-wrap" class="admin-login-wrap">
     <div class="panneau">
@@ -2708,6 +2830,7 @@ main{padding-top:30px;}
       <button class="btn-admin-tab" id="tab-btn-conventions" onclick="showAdminTab('conventions')" data-i18n="admtab.conventions">🤝 Conventions</button>
       <button class="btn-admin-tab" id="tab-btn-stats" onclick="showAdminTab('stats')" data-i18n="admtab.stats">📊 Statistiques par établissement</button>
       <button class="btn-admin-tab" id="tab-btn-rapport" onclick="showAdminTab('rapport')" data-i18n="admtab.rapport">📈 Rapport global</button>
+      <button class="btn-admin-tab" id="tab-btn-mgmc" onclick="showAdminTab('mgmc')" style="color:#1A3FCB;font-weight:800;">&#128309; MGMC</button>
       <button class="btn-admin-tab" id="tab-btn-effectifs" onclick="showAdminTab('effectifs')" data-i18n="admtab.effectifs">🧑‍💼 Effectifs</button>
     </div>
 
@@ -3125,6 +3248,22 @@ main{padding-top:30px;}
             <tbody id="stats-tbody"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <div id="admin-tab-mgmc" style="display:none;">
+      <div class="panneau" style="border:2px solid #1A3FCB;">
+        <h3 class="serif" style="color:#1A3FCB;margin-bottom:6px;font-size:18px;">&#128309; Gestion de la rubrique MGMC</h3>
+        <p style="font-size:13px;color:#44507a;margin-bottom:14px;">Adhérents autorisés, activités, prestations, suivi des observations et messages reçus.</p>
+        <div id="mga-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+          <button class="mg-btn p" style="flex:none" data-s="adh" onclick="mgaSec('adh')">Adhérents</button>
+          <button class="mg-btn o" style="flex:none" data-s="activites" onclick="mgaSec('activites')">Activités</button>
+          <button class="mg-btn o" style="flex:none" data-s="prestations" onclick="mgaSec('prestations')">Prestations</button>
+          <button class="mg-btn o" style="flex:none" data-s="observations" onclick="mgaSec('observations')">Suivi observations</button>
+          <button class="mg-btn o" style="flex:none" data-s="msgs" onclick="mgaSec('msgs')">Messages reçus</button>
+        </div>
+        <div id="mga-body"></div>
+        <div class="msg" id="mga-msg" style="display:none;margin-top:12px;"></div>
       </div>
     </div>
 
@@ -3939,7 +4078,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ===== NAV =====
 function showVue(id, btn, _dejaVerifie) {
-  if (_accesRequis(id)) { _accesDemander(id, btn); return; }
+  if (id === 'mgmc') { if (!mgmcSession()) { mgmcDemander(btn); return; } mgmcRendre(); }
+  else if (_accesRequis(id)) { _accesDemander(id, btn); return; }
   // Travailleur déjà identifié dans cet onglet : on revérifie qu'il n'a pas été bloqué entre-temps.
   if (!_dejaVerifie && VUES_PRESTATIONS.indexOf(id) !== -1 && _acSession()) {
     _acEstBloque(_acSession().mat).then(function(bloque) {
@@ -5764,6 +5904,9 @@ function applyAdminAuthState(user) {
 }
 
 function showAdminTab(id) {
+  var _mt = document.getElementById('admin-tab-mgmc'); if (_mt) _mt.style.display = (id === 'mgmc') ? 'block' : 'none';
+  var _mb = document.getElementById('tab-btn-mgmc'); if (_mb) _mb.classList.toggle('actif', id === 'mgmc');
+  if (id === 'mgmc') { try { mgaSec(window._mgaSec || 'adh'); } catch (e) { console.warn(e); } }
   if (id === 'annonces') ensureAnnoncesLoaded();
   document.getElementById('admin-tab-vue').style.display = (id === 'vue') ? 'block' : 'none';
   document.getElementById('tab-btn-vue').classList.toggle('actif', id === 'vue');
@@ -10679,5 +10822,359 @@ try { interneInfoProfil(); } catch (e) {}
     </div>
     <div class="t-right"><h2>🎉 Gagnants de la Omra</h2><div id="tir-liste"></div><div class="t-audit" id="tir-audit"></div></div>
   </div></div>
+
+<script id="mgmc-script">
+/* =====================================================================
+   ESPACE MGMC — À MODIFIER ICI
+   ===================================================================== */
+
+/* (1) LISTE DES ADHÉRENTS : une ligne par adhérent  ['MATRICULE', 'NOM Prénom'],
+   Seuls les matricules de cette liste peuvent entrer dans la rubrique. */
+var MGMC_ADHERENTS = [];
+
+/* (2) ACTIVITÉS de la MGMC */
+var MGMC_ACTIVITES = [
+  { date: 'À définir', titre: 'Exemple d\u2019activité', desc: 'Décrivez ici l\u2019activité organisée par la mutuelle.' }
+];
+
+/* (3) PRESTATIONS offertes aux adhérents */
+var MGMC_PRESTATIONS = [
+  { titre: 'Exemple de prestation', desc: 'Décrivez ici la prestation (conditions, montant, pièces à fournir).' }
+];
+
+/* (4) OBSERVATIONS & PROBLÈMES suivis (statut : 'En cours', 'Résolu', 'Transmis'…) */
+var MGMC_OBSERVATIONS = [
+  { date: '', objet: 'Exemple de problème signalé', statut: 'En cours', reponse: 'Réponse ou suivi de la mutuelle.' }
+];
+
+/* ===================================================================== */
+var _mgmcCible = null;
+function _mgNorm(s) { return String(s || '').trim().toUpperCase().replace(/\s+/g, ''); }
+function mgmcSession() {
+  try { var r = sessionStorage.getItem('schb_mgmc'); return r ? JSON.parse(r) : null; } catch (e) { return null; }
+}
+function _mgTrouver(mat) {
+  var m = _mgNorm(mat), m2 = m.replace(/^0+(?=.)/, '');
+  for (var i = 0; i < MGMC_ADHERENTS.length; i++) {
+    var a = _mgNorm(MGMC_ADHERENTS[i][0]);
+    if (a === m || a.replace(/^0+(?=.)/, '') === m2) return { mat: String(MGMC_ADHERENTS[i][0]).trim(), nom: MGMC_ADHERENTS[i][1] || '' };
+  }
+  return null;
+}
+function _mgMsg(t) { var e = document.getElementById('mgmc-msg'); e.textContent = t || ''; e.style.display = t ? 'block' : 'none'; }
+function mgmcDemander(btn) {
+  _mgmcCible = btn || null;
+  document.getElementById('mgmc-mat').value = '';
+  _mgMsg('');
+  document.getElementById('mgmc-overlay').classList.add('open');
+  setTimeout(function () { document.getElementById('mgmc-mat').focus(); }, 50);
+}
+function mgmcAnnuler() { document.getElementById('mgmc-overlay').classList.remove('open'); }
+function _mgmcEntrer(a) {
+  try { sessionStorage.setItem('schb_mgmc', JSON.stringify(a)); } catch (e) {}
+  mgmcAnnuler();
+  showVue('mgmc', _mgmcCible || document.querySelector('nav button.nav-mgmc'));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function mgmcValider() {
+  var v = document.getElementById('mgmc-mat').value;
+  if (!v.trim()) { _mgMsg('Veuillez saisir votre matricule MGMC.'); return; }
+  var a = _mgTrouver(v);
+  if (a) { _mgmcEntrer(a); return; }
+  var m = _mgNorm(v);
+  if (!m || /[.#$\[\]\/]/.test(m) || typeof window.fbMgmcFindAdherent !== 'function') { _mgMsg('Matricule non reconnu : accès réservé aux adhérents de la MGMC.'); return; }
+  var btn = document.getElementById('mgmc-ok'); btn.disabled = true;
+  var chercher = function (x) { return window.fbMgmcFindAdherent(x); };
+  var m2 = m.replace(/^0+(?=.)/, '');
+  chercher(m).then(function (r) { return r || (m2 !== m ? chercher(m2) : null); }).then(function (r) {
+    btn.disabled = false;
+    if (r) _mgmcEntrer({ mat: r.mat || m, nom: r.nom || '' });
+    else _mgMsg('Matricule non reconnu : accès réservé aux adhérents de la MGMC.');
+  }).catch(function (e) { console.warn('MGMC :', e); btn.disabled = false; _mgMsg('Vérification impossible pour le moment. Réessayez plus tard.'); });
+}
+function mgmcSortir() {
+  try { sessionStorage.removeItem('schb_mgmc'); } catch (e) {}
+  var h = document.querySelector('nav button'); showVue('accueil', h);
+}
+function mgmcTab(t) {
+  document.querySelectorAll('#vue-mgmc .mg-tabs button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-t') === t); });
+  document.querySelectorAll('#vue-mgmc .mg-pan').forEach(function (p) { p.classList.toggle('on', p.id === 'mg-' + t); });
+}
+function _mgEsc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+function _mgMedia(x) {
+  var h = '';
+  if (x.img) h += '<img src="' + x.img + '" alt="" style="max-width:100%;border-radius:8px;margin-top:10px;display:block">';
+  if (x.tableau && x.tableau.length) {
+    h += '<div style="overflow-x:auto;margin-top:10px"><table style="font-size:12.5px">' + x.tableau.map(function (r, i) {
+      return '<tr>' + r.map(function (c) { return (i === 0 ? '<th>' : '<td>') + _mgEsc(c) + (i === 0 ? '</th>' : '</td>'); }).join('') + '</tr>';
+    }).join('') + '</table></div>';
+  }
+  if (x.texte) h += '<div style="white-space:pre-wrap;margin-top:10px;font-size:13px;line-height:1.55;color:#33407a;border-top:1px solid #C9D4F8;padding-top:8px">' + _mgEsc(x.texte) + '</div>';
+  if (x.pdf) h += '<a href="' + x.pdf + '" download="' + _mgEsc(x.pdfNom || 'document.pdf') + '" style="display:inline-block;margin-top:10px;color:#1A3FCB;font-weight:700">📎 ' + _mgEsc(x.pdfNom || 'Document PDF') + '</a>';
+  return h;
+}
+function mgmcRendre() {
+  var s = mgmcSession(); if (!s) return;
+  if (typeof window.fbMgmcGetContenu === 'function' && !window._mgmcCharge) {
+    window._mgmcCharge = true;
+    window.fbMgmcGetContenu().then(function (c) {
+      if (c.activites) MGMC_ACTIVITES = c.activites; if (c.prestations) MGMC_PRESTATIONS = c.prestations; if (c.observations) MGMC_OBSERVATIONS = c.observations;
+      mgmcRendre();
+    }).catch(function (e) { console.warn('MGMC contenu :', e); });
+  }
+  document.getElementById('mg-who-nom').textContent = s.nom || '—';
+  document.getElementById('mg-who-mat').textContent = 'Matricule MGMC : ' + s.mat;
+  var vide = function (t) { return '<div class="mg-vide">' + t + '</div>'; };
+  var cartes = function (arr, avecDate) {
+    if (!arr.length) return vide('Rien à afficher pour le moment.');
+    return '<div class="mg-grid">' + arr.map(function (x) {
+      return '<div class="mg-card">' + (avecDate && x.date ? '<span class="d">' + _mgEsc(x.date) + '</span>' : '') + '<h4>' + _mgEsc(x.titre) + '</h4><p>' + _mgEsc(x.desc) + '</p>' + _mgMedia(x) + '</div>';
+    }).join('') + '</div>';
+  };
+  document.getElementById('mg-act').innerHTML = cartes(MGMC_ACTIVITES, true);
+  document.getElementById('mg-pre').innerHTML = cartes(MGMC_PRESTATIONS, false);
+  document.getElementById('mg-obs').innerHTML = MGMC_OBSERVATIONS.length
+    ? '<div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Objet</th><th>Statut</th><th>Suivi / réponse</th></tr></thead><tbody>' +
+      MGMC_OBSERVATIONS.map(function (o) { return '<tr><td>' + _mgEsc(o.date) + '</td><td>' + _mgEsc(o.objet) + '</td><td><span class="st">' + _mgEsc(o.statut) + '</span></td><td>' + _mgEsc(o.reponse) + '</td></tr>'; }).join('') +
+      '</tbody></table></div>'
+    : vide('Aucune observation enregistrée.');
+}
+function mgmcEnvoyer() {
+  var s = mgmcSession(), res = document.getElementById('mg-res');
+  var objet = document.getElementById('mg-objet').value.trim(), desc = document.getElementById('mg-desc').value.trim();
+  var fin = function (ok, t) { res.className = 'mg-ok ' + (ok ? 'ok' : 'ko'); res.textContent = t; };
+  if (!s) { fin(false, 'Session expirée : reconnectez-vous.'); return; }
+  if (!objet || !desc) { fin(false, 'Veuillez renseigner l\u2019objet et la description.'); return; }
+  if (typeof window.fbCreateMgmcObs !== 'function') { fin(false, 'Envoi indisponible (connexion à la base impossible). Réessayez plus tard.'); return; }
+  var btn = document.getElementById('mg-send'); btn.disabled = true;
+  var d = { num: 'MG-' + Date.now(), mat: s.mat, nom: s.nom, type: document.getElementById('mg-type').value,
+            objet: objet, description: desc, date: new Date().toISOString(), statut: 'Nouveau' };
+  window.fbCreateMgmcObs(d).then(function () {
+    btn.disabled = false;
+    document.getElementById('mg-objet').value = ''; document.getElementById('mg-desc').value = '';
+    fin(true, '✅ Message envoyé à la MGMC (réf. ' + d.num + ').');
+  }).catch(function (e) {
+    console.warn('MGMC envoi :', e); btn.disabled = false;
+    fin(false, 'Envoi impossible pour le moment (droits Firebase ou connexion).');
+  });
+}
+document.addEventListener('DOMContentLoaded', function () {
+  var i = document.getElementById('mgmc-mat');
+  if (i) i.addEventListener('keydown', function (e) { if (e.key === 'Enter') mgmcValider(); });
+  var ov = document.getElementById('mgmc-overlay');
+  if (ov) ov.addEventListener('click', function (e) { if (e.target === ov) mgmcAnnuler(); });
+});
+</script>
+
+<script id="mgmc-admin-script">
+function _mgaMsg(t, ok) { var m = document.getElementById('mga-msg'); if (!m) return; m.textContent = t || ''; m.style.display = t ? 'block' : 'none'; m.style.padding = '9px 12px'; m.style.borderRadius = '8px'; m.style.background = ok ? '#E7EEFF' : '#FDECEA'; m.style.color = ok ? '#0B2A8F' : '#A12622'; }
+function _mgaE(s) { return _mgEsc(s); }
+function mgaSec(s) {
+  window._mgaSec = s; _mgaMsg('');
+  document.querySelectorAll('#mga-tabs button').forEach(function (b) { b.className = 'mg-btn ' + (b.getAttribute('data-s') === s ? 'p' : 'o'); });
+  var body = document.getElementById('mga-body');
+  if (s === 'adh') return mgaAdh(body);
+  if (s === 'msgs') return mgaMsgs(body);
+  return mgaContenu(body, s);
+}
+function _mgaNeedFb() { if (typeof window.fbMgmcListAdherents !== 'function') { _mgaMsg('Base Firebase indisponible.'); return false; } return true; }
+/* ---- Adhérents ---- */
+function mgaAdh(body) {
+  body.innerHTML = '<div class="mg-f"><label style="font-weight:700;color:#1A3FCB;font-size:15px">📊 Intégrer le fichier des adhérents (Excel .xlsx / .xls ou .csv)</label>' +
+    '<input type="file" id="mga-adh-file" accept=".xlsx,.xls,.csv" onchange="mgaAdhExcel(this)" style="width:100%;box-sizing:border-box;padding:14px;border:2px dashed #1A3FCB;border-radius:12px;background:#F7F9FF;margin-top:6px">' +
+    '<div style="font-size:12.5px;color:#6A77AA;margin:6px 0 18px">Colonne 1 = matricule, colonne 2 = nom. Le site utilise uniquement ce fichier : l\u2019intégrer à nouveau remplace la liste précédente.</div></div>' +
+    '<div id="mga-adh-list">Chargement…</div>';
+  if (!_mgaNeedFb()) return;
+  window.fbMgmcListAdherents().then(function (l) {
+    window._mgaAdh = l.sort(function (a, b) { return String(a.nom).localeCompare(String(b.nom)); });
+    document.getElementById('mga-adh-list').innerHTML = l.length
+      ? '<b style="color:#1A3FCB">Fichier intégré : ' + l.length + ' adhérent(s)</b><input id="mga-adh-q" placeholder="Rechercher un matricule ou un nom…" oninput="mgaAdhFiltre()" style="margin:8px 0;width:100%;box-sizing:border-box;padding:9px;border:1.5px solid #B9C6F5;border-radius:8px"><div style="overflow-x:auto;max-height:420px;overflow-y:auto"><table><thead><tr><th>Matricule</th><th>Nom</th></tr></thead><tbody id="mga-adh-tb"></tbody></table></div>'
+      : '<div class="mg-vide">Aucun fichier intégré : personne ne peut encore entrer dans la rubrique.</div>';
+    if (l.length) mgaAdhFiltre();
+  }).catch(function (e) { console.warn(e); document.getElementById('mga-adh-list').textContent = ''; _mgaMsg('Lecture impossible : vérifiez les règles Firebase (mgmcAdherents).'); });
+}
+function mgaAdhExcel(inp) {
+  var f = inp.files && inp.files[0]; if (!f) return;
+  if (typeof XLSX === 'undefined') { _mgaMsg('Lecteur Excel non chargé (connexion internet requise).'); return; }
+  if (!_mgaNeedFb()) return;
+  var rd = new FileReader();
+  rd.onload = function () {
+    var list = [], seen = {};
+    try {
+      var wb = XLSX.read(rd.result, { type: 'array' });
+      var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' });
+      var iM = 0, iN = [], start = 0;
+      var h = (rows[0] || []).map(function (c) { return _mgNorm(c).toLowerCase(); });
+      var m = h.findIndex(function (c) { return /matr/.test(c); });
+      if (m !== -1) { iM = m; start = 1; h.forEach(function (c, i) { if (i !== m && /nom|prenom/.test(c)) iN.push(i); }); }
+      for (var i = start; i < rows.length; i++) {
+        var r = rows[i], mat = _mgNorm(r[iM]);
+        if (!mat || /[.#$\[\]\/]/.test(mat) || seen[mat]) continue;
+        seen[mat] = 1;
+        var nom = (iN.length ? iN.map(function (k) { return r[k]; }) : r.slice(iM + 1)).filter(function (x) { return String(x).trim(); }).join(' ').trim();
+        list.push({ mat: mat, nom: nom });
+      }
+    } catch (e) { console.warn(e); inp.value = ''; _mgaMsg('Fichier illisible. Vérifiez qu\u2019il s\u2019agit bien d\u2019un fichier Excel ou CSV.'); return; }
+    if (!list.length) { inp.value = ''; _mgaMsg('Aucun matricule trouvé dans le fichier.'); return; }
+    if (!confirm('Intégrer « ' + f.name + ' » : ' + list.length + ' adhérent(s).\nLa liste actuelle sera remplacée. Continuer ?')) { inp.value = ''; return; }
+    window.fbMgmcReplaceAdherents(list).then(function () {
+      _mgaMsg('✅ Fichier « ' + f.name + ' » intégré : ' + list.length + ' adhérent(s).', true);
+      mgaAdh(document.getElementById('mga-body'));
+      _mgaMsg('✅ Fichier « ' + f.name + ' » intégré : ' + list.length + ' adhérent(s).', true);
+    }).catch(function (e) { console.warn(e); inp.value = ''; _mgaMsg('Écriture refusée : vérifiez les règles Firebase (mgmcAdherents).'); });
+  };
+  rd.readAsArrayBuffer(f);
+}
+function mgaAdhFiltre() {
+  var q = _mgNorm((document.getElementById('mga-adh-q') || {}).value || '').toLowerCase();
+  var tb = document.getElementById('mga-adh-tb'); if (!tb) return;
+  tb.innerHTML = (window._mgaAdh || []).filter(function (a) { return !q || (_mgNorm(a.mat) + _mgNorm(a.nom)).toLowerCase().indexOf(q) !== -1; }).map(function (a) {
+    return '<tr><td>' + _mgaE(a.mat) + '</td><td>' + _mgaE(a.nom) + '</td><td><button class="mg-btn o" style="flex:none;padding:4px 10px" data-m="' + _mgaE(a.mat) + '" onclick="mgaAdhSupp(this.getAttribute(\'data-m\'))">Supprimer</button></td></tr>';
+  }).join('');
+}
+function mgaAdhAjouter() {
+  if (!_mgaNeedFb()) return;
+  var lignes = document.getElementById('mga-adh-txt').value.split(/\r?\n/), list = [], bad = 0;
+  lignes.forEach(function (l) {
+    if (!l.trim()) return;
+    var p = l.split(/[;\t,]/), mat = _mgNorm(p[0]), nom = (p.slice(1).join(' ') || '').trim();
+    if (!mat || /[.#$\[\]\/]/.test(mat)) { bad++; return; }
+    list.push({ mat: mat, nom: nom });
+  });
+  if (!list.length) { _mgaMsg('Aucune ligne valide.'); return; }
+  window.fbMgmcSetAdherents(list).then(function () { _mgaMsg(list.length + ' adhérent(s) enregistré(s)' + (bad ? ' (' + bad + ' ligne(s) ignorée(s))' : '') + '.', true); mgaAdh(document.getElementById('mga-body')); })
+    .catch(function (e) { console.warn(e); _mgaMsg('Écriture refusée : vérifiez les règles Firebase.'); });
+}
+function mgaAdhSupp(mat) {
+  if (!confirm('Retirer le matricule ' + mat + ' de la liste ?')) return;
+  window.fbMgmcDelAdherent(mat).then(function () { mgaAdh(document.getElementById('mga-body')); }).catch(function () { _mgaMsg('Suppression refusée.'); });
+}
+/* ---- Activités / Prestations / Suivi ---- */
+var _MGA_CH = {
+  activites:    [['date', 'Date'], ['titre', 'Titre'], ['desc', 'Description']],
+  prestations:  [['titre', 'Titre'], ['desc', 'Description']],
+  observations: [['date', 'Date'], ['objet', 'Objet'], ['statut', 'Statut (En cours, Résolu…)'], ['reponse', 'Suivi / réponse']]
+};
+function mgaContenu(body, key) {
+  body.innerHTML = 'Chargement…'; window._mgaPending = null;
+  if (typeof window.fbMgmcGetContenu !== 'function') { _mgaMsg('Base Firebase indisponible.'); return; }
+  window.fbMgmcGetContenu().then(function (c) {
+    var arr = c[key] || (key === 'activites' ? MGMC_ACTIVITES : key === 'prestations' ? MGMC_PRESTATIONS : MGMC_OBSERVATIONS).filter(function (x) { return !/^Exemple|^À définir/.test((x.titre || x.objet || '')); });
+    window._mgaArr = arr.slice();
+    var ch = _MGA_CH[key];
+    var f = ch.map(function (x) { return '<label style="display:block;font-weight:700;font-size:13px;color:#1A3FCB;margin-top:8px">' + x[1] + '</label><input id="mga-f-' + x[0] + '" style="width:100%;box-sizing:border-box;padding:9px;border:1.5px solid #B9C6F5;border-radius:8px">'; }).join('');
+    var fich = key === 'observations' ? '' :
+      '<label style="display:block;font-weight:700;font-size:13px;color:#1A3FCB;margin-top:12px">📎 Joindre un fichier (facultatif) : Word .docx, Excel .xlsx/.csv, image JPG/PNG ou PDF</label>' +
+      '<input type="file" id="mga-file" accept=".docx,.xlsx,.xls,.csv,.jpg,.jpeg,.png,.pdf" onchange="mgaFichier(this)" style="width:100%;box-sizing:border-box;padding:9px;border:1.5px dashed #1A3FCB;border-radius:10px;background:#F7F9FF">' +
+      '<div id="mga-file-info" style="font-size:12.5px;color:#0B2A8F;margin-top:4px"></div>';
+    body.innerHTML = '<div class="mg-f">' + f + fich + '<div style="margin:12px 0 18px"><button class="mg-btn p" style="flex:none" onclick="mgaAjout(\'' + key + '\')">Ajouter</button></div></div><div id="mga-ct"></div>';
+    mgaListe(key);
+  }).catch(function (e) { console.warn(e); body.textContent = ''; _mgaMsg('Lecture impossible : vérifiez les règles Firebase (mgmcContenu).'); });
+}
+function _mgaLoadMammoth(cb) {
+  if (window.mammoth) return cb();
+  var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+  s.onload = cb; s.onerror = function () { _mgaMsg('Lecteur Word non chargé (connexion internet requise).'); };
+  document.head.appendChild(s);
+}
+function mgaFichier(inp) {
+  var f = inp.files && inp.files[0], info = document.getElementById('mga-file-info'); window._mgaPending = null;
+  if (!f) { info.textContent = ''; return; }
+  var ext = (f.name.split('.').pop() || '').toLowerCase(), done = function (p, txt) { p.nom = f.name; window._mgaPending = p; info.textContent = '✅ ' + txt + ' : ' + f.name; _mgaMsg(''); };
+  var fail = function (t) { info.textContent = ''; inp.value = ''; _mgaMsg(t); };
+  if (f.size > 8 * 1024 * 1024) return fail('Fichier trop volumineux (8 Mo maximum).');
+  var rd = new FileReader();
+  if (/^(jpe?g|png)$/.test(ext)) {
+    rd.onload = function () {
+      var im = new Image();
+      im.onload = function () {
+        var k = Math.min(1, 1100 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+        c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+        var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+        done({ img: c.toDataURL('image/jpeg', 0.75) }, 'Image prête');
+      };
+      im.onerror = function () { fail('Image illisible.'); };
+      im.src = rd.result;
+    };
+    rd.readAsDataURL(f);
+  } else if (/^(xlsx|xls|csv)$/.test(ext)) {
+    if (typeof XLSX === 'undefined') return fail('Lecteur Excel non chargé (connexion internet requise).');
+    rd.onload = function () {
+      try {
+        var wb = XLSX.read(rd.result, { type: 'array' });
+        var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: '' })
+          .filter(function (r) { return r.some(function (c) { return String(c).trim(); }); }).slice(0, 200)
+          .map(function (r) { return r.slice(0, 12).map(function (c) { return String(c); }); });
+        if (!rows.length) return fail('Le fichier Excel est vide.');
+        done({ tableau: rows }, 'Tableau de ' + rows.length + ' ligne(s)');
+      } catch (e) { fail('Fichier Excel illisible.'); }
+    };
+    rd.readAsArrayBuffer(f);
+  } else if (ext === 'docx') {
+    _mgaLoadMammoth(function () {
+      rd.onload = function () {
+        window.mammoth.extractRawText({ arrayBuffer: rd.result }).then(function (r) {
+          var t = (r.value || '').trim(); if (!t) return fail('Document Word vide.');
+          done({ texte: t.slice(0, 20000) }, 'Texte Word extrait');
+        }).catch(function () { fail('Document Word illisible.'); });
+      };
+      rd.readAsArrayBuffer(f);
+    });
+  } else if (ext === 'pdf') {
+    if (f.size > 700 * 1024) return fail('PDF trop lourd (700 Ko maximum). Utilisez plutôt une image JPG.');
+    rd.onload = function () { done({ pdf: rd.result, pdfNom: f.name }, 'PDF joint'); };
+    rd.readAsDataURL(f);
+  } else if (ext === 'doc') {
+    fail('Ancien format .doc non pris en charge : enregistrez le document en .docx dans Word.');
+  } else fail('Format non pris en charge (Word .docx, Excel, JPG/PNG ou PDF).');
+}
+function mgaListe(key) {
+  var ch = _MGA_CH[key], a = window._mgaArr || [];
+  var ic = function (r) { return (r.img ? ' 🖼️' : '') + (r.tableau ? ' 📊' : '') + (r.texte ? ' 📄' : '') + (r.pdf ? ' 📎' : ''); };
+  document.getElementById('mga-ct').innerHTML = a.length ? '<div style="overflow-x:auto"><table><thead><tr>' + ch.map(function (x) { return '<th>' + x[1].split(' (')[0] + '</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
+    a.map(function (r, i) { return '<tr>' + ch.map(function (x, k) { return '<td>' + _mgaE(r[x[0]]) + (k === 0 || x[0] === 'titre' ? ic(r) : '') + '</td>'; }).join('') + '<td style="white-space:nowrap"><button class="mg-btn o" style="flex:none;padding:4px 10px" onclick="mgaSupp(\'' + key + '\',' + i + ')">Supprimer</button></td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="mg-vide">Aucun élément pour le moment.</div>';
+}
+function mgaSauver(key, msg) {
+  window.fbMgmcSetContenu(key, window._mgaArr).then(function () {
+    if (key === 'activites') MGMC_ACTIVITES = window._mgaArr; else if (key === 'prestations') MGMC_PRESTATIONS = window._mgaArr; else MGMC_OBSERVATIONS = window._mgaArr;
+    mgaListe(key); _mgaMsg(msg || 'Enregistré.', true);
+  }).catch(function (e) { console.warn(e); _mgaMsg('Écriture refusée : vérifiez les règles Firebase (mgmcContenu).'); });
+}
+function mgaAjout(key) {
+  var o = {}; _MGA_CH[key].forEach(function (x) { o[x[0]] = document.getElementById('mga-f-' + x[0]).value.trim(); });
+  var p = window._mgaPending;
+  if (p && key !== 'observations') {
+    ['img', 'tableau', 'texte', 'pdf', 'pdfNom'].forEach(function (k) { if (p[k]) o[k] = p[k]; });
+    if (!o.titre) o.titre = (p.nom || 'Document').replace(/\.[^.]+$/, '');
+  }
+  if (!(o.titre || o.objet)) { _mgaMsg('Le titre / l\u2019objet est obligatoire (ou joignez un fichier).'); return; }
+  window._mgaArr.push(o); mgaSauver(key, 'Ajouté.');
+  _MGA_CH[key].forEach(function (x) { document.getElementById('mga-f-' + x[0]).value = ''; });
+  window._mgaPending = null; var fi = document.getElementById('mga-file'); if (fi) fi.value = ''; var inf = document.getElementById('mga-file-info'); if (inf) inf.textContent = '';
+}
+function mgaSupp(key, i) { if (!confirm('Supprimer cet élément ?')) return; window._mgaArr.splice(i, 1); mgaSauver(key, 'Supprimé.'); }
+/* ---- Messages reçus ---- */
+function mgaMsgs(body) {
+  body.innerHTML = 'Chargement…';
+  if (typeof window.fbMgmcListMsgs !== 'function') { _mgaMsg('Base Firebase indisponible.'); return; }
+  window.fbMgmcListMsgs().then(function (l) {
+    window._mgaMsgs = l.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+    body.innerHTML = l.length ? '<div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Adhérent</th><th>Nature</th><th>Objet / description</th><th></th></tr></thead><tbody>' +
+      window._mgaMsgs.map(function (m, i) {
+        return '<tr><td>' + _mgaE((m.date || '').slice(0, 10)) + '</td><td>' + _mgaE(m.nom) + '<br><small>' + _mgaE(m.mat) + '</small></td><td>' + _mgaE(m.type) + '</td><td><b>' + _mgaE(m.objet) + '</b><br>' + _mgaE(m.description) + '</td><td style="white-space:nowrap"><button class="mg-btn p" style="flex:none;padding:4px 10px" onclick="mgaMsgPublier(' + i + ')">Publier au suivi</button> <button class="mg-btn o" style="flex:none;padding:4px 10px" onclick="mgaMsgSupp(' + i + ')">Supprimer</button></td></tr>';
+      }).join('') + '</tbody></table></div>' : '<div class="mg-vide">Aucun message reçu.</div>';
+  }).catch(function (e) { console.warn(e); body.textContent = ''; _mgaMsg('Lecture impossible : vérifiez les règles Firebase (mgmcObservations, lecture admin).'); });
+}
+function mgaMsgPublier(i) {
+  var m = window._mgaMsgs[i], rep = prompt('Statut de cette observation (ex. En cours, Résolu, Transmis) :', 'En cours'); if (rep === null) return;
+  var r = prompt('Réponse / suivi visible par les adhérents :', '') || '';
+  window.fbMgmcGetContenu().then(function (c) {
+    var a = c.observations || []; a.push({ date: (m.date || '').slice(0, 10), objet: m.objet, statut: rep, reponse: r });
+    return window.fbMgmcSetContenu('observations', a);
+  }).then(function () { window._mgmcCharge = false; _mgaMsg('Publié dans le suivi (sans nom d\u2019adhérent).', true); })
+    .catch(function () { _mgaMsg('Écriture refusée : vérifiez les règles Firebase.'); });
+}
+function mgaMsgSupp(i) { if (!confirm('Supprimer ce message ?')) return; window.fbMgmcDelMsg(window._mgaMsgs[i].num).then(function () { mgaMsgs(document.getElementById('mga-body')); }).catch(function () { _mgaMsg('Suppression refusée.'); }); }
+</script>
 </body>
 </html>
