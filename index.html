@@ -522,6 +522,23 @@
         });
       };
 
+      // Téléphones des travailleurs : nœud séparé (écriture publique validée, lecture admin uniquement).
+      window.fbSaveTelEffectif = function(mat, tel, nom, prenom) {
+        if (!mat || /[.#$\[\]\/]/.test(mat)) return Promise.resolve(null);
+        return _fbDb.ref('telephones/' + mat).set({ tel: String(tel), nom: nom || '', prenom: prenom || '', date: new Date().toISOString() });
+      };
+      window.fbGetTelEffectif = function(mat) {
+        if (!mat || /[.#$\[\]\/]/.test(mat)) return Promise.resolve(null);
+        return _fbDb.ref('telephones/' + mat + '/tel').once('value').then(function(x) { return x.val(); }).catch(function() { return null; });
+      };
+      var _refTels = null, _hTels = null;
+      window.fbListenAdminTelephones = function(callback, errorCallback) {
+        if (_refTels && _hTels) _refTels.off('value', _hTels);
+        _refTels = _fbDb.ref('telephones');
+        _hTels = function(x) { callback(x.val() || {}); };
+        _refTels.on('value', _hTels, errorCallback || function() {});
+      };
+
       // Recherche publique (autocomplétion des formulaires) : ne renvoie que les champs non sensibles.
       window.fbFindEffectifPublic = function(mat) {
         if (!mat) return Promise.resolve(null);
@@ -861,7 +878,7 @@ main{max-width:1100px;margin:0 auto;padding:36px 24px 80px;}
 .eyebrow{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--vert);margin-bottom:6px;display:block;}
 .sec-title{font-size:26px;font-weight:700;color:var(--bleu);margin-bottom:6px;}
 .sec-desc{color:#5C5142;font-size:14px;max-width:660px;line-height:1.6;}
-.grid-spec{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:32px;}
+.grid-spec .card-spec{cursor:pointer;transition:box-shadow .15s,border-color .15s;}.grid-spec .card-spec:hover{box-shadow:0 4px 14px rgba(0,0,0,.12);}.grid-spec .card-spec.selectionnee{outline:2px solid #1B6B3A;}.grid-spec{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:32px;}
 
 #tir-show{position:fixed;inset:0;z-index:99999;background:radial-gradient(ellipse at top,#14506f 0%,#0a2a3d 60%,#061a27 100%);color:#fff;display:none;flex-direction:column;font-family:'Inter',sans-serif;overflow:hidden;}
 #tir-show.on{display:flex;}
@@ -3310,7 +3327,7 @@ nav button.nav-mgmc:hover,nav button.nav-mgmc.actif{background:#fff;color:#1A3FC
         </div>
         <div class="tableau-wrap">
           <table class="tab">
-            <thead><tr><th>Matricule</th><th>Nom</th><th>Prénom</th><th>Unité</th><th>Direction</th><th>Département</th><th>Service</th><th>Poste</th><th>Prestations</th></tr></thead>
+            <thead><tr><th>Matricule</th><th>Nom</th><th>Prénom</th><th>Unité</th><th>Direction</th><th>Département</th><th>Service</th><th>Poste</th><th>Téléphone</th><th>Prestations</th></tr></thead>
             <tbody id="tbody-effectifs"></tbody>
           </table>
         </div>
@@ -4034,6 +4051,42 @@ function accesValider() {
   });
 }
 // Pré-remplit nom / prénom / matricule / service du formulaire de la rubrique ouverte (champs vides uniquement).
+function telValide(t) { return /^0[567]\d{8}$/.test(String(t || '').replace(/[\s.\-]/g, '')); }
+function sauverTelEffectif() {
+  var champ = document.getElementById('f-tel');
+  var mat = ((document.getElementById('f-matricule') || {}).value || '').trim();
+  var s = _acSession();
+  if (!champ || !mat || !s || String(s.mat) !== mat) return;
+  var tel = champ.value.trim();
+  if (!telValide(tel) || typeof window.fbSaveTelEffectif !== 'function') return;
+  if (window._telSauve === mat + '|' + tel) return;
+  window._telSauve = mat + '|' + tel;
+  window.fbSaveTelEffectif(mat, tel, s.nom, s.prenom).catch(function(e) { window._telSauve = ''; console.warn('Téléphone non enregistré:', e); });
+}
+function choisirEtablissement(carte) {
+  var conv = getConventions().filter(function(c) { return c.carte === carte; })[0];
+  if (!conv || conventionsFin[conv.id]) return;
+  var sel = document.getElementById('f-etab');
+  sel.value = conv.option.value;
+  sel.dispatchEvent(new Event('change', { bubbles: true }));
+  document.querySelectorAll('.grid-spec .card-spec').forEach(function(c) { c.classList.toggle('selectionnee', c === carte); });
+  _accesPrefill('demande');
+  var s = _acSession(), tel = document.getElementById('f-tel');
+  if (s && tel && !tel.value.trim() && typeof window.fbGetTelEffectif === 'function') {
+    window.fbGetTelEffectif(s.mat).then(function(t) { if (t && !tel.value.trim()) tel.value = t; });
+  }
+  var cible = document.getElementById('f-nom') || sel;
+  var form = sel.closest('.form-card, form, .card') || sel;
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(function() { var v = ['f-nom','f-prenom','f-matricule','f-tel'].map(function(i){return document.getElementById(i);}).filter(function(e){return e && !e.value.trim();})[0]; (v || sel).focus({ preventScroll: true }); }, 450);
+}
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.grid-spec .card-spec').forEach(function(c) {
+    c.addEventListener('click', function() { choisirEtablissement(c); });
+  });
+  var t = document.getElementById('f-tel');
+  if (t) { t.addEventListener('blur', sauverTelEffectif); t.addEventListener('change', sauverTelEffectif); }
+});
 function _accesPrefill(id) {
   var s = _acSession(), p = VUES_PROTEGEES[id];
   if (!s || !p) return;
@@ -4343,6 +4396,7 @@ async function soumettreDemande() {
   msg.textContent = '⏳ Enregistrement sécurisé de la demande…';
   try {
     await window.fbCreateDemande(d, makeSuiviPublic(d));
+    try { if (typeof sauverTelEffectif === 'function') sauverTelEffectif(); } catch (e0) {}
     notifierAdminParEmail(d);
     document.getElementById('tk-num').textContent = num;
     document.getElementById('tk-adh').textContent = nom + ' ' + prenom + ' (' + mat + ')';
@@ -5858,6 +5912,9 @@ function applyAdminAuthState(user) {
       });
     }
     // Idem pour l'état des effectifs (import Excel).
+    if (typeof window.fbListenAdminTelephones === 'function') {
+      window.fbListenAdminTelephones(function(m) { telephonesMap = m || {}; renderTableauEffectifs(); }, function(err) { console.error('Lecture telephones:', err); });
+    }
     effectifs = [];
     if (typeof window.fbListenAdminEffectifs === 'function') {
       window.fbListenAdminEffectifs(function(arr) {
@@ -6113,11 +6170,12 @@ function renderTableauEffectifs() {
       : '<button class="btn-danger-sm" onclick="basculerBlocage(' + matJs + ',true)">Bloquer</button>';
     return '<tr' + (bloque ? ' style="background:#FFF8F7;"' : '') + '><td>' + esc(e.mat) + '</td><td>' + esc(e.nom) + '</td><td>' + esc(e.prenom) + '</td><td>' +
       esc(e.unite) + '</td><td>' + esc(e.direction) + '</td><td>' + esc(e.departement) + '</td><td>' +
-      esc(e.service) + '</td><td>' + esc(e.poste) + '</td><td style="white-space:nowrap;">' + statut + ' ' + action + '</td></tr>';
-  }).join('') || '<tr><td colspan="9" style="text-align:center;color:#999;">Aucune fiche à afficher.</td></tr>';
+      esc(e.service) + '</td><td>' + esc(e.poste) + '</td><td style="white-space:nowrap;">' + esc((telephonesMap[e.mat] || {}).tel || '') + '</td><td style="white-space:nowrap;">' + statut + ' ' + action + '</td></tr>';
+  }).join('') || '<tr><td colspan="10" style="text-align:center;color:#999;">Aucune fiche à afficher.</td></tr>';
 }
 
 // ----- Blocage / déblocage des prestations (référence = matricule de la fiche d'effectif) -----
+var telephonesMap = {}; // { matricule: {tel, date} } — numéros saisis par les travailleurs
 var blocagesMap = {}; // { matricule: { bloque:true, nom, prenom, date } } — synchronisé en temps réel avec Firebase
 
 function effectifsFiltres() {
@@ -6128,7 +6186,7 @@ function effectifsFiltres() {
     if (st === 'bloque' && !bloque) return false;
     if (st === 'actif' && bloque) return false;
     if (!q) return true;
-    return [e.mat, e.nom, e.prenom, e.service, e.direction, e.departement].join(' ').toLowerCase().indexOf(q) !== -1;
+    return [e.mat, e.nom, e.prenom, e.service, e.direction, e.departement, (telephonesMap[e.mat] || {}).tel].join(' ').toLowerCase().indexOf(q) !== -1;
   });
 }
 function _blocageMsg(texte, ok) {
