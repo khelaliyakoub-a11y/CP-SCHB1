@@ -541,6 +541,31 @@
         _refTels.on('value', _hTels, errorCallback || function() {});
       };
 
+      // ===== Équipes sport : fiches joueurs et besoins d'équipe (validation par l'admin) =====
+      var _EQ_NODES = { sportJoueurs: 1, sportBesoins: 1 };
+      var _eqRefs = {};
+      window.fbCreateEq = function(node, d) {
+        if (!_EQ_NODES[node] || !d || !d.num) return Promise.reject(new Error('nœud invalide'));
+        return _fbDb.ref(node + '/' + d.num).set(d);
+      };
+      window.fbListenEq = function(node, callback, errorCallback) {
+        if (!_EQ_NODES[node]) return;
+        if (_eqRefs[node]) _eqRefs[node].ref.off('value', _eqRefs[node].h);
+        var ref = _fbDb.ref(node);
+        var h = function(snap) { var o = snap.val() || {}; callback(Object.keys(o).map(function(k) { return o[k]; })); };
+        _eqRefs[node] = { ref: ref, h: h };
+        ref.on('value', h, errorCallback || function() {});
+      };
+      window.fbUpdateEq = function(node, num, patch) {
+        if (!_EQ_NODES[node]) return Promise.reject(new Error('nœud invalide'));
+        var u = {}; Object.keys(patch).forEach(function(k) { u[node + '/' + num + '/' + k] = patch[k]; });
+        return _fbDb.ref().update(u);
+      };
+      window.fbDeleteEq = function(node, num) {
+        if (!_EQ_NODES[node]) return Promise.reject(new Error('nœud invalide'));
+        return _fbDb.ref(node + '/' + num).remove();
+      };
+
       // Recherche publique (autocomplétion des formulaires) : ne renvoie que les champs non sensibles.
       window.fbFindEffectifPublic = function(mat) {
         if (!mat) return Promise.resolve(null);
@@ -2201,6 +2226,98 @@ html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
       </div>
     </div>
   </div>
+
+  <!-- ===== Équipes : fiche joueur + espace secrétaire général ===== -->
+  <div id="sport-equipe-zone" style="margin-top:30px;">
+    <div class="panneau" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-primary" id="eq-btn-joueur" onclick="eqPublicTab('joueur')">👕 Fiche joueur (tenue, poste, pointure)</button>
+      <button class="btn btn-outline" id="eq-btn-sec" onclick="eqPublicTab('sec')">🔒 Espace secrétaire général d'équipe</button>
+    </div>
+
+    <div id="eq-pub-joueur">
+      <div class="panneau">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:6px;font-size:17px;">👕 Fiche joueur — Football / Pétanque</h3>
+        <p style="font-size:13px;color:#5C5142;margin-bottom:16px;">Renseignez votre taille de tenue, votre poste sur le terrain et votre pointure. Votre fiche sera examinée par le président de l'équipe ou l'administrateur, puis validée.</p>
+        <div class="cols2">
+          <div class="grp"><label>Nom <span class="req">*</span></label><input id="fj-nom" type="text" placeholder="NOM DE FAMILLE"></div>
+          <div class="grp"><label>Prénom <span class="req">*</span></label><input id="fj-prenom" type="text" placeholder="Prénom"></div>
+        </div>
+        <div class="cols2">
+          <div class="grp"><label>Matricule <span class="req">*</span></label><input id="fj-matricule" type="text" placeholder="N° matricule"></div>
+          <div class="grp"><label>N° de licence <small style="color:#7A6F58;">(facultatif)</small></label><input id="fj-licence" type="text" placeholder="Si vous en avez une"></div>
+        </div>
+        <div class="cols2">
+          <div class="grp"><label>Équipe <span class="req">*</span></label>
+            <select id="fj-equipe" onchange="eqMajPostes()"><option value="Football">⚽ Football</option><option value="Pétanque">🎯 Pétanque</option></select></div>
+          <div class="grp"><label>Poste sur le terrain <span class="req">*</span></label><select id="fj-poste"></select></div>
+        </div>
+        <div class="cols2">
+          <div class="grp"><label>Taille de la tenue <span class="req">*</span></label>
+            <select id="fj-taille"><option value="">— Choisir —</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option><option>3XL</option><option>4XL</option></select></div>
+          <div class="grp"><label>Pointure <span class="req">*</span></label><select id="fj-pointure"></select></div>
+        </div>
+        <div class="grp"><label>Remarque <small style="color:#7A6F58;">(facultatif)</small></label><textarea id="fj-remarque" rows="2" placeholder="Ex : pied gauche, blessure à signaler…"></textarea></div>
+        <div class="bar-actions">
+          <button class="btn btn-primary" onclick="soumettreJoueur()">✅ Envoyer ma fiche</button>
+        </div>
+        <div class="msg" id="msg-joueur"></div>
+      </div>
+    </div>
+
+    <div id="eq-pub-sec" style="display:none;">
+      <div class="panneau" id="eq-sec-lock">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:6px;font-size:17px;">🔒 Espace réservé au secrétaire général de l'équipe</h3>
+        <p style="font-size:13px;color:#5C5142;margin-bottom:12px;">Saisissez le mot de passe remis par le Comité de Participation.</p>
+        <div class="grp"><label>Mot de passe</label><input id="eq-sec-pass" type="password" autocomplete="off" onkeydown="if(event.key==='Enter')eqSecDeverrouiller()"></div>
+        <div class="bar-actions"><button class="btn btn-primary" onclick="eqSecDeverrouiller()">🔓 Accéder</button></div>
+        <div class="msg" id="msg-eq-lock"></div>
+      </div>
+      <div id="eq-sec-form" style="display:none;">
+        <div class="panneau">
+          <h3 class="serif" style="color:var(--bleu);margin-bottom:6px;font-size:17px;">📋 Besoins de l'équipe</h3>
+          <p style="font-size:13px;color:#5C5142;margin-bottom:16px;">Listez les besoins de votre équipe et vos remarques. La demande sera examinée par le président de l'équipe ou l'administrateur.</p>
+          <div class="cols2">
+            <div class="grp"><label>Équipe <span class="req">*</span></label><select id="fb-equipe"><option value="Football">⚽ Football</option><option value="Pétanque">🎯 Pétanque</option></select></div>
+            <div class="grp"><label>Nom / catégorie de l'équipe</label><input id="fb-nomequipe" type="text" placeholder="Ex : Seniors, Vétérans…"></div>
+          </div>
+          <div class="cols2">
+            <div class="grp"><label>Nom du secrétaire <span class="req">*</span></label><input id="fb-nom" type="text"></div>
+            <div class="grp"><label>Prénom <span class="req">*</span></label><input id="fb-prenom" type="text"></div>
+          </div>
+          <div class="cols2">
+            <div class="grp"><label>Matricule <span class="req">*</span></label><input id="fb-matricule" type="text"></div>
+            <div class="grp"><label>Téléphone <span class="req">*</span></label><input id="fb-tel" type="tel" placeholder="05/06/07 xx xx xx xx"></div>
+          </div>
+          <div class="grp"><label>Nombre de joueurs de l'équipe</label><input id="fb-effectif" type="number" min="0" max="99"></div>
+          <div class="grp"><label>Besoins de l'équipe <span class="req">*</span></label>
+            <div id="fb-besoins" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px 14px;font-size:13.5px;">
+              <label><input type="checkbox" value="Maillots"> Maillots</label>
+              <label><input type="checkbox" value="Shorts"> Shorts</label>
+              <label><input type="checkbox" value="Chaussettes"> Chaussettes</label>
+              <label><input type="checkbox" value="Chaussures"> Chaussures</label>
+              <label><input type="checkbox" value="Survêtements"> Survêtements</label>
+              <label><input type="checkbox" value="Ballons"> Ballons</label>
+              <label><input type="checkbox" value="Gants de gardien"> Gants de gardien</label>
+              <label><input type="checkbox" value="Chasubles"> Chasubles</label>
+              <label><input type="checkbox" value="Boules de pétanque"> Boules de pétanque</label>
+              <label><input type="checkbox" value="Cochonnets"> Cochonnets</label>
+              <label><input type="checkbox" value="Trousse de secours"> Trousse de secours</label>
+              <label><input type="checkbox" value="Transport"> Transport</label>
+              <label><input type="checkbox" value="Frais de championnat / licences"> Championnat / licences</label>
+              <label><input type="checkbox" value="Terrain / salle"> Terrain / salle</label>
+            </div>
+          </div>
+          <div class="grp"><label>Autres besoins (détails, quantités)</label><textarea id="fb-autre" rows="3" placeholder="Ex : 14 maillots taille M, 2 ballons n°5…"></textarea></div>
+          <div class="grp"><label>Remarques concernant l'équipe</label><textarea id="fb-remarque" rows="3"></textarea></div>
+          <div class="bar-actions">
+            <button class="btn btn-primary" onclick="soumettreBesoins()">✅ Envoyer les besoins</button>
+            <button class="btn btn-outline" onclick="eqSecVerrouiller()">🔒 Verrouiller</button>
+          </div>
+          <div class="msg" id="msg-besoins"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== ÉLECTROMÉNAGERS ===== -->
@@ -2874,6 +2991,7 @@ html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
       <button class="btn-admin-tab" id="tab-btn-prets" onclick="showAdminTab('prets')" data-i18n="admtab.prets">💰 Prêts sociaux</button>
       <button class="btn-admin-tab" id="tab-btn-omra" onclick="showAdminTab('omra')" data-i18n="admtab.omra">🕋 Omra</button>
       <button class="btn-admin-tab" id="tab-btn-sport" onclick="showAdminTab('sport')" data-i18n="admtab.sport">⚽ Sport &amp; Travail</button>
+      <button class="btn-admin-tab" id="tab-btn-equipes" onclick="showAdminTab('equipes')">👕 Équipes (joueurs &amp; besoins)</button>
       <button class="btn-admin-tab" id="tab-btn-electro" onclick="showAdminTab('electro')" data-i18n="admtab.electro">🔌 Électroménagers</button>
       <button class="btn-admin-tab" id="tab-btn-loisirs" onclick="showAdminTab('loisirs')" data-i18n="admtab.loisirs">🥋 Loisirs</button>
       <button class="btn-admin-tab" id="tab-btn-creches" onclick="showAdminTab('creches')" data-i18n="admtab.creches">👶 Crèches</button>
@@ -3043,6 +3161,26 @@ html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
             <tbody id="tbody-sport"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <div id="admin-tab-equipes" style="display:none;">
+      <div class="admin-stats" id="eq-stats"></div>
+      <div class="panneau">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn btn-primary" id="eq-adm-btn-j" onclick="eqAdmVue('joueurs')">👕 Fiches joueurs</button>
+          <button class="btn btn-outline" id="eq-adm-btn-b" onclick="eqAdmVue('besoins')">📋 Besoins des équipes</button>
+        </div>
+        <div class="filter-bar">
+          <input id="eq-f-search" type="text" placeholder="🔍 Rechercher nom, matricule, licence, besoin…" oninput="eqRender()" style="flex:1;min-width:200px;">
+          <select id="eq-f-equipe" onchange="eqRender()"><option value="">Toutes les équipes</option><option value="Football">⚽ Football</option><option value="Pétanque">🎯 Pétanque</option></select>
+          <select id="eq-f-statut" onchange="eqRender()"><option value="">Tous les statuts</option><option>En attente</option><option>Validé</option><option>Refusé</option><option>Traité</option></select>
+          <button class="btn-excel" onclick="eqExporter()">📊 Exporter Excel</button>
+          <button class="btn-excel" onclick="eqImprimer()" style="background:#334155;">🖨️ Imprimer / PDF</button>
+          <button class="btn-excel" id="eq-btn-recap" onclick="eqRecap()" style="background:#7A4B0E;">📏 Récap. tenues &amp; pointures</button>
+        </div>
+        <div class="tableau-wrap"><table class="tab"><thead id="eq-thead"></thead><tbody id="eq-tbody"></tbody></table></div>
+        <p style="font-size:12px;color:#7A6F58;margin-top:8px;">Statuts : En attente → Validé (après examen) → Traité (action effectuée : tenue commandée / remise, besoin satisfait). Les listes imprimées et exportées tiennent compte des filtres.</p>
       </div>
     </div>
 
@@ -6021,6 +6159,9 @@ function applyAdminAuthState(user) {
 }
 
 function showAdminTab(id) {
+  var _eqT = document.getElementById('admin-tab-equipes'); if (_eqT) _eqT.style.display = (id === 'equipes') ? 'block' : 'none';
+  var _eqB = document.getElementById('tab-btn-equipes'); if (_eqB) _eqB.classList.toggle('actif', id === 'equipes');
+  if (id === 'equipes') { try { eqInit(); } catch (e) { console.warn(e); } }
   var _mt = document.getElementById('admin-tab-mgmc'); if (_mt) _mt.style.display = (id === 'mgmc') ? 'block' : 'none';
   var _mb = document.getElementById('tab-btn-mgmc'); if (_mb) _mb.classList.toggle('actif', id === 'mgmc');
   if (id === 'mgmc') { try { mgaSec(window._mgaSec || 'adh'); } catch (e) { console.warn(e); } }
@@ -6240,6 +6381,9 @@ function infosSup(mat) {
   if (t.fonction) o.push('Fonction : ' + t.fonction);
   if (t.adresse) o.push('Adresse : ' + t.adresse);
   if (t.naissance) o.push('Né(e) le : ' + t.naissance);
+  if (t.taille) o.push('Tenue : ' + t.taille + (t.pointure ? ' · Pointure : ' + t.pointure : ''));
+  if (t.poste) o.push('Poste : ' + t.poste);
+  if (t.licence) o.push('Licence : ' + t.licence);
   if (t.passeport) o.push('Passeport : ' + t.passeport + (t.passeportExp ? ' (exp. ' + t.passeportExp + ')' : ''));
   return o.map(esc).join('<br>');
 }
@@ -11327,6 +11471,280 @@ function mgaMsgPublier(i) {
     .catch(function () { _mgaMsg('Écriture refusée : vérifiez les règles Firebase.'); });
 }
 function mgaMsgSupp(i) { if (!confirm('Supprimer ce message ?')) return; window.fbMgmcDelMsg(window._mgaMsgs[i].num).then(function () { mgaMsgs(document.getElementById('mga-body')); }).catch(function () { _mgaMsg('Suppression refusée.'); }); }
+</script>
+<script>
+/* ===================== Équipes sport : joueurs & besoins ===================== */
+var EQ_POSTES = {
+  'Football': ['Gardien de but', 'Défenseur', 'Milieu de terrain', 'Attaquant', 'Polyvalent'],
+  'Pétanque': ['Pointeur', 'Tireur', 'Milieu (polyvalent)']
+};
+function eqMajPostes() {
+  var eq = document.getElementById('fj-equipe'), po = document.getElementById('fj-poste');
+  if (!eq || !po) return;
+  po.innerHTML = '<option value="">— Choisir —</option>' + (EQ_POSTES[eq.value] || []).map(function(x) { return '<option>' + x + '</option>'; }).join('');
+}
+function eqInitPublic() {
+  eqMajPostes();
+  var pt = document.getElementById('fj-pointure');
+  if (pt && !pt.options.length) {
+    var h = '<option value="">— Choisir —</option>';
+    for (var i = 28; i <= 50; i++) h += '<option>' + i + '</option>';
+    pt.innerHTML = h;
+  }
+}
+function eqPublicTab(t) {
+  document.getElementById('eq-pub-joueur').style.display = (t === 'joueur') ? 'block' : 'none';
+  document.getElementById('eq-pub-sec').style.display = (t === 'sec') ? 'block' : 'none';
+  document.getElementById('eq-btn-joueur').className = 'btn ' + (t === 'joueur' ? 'btn-primary' : 'btn-outline');
+  document.getElementById('eq-btn-sec').className = 'btn ' + (t === 'sec' ? 'btn-primary' : 'btn-outline');
+  eqPrefill();
+}
+function eqPrefill() {
+  var s = _acSession(); if (!s) return;
+  var put = function(id, v) { var e = document.getElementById(id); if (e && !e.value.trim() && v) e.value = v; };
+  put('fj-nom', s.nom); put('fj-prenom', s.prenom); put('fj-matricule', s.mat);
+  put('fb-nom', s.nom); put('fb-prenom', s.prenom); put('fb-matricule', s.mat);
+}
+function _eqMsg(id, ok, txt) {
+  var m = document.getElementById(id); if (!m) return;
+  m.className = 'msg ' + (ok ? 'ok' : 'err'); m.style.display = 'flex'; m.textContent = txt;
+}
+function _eqNz(x) { return String(x || '').trim().replace(/^0+/, ''); }
+// Vérifie que le matricule saisi est celui du travailleur identifié et qu'il n'est pas bloqué.
+function _eqVerifTravailleur(mat) {
+  var s = _acSession();
+  if (!s) return Promise.resolve('Veuillez d\'abord vous identifier (nom, prénom, matricule).');
+  if (_eqNz(s.mat) !== _eqNz(mat)) return Promise.resolve('Le matricule doit être celui du travailleur identifié.');
+  return _acEstBloque(s.mat).then(function(b) { return b ? _msgSiteRepare() : ''; });
+}
+function _eqNum(pref) {
+  var n = new Date();
+  return pref + '-' + String(n.getFullYear()).slice(-2) + String(n.getMonth() + 1).padStart(2, '0') + String(n.getDate()).padStart(2, '0') + '-' + randomSecret(6);
+}
+async function soumettreJoueur() {
+  var g = function(id) { return (document.getElementById(id).value || '').trim(); };
+  var nom = g('fj-nom').toUpperCase(), prenom = g('fj-prenom'), mat = g('fj-matricule'), licence = g('fj-licence'),
+      equipe = g('fj-equipe'), poste = g('fj-poste'), taille = g('fj-taille'), pointure = g('fj-pointure'), remarque = g('fj-remarque');
+  if (!nom || !prenom || !mat || !equipe || !poste || !taille || !pointure) { _eqMsg('msg-joueur', false, '⚠️ Veuillez remplir tous les champs obligatoires (*).'); return; }
+  if (/[.#$\[\]\/]/.test(mat)) { _eqMsg('msg-joueur', false, '⚠️ Matricule invalide.'); return; }
+  var err = await _eqVerifTravailleur(mat);
+  if (err) { _eqMsg('msg-joueur', false, '⚠️ ' + err); return; }
+  if (typeof window.fbCreateEq !== 'function') { _eqMsg('msg-joueur', false, '⚠️ Base de données indisponible. Réessayez dans un instant.'); return; }
+  var now = new Date();
+  var d = { num: _eqNum('JO'), nom: nom, prenom: prenom, mat: mat, licence: licence, equipe: equipe, poste: poste, taille: taille, pointure: pointure,
+            remarque: remarque, statut: 'En attente', date: now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'}),
+            dateObj: now.toISOString(), annee: now.getFullYear() };
+  _eqMsg('msg-joueur', true, '⏳ Enregistrement…');
+  try {
+    await window.fbCreateEq('sportJoueurs', d);
+    if (typeof window.fbSaveTelEffectif === 'function') {
+      var s = _acSession(), o = { nom: s.nom || '', prenom: s.prenom || '', taille: taille, pointure: pointure, poste: equipe + ' — ' + poste };
+      if (licence) o.licence = licence;
+      window.fbSaveTelEffectif(String(s.mat), o).catch(function() {});
+    }
+    _eqMsg('msg-joueur', true, '✅ Fiche enregistrée (N° ' + d.num + '). Elle sera examinée puis validée par le président de l\'équipe ou l\'administrateur.');
+    ['fj-licence', 'fj-remarque'].forEach(function(i) { document.getElementById(i).value = ''; });
+    document.getElementById('fj-taille').value = ''; document.getElementById('fj-pointure').value = ''; document.getElementById('fj-poste').value = '';
+  } catch (e) {
+    console.error(e);
+    _eqMsg('msg-joueur', false, '❌ Enregistrement impossible. Vérifiez la connexion (ou les règles Firebase du nœud sportJoueurs).');
+  }
+}
+
+// Mot de passe du secrétaire général (comparaison sur empreinte : le mot de passe n'apparaît pas en clair dans la page).
+function _eqHash(str) {
+  var h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (var i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+var EQ_SEC_HASH = '1bavw3e5eun';
+var _eqSecOk = false;
+function eqSecDeverrouiller() {
+  var v = document.getElementById('eq-sec-pass').value;
+  if (_eqHash(v) === EQ_SEC_HASH) {
+    _eqSecOk = true;
+    document.getElementById('eq-sec-lock').style.display = 'none';
+    document.getElementById('eq-sec-form').style.display = 'block';
+    document.getElementById('eq-sec-pass').value = '';
+    eqPrefill();
+  } else {
+    _eqMsg('msg-eq-lock', false, '❌ Mot de passe incorrect.');
+  }
+}
+function eqSecVerrouiller() {
+  _eqSecOk = false;
+  document.getElementById('eq-sec-lock').style.display = 'block';
+  document.getElementById('eq-sec-form').style.display = 'none';
+  document.getElementById('msg-eq-lock').style.display = 'none';
+}
+async function soumettreBesoins() {
+  if (!_eqSecOk) { eqSecVerrouiller(); return; }
+  var g = function(id) { return (document.getElementById(id).value || '').trim(); };
+  var nom = g('fb-nom').toUpperCase(), prenom = g('fb-prenom'), mat = g('fb-matricule'), tel = g('fb-tel'), equipe = g('fb-equipe'),
+      nomEquipe = g('fb-nomequipe'), effectif = g('fb-effectif'), autre = g('fb-autre'), remarque = g('fb-remarque');
+  var besoins = Array.prototype.map.call(document.querySelectorAll('#fb-besoins input:checked'), function(c) { return c.value; });
+  if (!nom || !prenom || !mat || !tel) { _eqMsg('msg-besoins', false, '⚠️ Nom, prénom, matricule et téléphone sont obligatoires.'); return; }
+  if (!telValide(tel)) { _eqMsg('msg-besoins', false, '⚠️ Numéro de téléphone invalide.'); return; }
+  if (!besoins.length && !autre) { _eqMsg('msg-besoins', false, '⚠️ Indiquez au moins un besoin.'); return; }
+  if (/[.#$\[\]\/]/.test(mat)) { _eqMsg('msg-besoins', false, '⚠️ Matricule invalide.'); return; }
+  var err = await _eqVerifTravailleur(mat);
+  if (err) { _eqMsg('msg-besoins', false, '⚠️ ' + err); return; }
+  if (typeof window.fbCreateEq !== 'function') { _eqMsg('msg-besoins', false, '⚠️ Base de données indisponible. Réessayez dans un instant.'); return; }
+  var now = new Date();
+  var d = { num: _eqNum('BE'), equipe: equipe, nomEquipe: nomEquipe, nom: nom, prenom: prenom, mat: mat, tel: tel, effectif: effectif,
+            besoins: besoins.join(', '), autre: autre, remarque: remarque, statut: 'En attente',
+            date: now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'}),
+            dateObj: now.toISOString(), annee: now.getFullYear() };
+  _eqMsg('msg-besoins', true, '⏳ Enregistrement…');
+  try {
+    await window.fbCreateEq('sportBesoins', d);
+    try { var s = _acSession(); if (s && typeof window.fbSaveTelEffectif === 'function') window.fbSaveTelEffectif(String(s.mat), { tel: tel, nom: s.nom || '', prenom: s.prenom || '' }).catch(function() {}); } catch (e1) {}
+    _eqMsg('msg-besoins', true, '✅ Besoins enregistrés (N° ' + d.num + '). Ils seront examinés par le président de l\'équipe ou l\'administrateur.');
+    document.querySelectorAll('#fb-besoins input').forEach(function(c) { c.checked = false; });
+    ['fb-autre', 'fb-remarque', 'fb-effectif'].forEach(function(i) { document.getElementById(i).value = ''; });
+  } catch (e) {
+    console.error(e);
+    _eqMsg('msg-besoins', false, '❌ Enregistrement impossible. Vérifiez la connexion (ou les règles Firebase du nœud sportBesoins).');
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  eqInitPublic();
+  if (typeof showVue === 'function') {
+    var _sv0 = showVue;
+    showVue = function(id) { var r = _sv0.apply(this, arguments); if (id === 'sport') setTimeout(eqPrefill, 200); return r; };
+  }
+});
+
+/* ---------- Admin ---------- */
+var eqJoueurs = [], eqBesoins = [], eqVue = 'joueurs', _eqStarted = false;
+function eqInit() {
+  if (!_eqStarted && typeof window.fbListenEq === 'function') {
+    _eqStarted = true;
+    var tri = function(a) { return a.sort(function(x, y) { return String(y.dateObj || '').localeCompare(String(x.dateObj || '')); }); };
+    var ko = function(n) { return function(e) { console.error('Lecture ' + n + ':', e); alert("Équipes : les règles Firebase n'autorisent pas encore la lecture de '" + n + "'. Ajoutez les règles de ce chemin."); }; };
+    window.fbListenEq('sportJoueurs', function(a) { eqJoueurs = tri(a); eqRender(); }, ko('sportJoueurs'));
+    window.fbListenEq('sportBesoins', function(a) { eqBesoins = tri(a); eqRender(); }, ko('sportBesoins'));
+  }
+  eqRender();
+}
+function eqAdmVue(v) {
+  eqVue = v;
+  document.getElementById('eq-adm-btn-j').className = 'btn ' + (v === 'joueurs' ? 'btn-primary' : 'btn-outline');
+  document.getElementById('eq-adm-btn-b').className = 'btn ' + (v === 'besoins' ? 'btn-primary' : 'btn-outline');
+  document.getElementById('eq-btn-recap').style.display = (v === 'joueurs') ? '' : 'none';
+  eqRender();
+}
+function eqFiltres() {
+  var q = (document.getElementById('eq-f-search').value || '').toLowerCase().trim();
+  var eq = document.getElementById('eq-f-equipe').value, st = document.getElementById('eq-f-statut').value;
+  var src = eqVue === 'joueurs' ? eqJoueurs : eqBesoins;
+  return src.filter(function(d) {
+    if (eq && d.equipe !== eq) return false;
+    if (st && d.statut !== st) return false;
+    if (!q) return true;
+    return [d.num, d.nom, d.prenom, d.mat, d.licence, d.poste, d.taille, d.pointure, d.besoins, d.autre, d.remarque, d.nomEquipe].join(' ').toLowerCase().indexOf(q) !== -1;
+  });
+}
+function eqBadge(st) {
+  var c = { 'En attente': ['#FEF3C7', '#92400E'], 'Validé': ['#E8F5EC', '#1B6B3A'], 'Refusé': ['#FBEAE8', '#A12622'], 'Traité': ['#E0E7FF', '#3730A3'] }[st] || ['#eee', '#333'];
+  return '<span class="badge" style="background:' + c[0] + ';color:' + c[1] + ';">' + esc(st) + '</span>';
+}
+function eqActions(d, node) {
+  var n = JSON.stringify(String(d.num)).replace(/"/g, '&quot;'), nd = "'" + node + "'";
+  var sel = '<select onchange="eqSetStatut(' + nd + ',' + n + ',this.value)" style="font-size:12px;">' +
+    ['En attente', 'Validé', 'Refusé', 'Traité'].map(function(x) { return '<option' + (x === d.statut ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>';
+  var act = d.statut === 'Validé' ? ' <button class="btn-danger-sm" style="color:#3730A3;border-color:#3730A3;" onclick="eqSetStatut(' + nd + ',' + n + ',\'Traité\')">▶ Passer à l\'action</button>' : '';
+  return sel + act + ' <button class="btn-danger-sm" onclick="eqSupprimer(' + nd + ',' + n + ')">🗑️</button>';
+}
+function eqRender() {
+  var th = document.getElementById('eq-thead'), tb = document.getElementById('eq-tbody'), st = document.getElementById('eq-stats');
+  if (!th || !tb) return;
+  var all = eqVue === 'joueurs' ? eqJoueurs : eqBesoins, c = function(s) { return all.filter(function(d) { return d.statut === s; }).length; };
+  st.innerHTML = '<div class="stat-card"><div class="stat-num">' + all.length + '</div><div class="stat-lbl">Total</div></div>' +
+    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + c('En attente') + '</div><div class="stat-lbl">En attente</div></div>' +
+    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + c('Validé') + '</div><div class="stat-lbl">Validés</div></div>' +
+    '<div class="stat-card" style="border-color:#3730A3;"><div class="stat-num" style="color:#3730A3;">' + c('Traité') + '</div><div class="stat-lbl">Traités</div></div>' +
+    '<div class="stat-card" style="border-color:var(--rouge);"><div class="stat-num" style="color:var(--rouge);">' + c('Refusé') + '</div><div class="stat-lbl">Refusés</div></div>';
+  var l = eqFiltres();
+  if (eqVue === 'joueurs') {
+    th.innerHTML = '<tr><th>N°</th><th>Date</th><th>Joueur</th><th>Matricule</th><th>Licence</th><th>Équipe</th><th>Poste</th><th>Tenue</th><th>Pointure</th><th>Remarque</th><th>Statut</th><th>Action</th></tr>';
+    tb.innerHTML = l.map(function(d) {
+      return '<tr><td>' + esc(d.num) + '</td><td>' + esc(d.date) + '</td><td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td><td>' + esc(d.mat) + '</td><td>' + esc(d.licence || '—') +
+        '</td><td>' + esc(d.equipe) + '</td><td>' + esc(d.poste) + '</td><td>' + esc(d.taille) + '</td><td>' + esc(d.pointure) + '</td><td>' + esc(d.remarque || '') +
+        '</td><td>' + eqBadge(d.statut) + '</td><td style="white-space:nowrap;">' + eqActions(d, 'sportJoueurs') + '</td></tr>';
+    }).join('') || '<tr><td colspan="12" style="text-align:center;color:#999;">Aucune fiche.</td></tr>';
+  } else {
+    th.innerHTML = '<tr><th>N°</th><th>Date</th><th>Équipe</th><th>Secrétaire</th><th>Matricule</th><th>Tél</th><th>Effectif</th><th>Besoins</th><th>Remarques</th><th>Statut</th><th>Action</th></tr>';
+    tb.innerHTML = l.map(function(d) {
+      return '<tr><td>' + esc(d.num) + '</td><td>' + esc(d.date) + '</td><td>' + esc(d.equipe) + (d.nomEquipe ? ' — ' + esc(d.nomEquipe) : '') + '</td><td>' + esc(d.nom) + ' ' + esc(d.prenom) +
+        '</td><td>' + esc(d.mat) + '</td><td>' + esc(d.tel) + '</td><td>' + esc(d.effectif || '') + '</td><td>' + esc(d.besoins || '') + (d.autre ? '<br><em>' + esc(d.autre) + '</em>' : '') +
+        '</td><td>' + esc(d.remarque || '') + '</td><td>' + eqBadge(d.statut) + '</td><td style="white-space:nowrap;">' + eqActions(d, 'sportBesoins') + '</td></tr>';
+    }).join('') || '<tr><td colspan="11" style="text-align:center;color:#999;">Aucun besoin enregistré.</td></tr>';
+  }
+}
+function eqSetStatut(node, num, statut) {
+  var patch = { statut: statut };
+  var now = new Date().toLocaleDateString('fr-DZ');
+  if (statut === 'Validé') patch.dateValidation = now;
+  if (statut === 'Traité') patch.dateAction = now;
+  window.fbUpdateEq(node, num, patch).catch(function(e) { console.error(e); alert('Mise à jour refusée (êtes-vous connecté en administrateur ?).'); });
+}
+function eqSupprimer(node, num) {
+  if (!confirm('Supprimer définitivement cette fiche ?')) return;
+  window.fbDeleteEq(node, num).catch(function(e) { console.error(e); alert('Suppression refusée.'); });
+}
+function eqLignesExport() {
+  var l = eqFiltres();
+  if (eqVue === 'joueurs') return { titre: 'Fiches joueurs', cols: ['N°', 'Date', 'Nom', 'Prénom', 'Matricule', 'Licence', 'Équipe', 'Poste', 'Tenue', 'Pointure', 'Remarque', 'Statut'],
+    rows: l.map(function(d) { return [d.num, d.date, d.nom, d.prenom, d.mat, d.licence || '', d.equipe, d.poste, d.taille, d.pointure, d.remarque || '', d.statut]; }) };
+  return { titre: "Besoins des équipes", cols: ['N°', 'Date', 'Équipe', 'Nom équipe', 'Secrétaire', 'Matricule', 'Téléphone', 'Effectif', 'Besoins', 'Autres besoins', 'Remarques', 'Statut'],
+    rows: l.map(function(d) { return [d.num, d.date, d.equipe, d.nomEquipe || '', d.nom + ' ' + d.prenom, d.mat, d.tel, d.effectif || '', d.besoins || '', d.autre || '', d.remarque || '', d.statut]; }) };
+}
+function eqExporter() {
+  var x = eqLignesExport();
+  if (!x.rows.length) { alert('Rien à exporter.'); return; }
+  var ws = XLSX.utils.aoa_to_sheet([x.cols].concat(x.rows)), wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, x.titre.slice(0, 30));
+  XLSX.writeFile(wb, 'SCHB_Sport_' + x.titre.replace(/\s+/g, '_') + '_' + new Date().toLocaleDateString('fr-DZ').replace(/\//g, '-') + '.xlsx');
+}
+function _eqFenetre(titre, corps) {
+  var w = window.open('', '_blank');
+  if (!w) { alert('Autorisez les fenêtres pop-up pour imprimer.'); return; }
+  w.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' + esc(titre) + '</title><style>' +
+    'body{font-family:Arial,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 6px}p{font-size:12px;color:#555;margin:0 0 12px}' +
+    'table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #888;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eee}' +
+    '.sig{margin-top:40px;display:flex;justify-content:space-between;font-size:12px}@media print{button{display:none}}</style></head><body>' +
+    '<button onclick="window.print()" style="margin-bottom:12px;padding:6px 14px;">🖨️ Imprimer / Enregistrer en PDF</button>' +
+    '<h1>SCHB — Comité de Participation · Sport &amp; Travail</h1>' + corps +
+    '<div class="sig"><div>Le Président de l\'équipe</div><div>L\'Administrateur</div></div></body></html>');
+  w.document.close();
+}
+function eqImprimer() {
+  var x = eqLignesExport();
+  if (!x.rows.length) { alert('Rien à imprimer.'); return; }
+  var t = '<table><thead><tr>' + x.cols.map(function(c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    x.rows.map(function(r) { return '<tr>' + r.map(function(v) { return '<td>' + esc(v) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+  _eqFenetre(x.titre, '<p>' + esc(x.titre) + ' — édité le ' + new Date().toLocaleDateString('fr-DZ') + ' — ' + x.rows.length + ' ligne(s)</p>' + t);
+}
+function eqRecap() {
+  var l = eqFiltres().filter(function(d) { return d.statut !== 'Refusé'; });
+  if (!l.length) { alert('Aucune fiche (hors refusées) à récapituler.'); return; }
+  var tailles = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'], corps = '<p>Récapitulatif des tenues et pointures (fiches non refusées, selon les filtres) — ' + new Date().toLocaleDateString('fr-DZ') + '</p>';
+  ['Football', 'Pétanque'].forEach(function(eq) {
+    var j = l.filter(function(d) { return d.equipe === eq; });
+    if (!j.length) return;
+    var ct = {}, cp = {}, cpo = {};
+    j.forEach(function(d) { ct[d.taille] = (ct[d.taille] || 0) + 1; cp[d.pointure] = (cp[d.pointure] || 0) + 1; cpo[d.poste] = (cpo[d.poste] || 0) + 1; });
+    var row = function(o, keys) { return '<tr>' + keys.map(function(k) { return '<th>' + esc(k) + '</th>'; }).join('') + '<th>Total</th></tr><tr>' + keys.map(function(k) { return '<td>' + (o[k] || 0) + '</td>'; }).join('') + '<td><b>' + j.length + '</b></td></tr>'; };
+    var pts = Object.keys(cp).sort(function(a, b) { return a - b; }), pos = Object.keys(cpo).sort();
+    corps += '<h2>' + esc(eq) + ' — ' + j.length + ' joueur(s)</h2><table>' + row(ct, tailles) + '</table><br><table>' + row(cp, pts) + '</table><br><table>' + row(cpo, pos) + '</table>';
+    corps += '<h2>Liste nominative</h2><table><thead><tr><th>Joueur</th><th>Matricule</th><th>Licence</th><th>Poste</th><th>Tenue</th><th>Pointure</th><th>Statut</th></tr></thead><tbody>' +
+      j.map(function(d) { return '<tr><td>' + esc(d.nom + ' ' + d.prenom) + '</td><td>' + esc(d.mat) + '</td><td>' + esc(d.licence || '') + '</td><td>' + esc(d.poste) + '</td><td>' + esc(d.taille) + '</td><td>' + esc(d.pointure) + '</td><td>' + esc(d.statut) + '</td></tr>'; }).join('') + '</tbody></table>';
+  });
+  _eqFenetre('Récap tenues et pointures', corps);
+}
 </script>
 <div id="fete-voeux" role="note">🎄 <b>Joyeuses fêtes</b> &amp; <b>Bonne année 2027</b> ✨ — Le Comité de Participation SCHB vous souhaite santé, bonheur et prospérité. <span dir="rtl" style="margin-inline-start:8px;">كل عام وأنتم بخير</span></div>
 <canvas id="fete-neige" aria-hidden="true"></canvas>
