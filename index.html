@@ -523,9 +523,11 @@
       };
 
       // Téléphones des travailleurs : nœud séparé (écriture publique validée, lecture admin uniquement).
-      window.fbSaveTelEffectif = function(mat, tel, nom, prenom) {
+      window.fbSaveTelEffectif = function(mat, obj) {
         if (!mat || /[.#$\[\]\/]/.test(mat)) return Promise.resolve(null);
-        return _fbDb.ref('telephones/' + mat).set({ tel: String(tel), nom: nom || '', prenom: prenom || '', date: new Date().toISOString() });
+        var u = {}; Object.keys(obj || {}).forEach(function(k) { if (obj[k] !== undefined && obj[k] !== '') u[k] = String(obj[k]).slice(0, 200); });
+        u.date = new Date().toISOString();
+        return _fbDb.ref('telephones/' + mat).update(u);
       };
       window.fbGetTelEffectif = function(mat) {
         if (!mat || /[.#$\[\]\/]/.test(mat)) return Promise.resolve(null);
@@ -3327,7 +3329,7 @@ nav button.nav-mgmc:hover,nav button.nav-mgmc.actif{background:#fff;color:#1A3FC
         </div>
         <div class="tableau-wrap">
           <table class="tab">
-            <thead><tr><th>Matricule</th><th>Nom</th><th>Prénom</th><th>Unité</th><th>Direction</th><th>Département</th><th>Service</th><th>Poste</th><th>Téléphone</th><th>Prestations</th></tr></thead>
+            <thead><tr><th>Matricule</th><th>Nom</th><th>Prénom</th><th>Unité</th><th>Direction</th><th>Département</th><th>Service</th><th>Poste</th><th>Téléphone</th><th>Autres infos saisies</th><th>Dossier</th><th>Prestations</th></tr></thead>
             <tbody id="tbody-effectifs"></tbody>
           </table>
         </div>
@@ -4052,16 +4054,25 @@ function accesValider() {
 }
 // Pré-remplit nom / prénom / matricule / service du formulaire de la rubrique ouverte (champs vides uniquement).
 function telValide(t) { return /^0[567]\d{8}$/.test(String(t || '').replace(/[\s.\-]/g, '')); }
-function sauverTelEffectif() {
-  var champ = document.getElementById('f-tel');
-  var mat = ((document.getElementById('f-matricule') || {}).value || '').trim();
+var PROFIL_CHAMPS = { fo: { adresse: 'fo-adresse', naissance: 'fo-naissance', passeport: 'fo-passeport', passeportExp: 'fo-passeport-exp' }, fp: { fonction: 'fp-fonction' } };
+// Enregistre dans le fichier effectif (nœud telephones/{matricule}) les infos de contact saisies dans une rubrique.
+function sauverTelEffectif(prefix) {
+  prefix = (typeof prefix === 'string') ? prefix : 'f';
+  var g = function(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; };
+  var mat = g(prefix + '-matricule');
   var s = _acSession();
-  if (!champ || !mat || !s || String(s.mat) !== mat) return;
-  var tel = champ.value.trim();
-  if (!telValide(tel) || typeof window.fbSaveTelEffectif !== 'function') return;
-  if (window._telSauve === mat + '|' + tel) return;
-  window._telSauve = mat + '|' + tel;
-  window.fbSaveTelEffectif(mat, tel, s.nom, s.prenom).catch(function(e) { window._telSauve = ''; console.warn('Téléphone non enregistré:', e); });
+  if (!mat || !s || String(s.mat) !== mat || typeof window.fbSaveTelEffectif !== 'function') return;
+  var obj = {}, tel = g(prefix + '-tel');
+  if (telValide(tel)) obj.tel = tel;
+  var extra = PROFIL_CHAMPS[prefix] || {};
+  Object.keys(extra).forEach(function(k) { var v = g(extra[k]); if (v) obj[k] = v; });
+  obj.nom = s.nom || ''; obj.prenom = s.prenom || '';
+  if (!obj.tel && Object.keys(obj).length <= 2) return;
+  var cle = mat + '|' + JSON.stringify(obj);
+  window._telSauve = window._telSauve || {};
+  if (window._telSauve[prefix] === cle) return;
+  window._telSauve[prefix] = cle;
+  window.fbSaveTelEffectif(mat, obj).catch(function(e) { window._telSauve[prefix] = ''; console.warn('Infos non enregistrées:', e); });
 }
 function choisirEtablissement(carte) {
   var conv = getConventions().filter(function(c) { return c.carte === carte; })[0];
@@ -4084,8 +4095,14 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.grid-spec .card-spec').forEach(function(c) {
     c.addEventListener('click', function() { choisirEtablissement(c); });
   });
-  var t = document.getElementById('f-tel');
-  if (t) { t.addEventListener('blur', sauverTelEffectif); t.addEventListener('change', sauverTelEffectif); }
+  ['f','fl','fp','fo','fs','fe','flo','fc'].forEach(function(px) {
+    var ids = [px + '-tel'].concat(Object.keys(PROFIL_CHAMPS[px] || {}).map(function(k) { return PROFIL_CHAMPS[px][k]; }));
+    ids.forEach(function(id) {
+      var el = document.getElementById(id); if (!el) return;
+      el.addEventListener('blur', function() { sauverTelEffectif(px); });
+      el.addEventListener('change', function() { sauverTelEffectif(px); });
+    });
+  });
 });
 function _accesPrefill(id) {
   var s = _acSession(), p = VUES_PROTEGEES[id];
@@ -4396,7 +4413,7 @@ async function soumettreDemande() {
   msg.textContent = '⏳ Enregistrement sécurisé de la demande…';
   try {
     await window.fbCreateDemande(d, makeSuiviPublic(d));
-    try { if (typeof sauverTelEffectif === 'function') sauverTelEffectif(); } catch (e0) {}
+    try { if (typeof sauverTelEffectif === 'function') sauverTelEffectif('f'); } catch (e0) {}
     notifierAdminParEmail(d);
     document.getElementById('tk-num').textContent = num;
     document.getElementById('tk-adh').textContent = nom + ' ' + prenom + ' (' + mat + ')';
@@ -4502,6 +4519,7 @@ async function soumettrePret() {
   msg.className = 'msg ok'; msg.style.display = 'flex';
   msg.innerHTML = '✅ Demande <strong>' + esc(num) + '</strong> enregistrée. Notez votre code de suivi confidentiel.';
 
+  try { sauverTelEffectif('fp'); } catch (e0) {}
   if (typeof window.fbCreatePret === 'function') {
     window.fbCreatePret(d, makeSuiviPublicPret(d)).catch(function(err){
       console.warn('Synchronisation Firebase échouée (prêt) :', err);
@@ -4663,6 +4681,7 @@ async function soumettreLivre() {
   msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
 
   // Synchronisation Firebase en arrière-plan (best-effort, ne bloque jamais l'enregistrement local)
+  try { sauverTelEffectif('fl'); } catch (e0) {}
   if (typeof window.fbCreateLivre === 'function') {
     window.fbCreateLivre(d, makeSuiviPublicLivre(d)).catch(function(err){
       console.warn('Synchronisation Firebase échouée (inscription tout de même enregistrée localement) :', err);
@@ -4772,6 +4791,7 @@ async function soumettreOmra() {
   msg.className = 'msg ok'; msg.style.display = 'flex';
   msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
 
+  try { sauverTelEffectif('fo'); } catch (e0) {}
   if (typeof window.fbCreateOmra === 'function') {
     window.fbCreateOmra(d, makeSuiviPublicOmra(d)).catch(function(err){
       console.warn('Synchronisation Firebase échouée (omra, enregistrée localement) :', err);
@@ -4877,6 +4897,7 @@ async function soumettreSport() {
   msg.className = 'msg ok'; msg.style.display = 'flex';
   msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
 
+  try { sauverTelEffectif('fs'); } catch (e0) {}
   if (typeof window.fbCreateSport === 'function') {
     window.fbCreateSport(d, makeSuiviPublicSport(d)).catch(function(err){
       console.warn('Synchronisation Firebase échouée (sport, enregistrée localement) :', err);
@@ -4967,6 +4988,7 @@ async function soumettreElectro() {
   msg.className = 'msg ok'; msg.style.display = 'flex';
   msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
 
+  try { sauverTelEffectif('fe'); } catch (e0) {}
   if (typeof window.fbCreateElectro === 'function') {
     window.fbCreateElectro(d, makeSuiviPublicElectro(d)).catch(function(err){
       console.warn('Synchronisation Firebase échouée (electro, enregistrée localement) :', err);
@@ -5058,6 +5080,7 @@ async function soumettreLoisirs() {
   msg.className = 'msg ok'; msg.style.display = 'flex';
   msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
 
+  try { sauverTelEffectif('flo'); } catch (e0) {}
   if (typeof window.fbCreateLoisirs === 'function') {
     window.fbCreateLoisirs(d, makeSuiviPublicLoisirs(d)).catch(function(err){
       console.warn('Synchronisation Firebase échouée (loisirs, enregistrée localement) :', err);
@@ -5148,6 +5171,7 @@ async function soumettreCreches() {
   msg.className = 'msg ok'; msg.style.display = 'flex';
   msg.innerHTML = '✅ Inscription <strong>' + esc(num) + '</strong> enregistrée sur cet appareil. Notez votre code de suivi confidentiel.';
 
+  try { sauverTelEffectif('fc'); } catch (e0) {}
   if (typeof window.fbCreateCreches === 'function') {
     window.fbCreateCreches(d, makeSuiviPublicCreches(d)).catch(function(err){
       console.warn('Synchronisation Firebase échouée (creches, enregistrée localement) :', err);
@@ -6170,11 +6194,45 @@ function renderTableauEffectifs() {
       : '<button class="btn-danger-sm" onclick="basculerBlocage(' + matJs + ',true)">Bloquer</button>';
     return '<tr' + (bloque ? ' style="background:#FFF8F7;"' : '') + '><td>' + esc(e.mat) + '</td><td>' + esc(e.nom) + '</td><td>' + esc(e.prenom) + '</td><td>' +
       esc(e.unite) + '</td><td>' + esc(e.direction) + '</td><td>' + esc(e.departement) + '</td><td>' +
-      esc(e.service) + '</td><td>' + esc(e.poste) + '</td><td style="white-space:nowrap;">' + esc((telephonesMap[e.mat] || {}).tel || '') + '</td><td style="white-space:nowrap;">' + statut + ' ' + action + '</td></tr>';
-  }).join('') || '<tr><td colspan="10" style="text-align:center;color:#999;">Aucune fiche à afficher.</td></tr>';
+      esc(e.service) + '</td><td>' + esc(e.poste) + '</td><td style="white-space:nowrap;">' + esc((telephonesMap[e.mat] || {}).tel || '') + '</td><td style="font-size:12px;">' + infosSup(e.mat) + '</td><td><button class="btn-danger-sm" style="color:#1B6B3A;border-color:#1B6B3A;" onclick="ouvrirDossierEffectif(' + matJs + ')">📂 ' + dossierDe(e.mat).length + '</button></td><td style="white-space:nowrap;">' + statut + ' ' + action + '</td></tr>';
+  }).join('') || '<tr><td colspan="12" style="text-align:center;color:#999;">Aucune fiche à afficher.</td></tr>';
 }
 
 // ----- Blocage / déblocage des prestations (référence = matricule de la fiche d'effectif) -----
+function infosSup(mat) {
+  var t = telephonesMap[mat] || {}, o = [];
+  if (t.fonction) o.push('Fonction : ' + t.fonction);
+  if (t.adresse) o.push('Adresse : ' + t.adresse);
+  if (t.naissance) o.push('Né(e) le : ' + t.naissance);
+  if (t.passeport) o.push('Passeport : ' + t.passeport + (t.passeportExp ? ' (exp. ' + t.passeportExp + ')' : ''));
+  return o.map(esc).join('<br>');
+}
+function dossierDe(mat) {
+  var src = [['Prise en charge', demandes], ['Livres', livres], ['Prêt social', prets], ['Omra', omra], ['Sport', sport],
+             ['Électroménager', electro], ['Loisirs', loisirs], ['Crèches', creches]];
+  var r = [];
+  src.forEach(function(x) { (x[1] || []).forEach(function(d) { if (d && String(d.mat) === String(mat)) r.push({ rub: x[0], d: d }); }); });
+  return r;
+}
+function ouvrirDossierEffectif(mat) {
+  var e = (effectifs || []).filter(function(x) { return String(x.mat) === String(mat); })[0] || {};
+  var t = telephonesMap[mat] || {};
+  var lignes = dossierDe(mat).map(function(x) {
+    var d = x.d;
+    return '<tr><td>' + esc(x.rub) + '</td><td>' + esc(d.num) + '</td><td>' + esc(d.date || '') + '</td><td>' + esc(d.statut || '') + '</td><td>' + esc(d.etab || d.choix || d.discipline || d.montant || d.pnom || '') + '</td></tr>';
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:#999;">Aucune demande.</td></tr>';
+  var old = document.getElementById('dossier-effectif'); if (old) old.remove();
+  var div = document.createElement('div');
+  div.id = 'dossier-effectif';
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  div.innerHTML = '<div style="background:#fff;color:#222;border-radius:10px;max-width:760px;width:100%;max-height:90vh;overflow:auto;padding:20px;">' +
+    '<h3 style="margin:0 0 8px;">Dossier de ' + esc(e.nom || t.nom || '') + ' ' + esc(e.prenom || t.prenom || '') + ' (' + esc(mat) + ')</h3>' +
+    '<p style="margin:0 0 10px;font-size:13px;">Service : ' + esc(e.service || '') + ' · Tél : ' + esc(t.tel || '—') + '<br>' + infosSup(mat) + '</p>' +
+    '<table style="width:100%;font-size:13px;border-collapse:collapse;"><thead><tr><th align="left">Rubrique</th><th align="left">N°</th><th align="left">Date</th><th align="left">Statut</th><th align="left">Détail</th></tr></thead><tbody>' + lignes + '</tbody></table>' +
+    '<div style="text-align:right;margin-top:12px;"><button class="btn-danger-sm" onclick="document.getElementById(\'dossier-effectif\').remove()">Fermer</button></div></div>';
+  div.addEventListener('click', function(ev) { if (ev.target === div) div.remove(); });
+  document.body.appendChild(div);
+}
 var telephonesMap = {}; // { matricule: {tel, date} } — numéros saisis par les travailleurs
 var blocagesMap = {}; // { matricule: { bloque:true, nom, prenom, date } } — synchronisé en temps réel avec Firebase
 
@@ -6186,7 +6244,7 @@ function effectifsFiltres() {
     if (st === 'bloque' && !bloque) return false;
     if (st === 'actif' && bloque) return false;
     if (!q) return true;
-    return [e.mat, e.nom, e.prenom, e.service, e.direction, e.departement, (telephonesMap[e.mat] || {}).tel].join(' ').toLowerCase().indexOf(q) !== -1;
+    return [e.mat, e.nom, e.prenom, e.service, e.direction, e.departement, (telephonesMap[e.mat] || {}).tel, infosSup(e.mat)].join(' ').toLowerCase().indexOf(q) !== -1;
   });
 }
 function _blocageMsg(texte, ok) {
