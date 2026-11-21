@@ -4053,7 +4053,7 @@ function accesValider() {
   });
 }
 // Pré-remplit nom / prénom / matricule / service du formulaire de la rubrique ouverte (champs vides uniquement).
-function telValide(t) { return /^0[567]\d{8}$/.test(String(t || '').replace(/[\s.\-]/g, '')); }
+function telValide(t) { var n = String(t || '').replace(/[\s.\-()]/g, ''); return /^\+?\d{9,13}$/.test(n); }
 var PROFIL_CHAMPS = { fo: { adresse: 'fo-adresse', naissance: 'fo-naissance', passeport: 'fo-passeport', passeportExp: 'fo-passeport-exp' }, fp: { fonction: 'fp-fonction' } };
 // Enregistre dans le fichier effectif (nœud telephones/{matricule}) les infos de contact saisies dans une rubrique.
 function sauverTelEffectif(prefix) {
@@ -4061,7 +4061,9 @@ function sauverTelEffectif(prefix) {
   var g = function(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; };
   var mat = g(prefix + '-matricule');
   var s = _acSession();
-  if (!mat || !s || String(s.mat) !== mat || typeof window.fbSaveTelEffectif !== 'function') return;
+  var nz = function(x) { return String(x || '').trim().replace(/^0+/, ''); };
+  if (!mat || !s || nz(s.mat) !== nz(mat) || typeof window.fbSaveTelEffectif !== 'function') { if (mat && s) console.warn('Infos non enregistrées : matricule différent de la session', mat, s.mat); return; }
+  mat = String(s.mat);
   var obj = {}, tel = g(prefix + '-tel');
   if (telValide(tel)) obj.tel = tel;
   var extra = PROFIL_CHAMPS[prefix] || {};
