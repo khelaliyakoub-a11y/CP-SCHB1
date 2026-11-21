@@ -1433,7 +1433,7 @@ html.fete #fete-neige{display:block;}
 #fete-toggle:hover{transform:scale(1.08);}
 html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
 @media (prefers-reduced-motion:reduce){#fete-guirlande i{animation:none;}}
-@media print{#fete-neige,#fete-guirlande,#fete-voeux,#fete-toggle{display:none !important;}}
+@media print{#fete-neige,#fete-guirlande,#fete-voeux{display:none !important;}}
 </style>
 </head>
 <body>
@@ -3056,6 +3056,13 @@ html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
     </div>
 
     <div id="admin-tab-vue">
+      <div class="panneau" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h3 class="serif" style="color:var(--bleu);margin-bottom:4px;font-size:16px;">🎄 Thème des fêtes (Noël / Nouvel An)</h3>
+          <div id="fete-admin-etat" style="font-size:13.5px;color:#5C5142;">Chargement…</div>
+        </div>
+        <button id="btn-toggle-fete" class="btn btn-primary" onclick="toggleFeteAdmin()">…</button>
+      </div>
       <div id="vue-globale"></div>
     </div>
 
@@ -12080,13 +12087,12 @@ function eqgRecap(p) {
 </script>
 <div id="fete-voeux" role="note">🎄 <b>Joyeuses fêtes</b> &amp; <b>Bonne année 2027</b> ✨ — Le Comité de Participation SCHB vous souhaite santé, bonheur et prospérité. <span dir="rtl" style="margin-inline-start:8px;">كل عام وأنتم بخير</span></div>
 <canvas id="fete-neige" aria-hidden="true"></canvas>
-<button id="fete-toggle" type="button" title="Activer / désactiver le thème des fêtes" aria-label="Thème des fêtes">❄️</button>
 <script>
 (function () {
   var KEY = 'schb_fete', root = document.documentElement;
   function lire() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   function ecrire(v) { try { localStorage.setItem(KEY, v); } catch (e) {} }
-  var actif = lire() !== 'off';
+  var actif = lire() === 'on';   // piloté par l'administrateur (meta/feteActive)
   // Guirlande dans l'en-tête
   var hdr = document.querySelector('header');
   if (hdr) {
@@ -12125,13 +12131,34 @@ function eqgRecap(p) {
     root.classList.toggle('fete', actif);
     cancelAnimationFrame(raf);
     if (actif && !reduit) { taille(); init(); boucle(); } else ctx.clearRect(0, 0, cv.width, cv.height);
-    var t = document.getElementById('fete-toggle'); if (t) t.style.opacity = actif ? '1' : '.6';
   }
   addEventListener('resize', function () { if (actif) { taille(); init(); } });
   document.addEventListener('visibilitychange', function () { cancelAnimationFrame(raf); if (actif && !reduit && !document.hidden) boucle(); });
-  document.getElementById('fete-toggle').addEventListener('click', function () { actif = !actif; ecrire(actif ? 'on' : 'off'); appliquer(); });
+  window._feteEtat = function (v) { v = !!v; ecrire(v ? 'on' : 'off'); if (v !== actif) { actif = v; appliquer(); } if (typeof window._feteAdminUI === 'function') window._feteAdminUI(v); };
   appliquer();
+  // Écoute en temps réel de l'état choisi par l'administrateur (dès que Firebase est prêt)
+  var essais = 0, t = setInterval(function () {
+    if (typeof window.fbListenSaison === 'function') {
+      clearInterval(t);
+      window.fbListenSaison('feteActive', function (v) { window._feteEtat(v); });
+    } else if (++essais > 100) clearInterval(t);
+  }, 300);
 })();
+</script>
+<script>
+function _feteAdminUI(v) {
+  var b = document.getElementById('btn-toggle-fete'), e = document.getElementById('fete-admin-etat');
+  if (b) { b.textContent = v ? '🔕 Désactiver le thème des fêtes' : '🎄 Activer le thème des fêtes'; b.style.background = v ? 'var(--rouge)' : ''; b.style.borderColor = v ? 'var(--rouge)' : ''; }
+  if (e) e.innerHTML = v ? '<span class="badge b-ok">🎄 Activé</span> — guirlande, neige et bandeau de vœux visibles par tous les visiteurs.' : '<span class="badge b-clo">⛔ Désactivé</span> — le site s\'affiche avec son thème habituel.';
+}
+function toggleFeteAdmin() {
+  var nouveau = !(document.documentElement.classList.contains('fete'));
+  if (typeof window.fbSetSaison !== 'function') { alert('Base de données indisponible. Réessayez dans un instant.'); return; }
+  window.fbSetSaison('feteActive', nouveau).catch(function (err) {
+    alert("Impossible de modifier le thème des fêtes : " + (err && err.message || 'erreur inconnue') + "\nVérifiez les règles Firebase (meta/feteActive : lecture publique, écriture admin).");
+  });
+}
+document.addEventListener('DOMContentLoaded', function () { _feteAdminUI(document.documentElement.classList.contains('fete')); });
 </script>
 </body>
 </html>
