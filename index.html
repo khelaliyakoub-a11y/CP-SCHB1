@@ -2232,6 +2232,7 @@ html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
     <div class="panneau" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
       <button class="btn btn-primary" id="eq-btn-joueur" onclick="eqPublicTab('joueur')">👕 Fiche joueur (tenue, poste, pointure)</button>
       <button class="btn btn-outline" id="eq-btn-sec" onclick="eqPublicTab('sec')">🔒 Espace secrétaire général d'équipe</button>
+      <button class="btn btn-outline" id="eq-btn-pres" onclick="eqPublicTab('pres')">🏅 Espace président d'équipe</button>
     </div>
 
     <div id="eq-pub-joueur">
@@ -2256,6 +2257,7 @@ html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
             <select id="fj-taille"><option value="">— Choisir —</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option><option>3XL</option><option>4XL</option></select></div>
           <div class="grp"><label>Pointure <span class="req">*</span></label><select id="fj-pointure"></select></div>
         </div>
+        <div class="grp"><label>N° de maillot souhaité <small style="color:#7A6F58;">(facultatif)</small></label><input id="fj-maillot" type="number" min="0" max="99" placeholder="Ex : 10"></div>
         <div class="grp"><label>Remarque <small style="color:#7A6F58;">(facultatif)</small></label><textarea id="fj-remarque" rows="2" placeholder="Ex : pied gauche, blessure à signaler…"></textarea></div>
         <div class="bar-actions">
           <button class="btn btn-primary" onclick="soumettreJoueur()">✅ Envoyer ma fiche</button>
@@ -2273,6 +2275,11 @@ html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
         <div class="msg" id="msg-eq-lock"></div>
       </div>
       <div id="eq-sec-form" style="display:none;">
+        <div class="panneau" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button id="eq-sec-t1" class="btn btn-primary" onclick="eqSecSub(1)">📋 Besoins de l'équipe</button>
+          <button id="eq-sec-t2" class="btn btn-outline" onclick="eqSecSub(2)">📅 Matchs, résultats &amp; entraînements</button>
+        </div>
+        <div id="eq-sec-besoins">
         <div class="panneau">
           <h3 class="serif" style="color:var(--bleu);margin-bottom:6px;font-size:17px;">📋 Besoins de l'équipe</h3>
           <p style="font-size:13px;color:#5C5142;margin-bottom:16px;">Listez les besoins de votre équipe et vos remarques. La demande sera examinée par le président de l'équipe ou l'administrateur.</p>
@@ -2315,6 +2322,22 @@ html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
           </div>
           <div class="msg" id="msg-besoins"></div>
         </div>
+        </div>
+        <div id="eq-sec-gestion" style="display:none;"><div id="eqg-s"></div></div>
+      </div>
+    </div>
+
+    <div id="eq-pub-pres" style="display:none;">
+      <div class="panneau" id="eq-pres-lock">
+        <h3 class="serif" style="color:var(--bleu);margin-bottom:6px;font-size:17px;">🏅 Espace réservé au président de l'équipe</h3>
+        <p style="font-size:13px;color:#5C5142;margin-bottom:12px;">Saisissez le mot de passe du président. Vous pourrez valider les demandes (joueurs et besoins), gérer l'effectif, les matchs, les entraînements et la discipline.</p>
+        <div class="grp"><label>Mot de passe</label><input id="eq-pres-pass" type="password" autocomplete="off" onkeydown="if(event.key==='Enter')eqPresDeverrouiller()"></div>
+        <div class="bar-actions"><button class="btn btn-primary" onclick="eqPresDeverrouiller()">🔓 Accéder</button></div>
+        <div class="msg" id="msg-eq-pres-lock"></div>
+      </div>
+      <div id="eq-pres-zone" style="display:none;">
+        <div style="text-align:right;margin-bottom:8px;"><button class="btn btn-outline" onclick="eqPresVerrouiller()">🔒 Verrouiller</button></div>
+        <div id="eqg-p"></div>
       </div>
     </div>
   </div>
@@ -3165,23 +3188,8 @@ html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
     </div>
 
     <div id="admin-tab-equipes" style="display:none;">
-      <div class="admin-stats" id="eq-stats"></div>
-      <div class="panneau">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="btn btn-primary" id="eq-adm-btn-j" onclick="eqAdmVue('joueurs')">👕 Fiches joueurs</button>
-          <button class="btn btn-outline" id="eq-adm-btn-b" onclick="eqAdmVue('besoins')">📋 Besoins des équipes</button>
-        </div>
-        <div class="filter-bar">
-          <input id="eq-f-search" type="text" placeholder="🔍 Rechercher nom, matricule, licence, besoin…" oninput="eqRender()" style="flex:1;min-width:200px;">
-          <select id="eq-f-equipe" onchange="eqRender()"><option value="">Toutes les équipes</option><option value="Football">⚽ Football</option><option value="Pétanque">🎯 Pétanque</option></select>
-          <select id="eq-f-statut" onchange="eqRender()"><option value="">Tous les statuts</option><option>En attente</option><option>Validé</option><option>Refusé</option><option>Traité</option></select>
-          <button class="btn-excel" onclick="eqExporter()">📊 Exporter Excel</button>
-          <button class="btn-excel" onclick="eqImprimer()" style="background:#334155;">🖨️ Imprimer / PDF</button>
-          <button class="btn-excel" id="eq-btn-recap" onclick="eqRecap()" style="background:#7A4B0E;">📏 Récap. tenues &amp; pointures</button>
-        </div>
-        <div class="tableau-wrap"><table class="tab"><thead id="eq-thead"></thead><tbody id="eq-tbody"></tbody></table></div>
-        <p style="font-size:12px;color:#7A6F58;margin-top:8px;">Statuts : En attente → Validé (après examen) → Traité (action effectuée : tenue commandée / remise, besoin satisfait). Les listes imprimées et exportées tiennent compte des filtres.</p>
-      </div>
+      <p style="font-size:13px;color:#5C5142;margin-bottom:10px;">Gestion complète des équipes (Football / Pétanque) : joueurs, besoins, matchs, entraînements, discipline. Le président de l'équipe dispose des mêmes outils depuis la rubrique Sport &amp; Travail.</p>
+      <div id="eqg-a"></div>
     </div>
 
     <div id="admin-tab-electro" style="display:none;">
@@ -6161,7 +6169,7 @@ function applyAdminAuthState(user) {
 function showAdminTab(id) {
   var _eqT = document.getElementById('admin-tab-equipes'); if (_eqT) _eqT.style.display = (id === 'equipes') ? 'block' : 'none';
   var _eqB = document.getElementById('tab-btn-equipes'); if (_eqB) _eqB.classList.toggle('actif', id === 'equipes');
-  if (id === 'equipes') { try { eqInit(); } catch (e) { console.warn(e); } }
+  if (id === 'equipes') { try { eqgMount('a', EQ_ALL_TABS); } catch (e) { console.warn(e); } }
   var _mt = document.getElementById('admin-tab-mgmc'); if (_mt) _mt.style.display = (id === 'mgmc') ? 'block' : 'none';
   var _mb = document.getElementById('tab-btn-mgmc'); if (_mb) _mb.classList.toggle('actif', id === 'mgmc');
   if (id === 'mgmc') { try { mgaSec(window._mgaSec || 'adh'); } catch (e) { console.warn(e); } }
@@ -11473,11 +11481,18 @@ function mgaMsgPublier(i) {
 function mgaMsgSupp(i) { if (!confirm('Supprimer ce message ?')) return; window.fbMgmcDelMsg(window._mgaMsgs[i].num).then(function () { mgaMsgs(document.getElementById('mga-body')); }).catch(function () { _mgaMsg('Suppression refusée.'); }); }
 </script>
 <script>
-/* ===================== Équipes sport : joueurs & besoins ===================== */
+/* ===================== Équipes sport : joueurs, besoins, matchs, entraînements, discipline ===================== */
 var EQ_POSTES = {
   'Football': ['Gardien de but', 'Défenseur', 'Milieu de terrain', 'Attaquant', 'Polyvalent'],
   'Pétanque': ['Pointeur', 'Tireur', 'Milieu (polyvalent)']
 };
+var EQ_TABS = { stats: '📊 Statistiques', joueurs: '👕 Joueurs', besoins: '📋 Besoins', matchs: '📅 Matchs & résultats', entrainements: '🏋️ Entraînements', discipline: '⚖️ Discipline' };
+var EQ_NODE = { joueurs: 'sportJoueurs', besoins: 'sportBesoins', matchs: 'sportMatchs', entrainements: 'sportEntrainements', discipline: 'sportDiscipline' };
+var EQ_ALL_TABS = ['stats', 'joueurs', 'besoins', 'matchs', 'entrainements', 'discipline'];
+var EQ_DATA = { joueurs: [], besoins: [], matchs: [], entrainements: [], discipline: [] };
+var EQ_COMP = ['Championnat', 'Coupe', 'Tournoi', 'Amical'];
+
+/* ---------- Formulaires publics ---------- */
 function eqMajPostes() {
   var eq = document.getElementById('fj-equipe'), po = document.getElementById('fj-poste');
   if (!eq || !po) return;
@@ -11493,10 +11508,10 @@ function eqInitPublic() {
   }
 }
 function eqPublicTab(t) {
-  document.getElementById('eq-pub-joueur').style.display = (t === 'joueur') ? 'block' : 'none';
-  document.getElementById('eq-pub-sec').style.display = (t === 'sec') ? 'block' : 'none';
-  document.getElementById('eq-btn-joueur').className = 'btn ' + (t === 'joueur' ? 'btn-primary' : 'btn-outline');
-  document.getElementById('eq-btn-sec').className = 'btn ' + (t === 'sec' ? 'btn-primary' : 'btn-outline');
+  ['joueur', 'sec', 'pres'].forEach(function(k) {
+    document.getElementById('eq-pub-' + k).style.display = (k === t) ? 'block' : 'none';
+    document.getElementById('eq-btn-' + k).className = 'btn ' + (k === t ? 'btn-primary' : 'btn-outline');
+  });
   eqPrefill();
 }
 function eqPrefill() {
@@ -11510,7 +11525,6 @@ function _eqMsg(id, ok, txt) {
   m.className = 'msg ' + (ok ? 'ok' : 'err'); m.style.display = 'flex'; m.textContent = txt;
 }
 function _eqNz(x) { return String(x || '').trim().replace(/^0+/, ''); }
-// Vérifie que le matricule saisi est celui du travailleur identifié et qu'il n'est pas bloqué.
 function _eqVerifTravailleur(mat) {
   var s = _acSession();
   if (!s) return Promise.resolve('Veuillez d\'abord vous identifier (nom, prénom, matricule).');
@@ -11521,29 +11535,32 @@ function _eqNum(pref) {
   var n = new Date();
   return pref + '-' + String(n.getFullYear()).slice(-2) + String(n.getMonth() + 1).padStart(2, '0') + String(n.getDate()).padStart(2, '0') + '-' + randomSecret(6);
 }
+function _eqNow() {
+  var now = new Date();
+  return { date: now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'}), dateObj: now.toISOString(), annee: now.getFullYear() };
+}
 async function soumettreJoueur() {
   var g = function(id) { return (document.getElementById(id).value || '').trim(); };
   var nom = g('fj-nom').toUpperCase(), prenom = g('fj-prenom'), mat = g('fj-matricule'), licence = g('fj-licence'),
-      equipe = g('fj-equipe'), poste = g('fj-poste'), taille = g('fj-taille'), pointure = g('fj-pointure'), remarque = g('fj-remarque');
+      equipe = g('fj-equipe'), poste = g('fj-poste'), taille = g('fj-taille'), pointure = g('fj-pointure'), maillot = g('fj-maillot'), remarque = g('fj-remarque');
   if (!nom || !prenom || !mat || !equipe || !poste || !taille || !pointure) { _eqMsg('msg-joueur', false, '⚠️ Veuillez remplir tous les champs obligatoires (*).'); return; }
   if (/[.#$\[\]\/]/.test(mat)) { _eqMsg('msg-joueur', false, '⚠️ Matricule invalide.'); return; }
   var err = await _eqVerifTravailleur(mat);
   if (err) { _eqMsg('msg-joueur', false, '⚠️ ' + err); return; }
   if (typeof window.fbCreateEq !== 'function') { _eqMsg('msg-joueur', false, '⚠️ Base de données indisponible. Réessayez dans un instant.'); return; }
-  var now = new Date();
-  var d = { num: _eqNum('JO'), nom: nom, prenom: prenom, mat: mat, licence: licence, equipe: equipe, poste: poste, taille: taille, pointure: pointure,
-            remarque: remarque, statut: 'En attente', date: now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'}),
-            dateObj: now.toISOString(), annee: now.getFullYear() };
+  var d = Object.assign({ num: _eqNum('JO'), nom: nom, prenom: prenom, mat: mat, licence: licence, equipe: equipe, poste: poste, taille: taille, pointure: pointure,
+            maillot: maillot, remarque: remarque, statut: 'En attente' }, _eqNow());
   _eqMsg('msg-joueur', true, '⏳ Enregistrement…');
   try {
     await window.fbCreateEq('sportJoueurs', d);
     if (typeof window.fbSaveTelEffectif === 'function') {
       var s = _acSession(), o = { nom: s.nom || '', prenom: s.prenom || '', taille: taille, pointure: pointure, poste: equipe + ' — ' + poste };
       if (licence) o.licence = licence;
+      if (maillot) o.maillot = maillot;
       window.fbSaveTelEffectif(String(s.mat), o).catch(function() {});
     }
     _eqMsg('msg-joueur', true, '✅ Fiche enregistrée (N° ' + d.num + '). Elle sera examinée puis validée par le président de l\'équipe ou l\'administrateur.');
-    ['fj-licence', 'fj-remarque'].forEach(function(i) { document.getElementById(i).value = ''; });
+    ['fj-licence', 'fj-remarque', 'fj-maillot'].forEach(function(i) { document.getElementById(i).value = ''; });
     document.getElementById('fj-taille').value = ''; document.getElementById('fj-pointure').value = ''; document.getElementById('fj-poste').value = '';
   } catch (e) {
     console.error(e);
@@ -11551,7 +11568,7 @@ async function soumettreJoueur() {
   }
 }
 
-// Mot de passe du secrétaire général (comparaison sur empreinte : le mot de passe n'apparaît pas en clair dans la page).
+// Mots de passe (comparaison sur empreinte : ils n'apparaissent pas en clair dans la page).
 function _eqHash(str) {
   var h1 = 0xdeadbeef, h2 = 0x41c6ce57;
   for (var i = 0, ch; i < str.length; i++) { ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
@@ -11560,24 +11577,44 @@ function _eqHash(str) {
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
 }
 var EQ_SEC_HASH = '1bavw3e5eun';
-var _eqSecOk = false;
+var EQ_PRES_HASH = '1gk06ctxeve';
+var _eqSecOk = false, _eqPresOk = false;
 function eqSecDeverrouiller() {
-  var v = document.getElementById('eq-sec-pass').value;
-  if (_eqHash(v) === EQ_SEC_HASH) {
+  if (_eqHash(document.getElementById('eq-sec-pass').value) === EQ_SEC_HASH) {
     _eqSecOk = true;
     document.getElementById('eq-sec-lock').style.display = 'none';
     document.getElementById('eq-sec-form').style.display = 'block';
     document.getElementById('eq-sec-pass').value = '';
     eqPrefill();
-  } else {
-    _eqMsg('msg-eq-lock', false, '❌ Mot de passe incorrect.');
-  }
+  } else { _eqMsg('msg-eq-lock', false, '❌ Mot de passe incorrect.'); }
 }
 function eqSecVerrouiller() {
   _eqSecOk = false;
   document.getElementById('eq-sec-lock').style.display = 'block';
   document.getElementById('eq-sec-form').style.display = 'none';
   document.getElementById('msg-eq-lock').style.display = 'none';
+}
+function eqSecSub(n) {
+  document.getElementById('eq-sec-besoins').style.display = (n === 1) ? 'block' : 'none';
+  document.getElementById('eq-sec-gestion').style.display = (n === 2) ? 'block' : 'none';
+  document.getElementById('eq-sec-t1').className = 'btn ' + (n === 1 ? 'btn-primary' : 'btn-outline');
+  document.getElementById('eq-sec-t2').className = 'btn ' + (n === 2 ? 'btn-primary' : 'btn-outline');
+  if (n === 2) eqgMount('s', ['matchs', 'entrainements']);
+}
+function eqPresDeverrouiller() {
+  if (_eqHash(document.getElementById('eq-pres-pass').value) === EQ_PRES_HASH) {
+    _eqPresOk = true;
+    document.getElementById('eq-pres-lock').style.display = 'none';
+    document.getElementById('eq-pres-zone').style.display = 'block';
+    document.getElementById('eq-pres-pass').value = '';
+    eqgMount('p', EQ_ALL_TABS);
+  } else { _eqMsg('msg-eq-pres-lock', false, '❌ Mot de passe incorrect.'); }
+}
+function eqPresVerrouiller() {
+  _eqPresOk = false;
+  document.getElementById('eq-pres-lock').style.display = 'block';
+  document.getElementById('eq-pres-zone').style.display = 'none';
+  document.getElementById('msg-eq-pres-lock').style.display = 'none';
 }
 async function soumettreBesoins() {
   if (!_eqSecOk) { eqSecVerrouiller(); return; }
@@ -11592,11 +11629,8 @@ async function soumettreBesoins() {
   var err = await _eqVerifTravailleur(mat);
   if (err) { _eqMsg('msg-besoins', false, '⚠️ ' + err); return; }
   if (typeof window.fbCreateEq !== 'function') { _eqMsg('msg-besoins', false, '⚠️ Base de données indisponible. Réessayez dans un instant.'); return; }
-  var now = new Date();
-  var d = { num: _eqNum('BE'), equipe: equipe, nomEquipe: nomEquipe, nom: nom, prenom: prenom, mat: mat, tel: tel, effectif: effectif,
-            besoins: besoins.join(', '), autre: autre, remarque: remarque, statut: 'En attente',
-            date: now.toLocaleDateString('fr-DZ') + ' à ' + now.toLocaleTimeString('fr-DZ', {hour:'2-digit',minute:'2-digit'}),
-            dateObj: now.toISOString(), annee: now.getFullYear() };
+  var d = Object.assign({ num: _eqNum('BE'), equipe: equipe, nomEquipe: nomEquipe, nom: nom, prenom: prenom, mat: mat, tel: tel, effectif: effectif,
+            besoins: besoins.join(', '), autre: autre, remarque: remarque, statut: 'En attente' }, _eqNow());
   _eqMsg('msg-besoins', true, '⏳ Enregistrement…');
   try {
     await window.fbCreateEq('sportBesoins', d);
@@ -11617,94 +11651,272 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-/* ---------- Admin ---------- */
-var eqJoueurs = [], eqBesoins = [], eqVue = 'joueurs', _eqStarted = false;
-function eqInit() {
-  if (!_eqStarted && typeof window.fbListenEq === 'function') {
-    _eqStarted = true;
-    var tri = function(a) { return a.sort(function(x, y) { return String(y.dateObj || '').localeCompare(String(x.dateObj || '')); }); };
-    var ko = function(n) { return function(e) { console.error('Lecture ' + n + ':', e); alert("Équipes : les règles Firebase n'autorisent pas encore la lecture de '" + n + "'. Ajoutez les règles de ce chemin."); }; };
-    window.fbListenEq('sportJoueurs', function(a) { eqJoueurs = tri(a); eqRender(); }, ko('sportJoueurs'));
-    window.fbListenEq('sportBesoins', function(a) { eqBesoins = tri(a); eqRender(); }, ko('sportBesoins'));
-  }
-  eqRender();
-}
-function eqAdmVue(v) {
-  eqVue = v;
-  document.getElementById('eq-adm-btn-j').className = 'btn ' + (v === 'joueurs' ? 'btn-primary' : 'btn-outline');
-  document.getElementById('eq-adm-btn-b').className = 'btn ' + (v === 'besoins' ? 'btn-primary' : 'btn-outline');
-  document.getElementById('eq-btn-recap').style.display = (v === 'joueurs') ? '' : 'none';
-  eqRender();
-}
-function eqFiltres() {
-  var q = (document.getElementById('eq-f-search').value || '').toLowerCase().trim();
-  var eq = document.getElementById('eq-f-equipe').value, st = document.getElementById('eq-f-statut').value;
-  var src = eqVue === 'joueurs' ? eqJoueurs : eqBesoins;
-  return src.filter(function(d) {
-    if (eq && d.equipe !== eq) return false;
-    if (st && d.statut !== st) return false;
-    if (!q) return true;
-    return [d.num, d.nom, d.prenom, d.mat, d.licence, d.poste, d.taille, d.pointure, d.besoins, d.autre, d.remarque, d.nomEquipe].join(' ').toLowerCase().indexOf(q) !== -1;
+/* ===================== Composant de gestion d'équipe (président, admin, secrétaire) ===================== */
+var EQG = {}, _eqgStarted = false;
+function _q(x) { return JSON.stringify(String(x)).replace(/"/g, '&quot;'); }
+function _fd(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : (iso || ''); }
+function eqgStart() {
+  if (_eqgStarted || typeof window.fbListenEq !== 'function') return;
+  _eqgStarted = true;
+  Object.keys(EQ_NODE).forEach(function(k) {
+    window.fbListenEq(EQ_NODE[k], function(a) {
+      EQ_DATA[k] = a.sort(function(x, y) { return String(y.dateObj || '').localeCompare(String(x.dateObj || '')); });
+      eqgRefreshAll();
+    }, function(e) { console.error('Lecture ' + EQ_NODE[k] + ' :', e); alert("Équipes : lecture refusée sur '" + EQ_NODE[k] + "'. Publiez les règles Firebase mises à jour (fichier regles-firebase.json)."); });
   });
 }
-function eqBadge(st) {
-  var c = { 'En attente': ['#FEF3C7', '#92400E'], 'Validé': ['#E8F5EC', '#1B6B3A'], 'Refusé': ['#FBEAE8', '#A12622'], 'Traité': ['#E0E7FF', '#3730A3'] }[st] || ['#eee', '#333'];
+function eqgMount(p, tabs) {
+  var box = document.getElementById('eqg-' + p); if (!box) return;
+  eqgStart();
+  if (box.dataset.m) { eqgRefreshAll(); return; }
+  box.dataset.m = '1';
+  EQG[p] = { tabs: tabs, tab: tabs[0] };
+  box.innerHTML =
+    '<div class="panneau"><div id="eqg-tabs-' + p + '" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">' +
+    tabs.map(function(t) { return '<button class="btn btn-outline" id="eqg-t-' + p + '-' + t + '" onclick="eqgTab(\'' + p + '\',\'' + t + '\')" style="padding:6px 12px;font-size:13px;">' + EQ_TABS[t] + '</button>'; }).join('') + '</div>' +
+    '<div class="filter-bar" id="eqg-bar-' + p + '">' +
+    '<select id="eqg-eq-' + p + '" onchange="eqgRefresh(\'' + p + '\')"><option value="">Toutes les équipes</option><option value="Football">⚽ Football</option><option value="Pétanque">🎯 Pétanque</option></select>' +
+    '<input id="eqg-q-' + p + '" type="text" placeholder="🔍 Rechercher…" oninput="eqgRefresh(\'' + p + '\')" style="flex:1;min-width:160px;">' +
+    '<select id="eqg-st-' + p + '" onchange="eqgRefresh(\'' + p + '\')"><option value="">Tous les statuts</option><option>En attente</option><option>Validé</option><option>Refusé</option><option>Traité</option><option>Radié</option></select>' +
+    '<button class="btn-excel" id="eqg-xl-' + p + '" onclick="eqgExporter(\'' + p + '\')">📊 Excel</button>' +
+    '<button class="btn-excel" id="eqg-pr-' + p + '" onclick="eqgImprimer(\'' + p + '\')" style="background:#334155;">🖨️ Imprimer / PDF</button>' +
+    '<button class="btn-excel" id="eqg-rc-' + p + '" onclick="eqgRecap(\'' + p + '\')" style="background:#7A4B0E;">📏 Récap. tenues</button>' +
+    '</div><div id="eqg-form-' + p + '"></div><div id="eqg-body-' + p + '" class="tableau-wrap"></div></div>';
+  eqgTab(p, tabs[0]);
+}
+function eqgTab(p, t) {
+  EQG[p].tab = t;
+  EQG[p].tabs.forEach(function(x) { document.getElementById('eqg-t-' + p + '-' + x).className = 'btn ' + (x === t ? 'btn-primary' : 'btn-outline'); });
+  var show = function(id, v) { var e = document.getElementById(id + p); if (e) e.style.display = v ? '' : 'none'; };
+  show('eqg-st-', t === 'joueurs' || t === 'besoins');
+  show('eqg-xl-', t !== 'stats'); show('eqg-pr-', true); show('eqg-rc-', t === 'joueurs');
+  show('eqg-q-', t !== 'stats');
+  document.getElementById('eqg-form-' + p).innerHTML = eqgFormHtml(p, t);
+  if (t === 'entrainements') eqgEntrListe(p);
+  eqgRefresh(p);
+}
+function eqgRefreshAll() { Object.keys(EQG).forEach(function(p) { if (document.getElementById('eqg-body-' + p)) eqgRefresh(p); }); }
+function eqgItems(p, t) {
+  var q = (document.getElementById('eqg-q-' + p).value || '').toLowerCase().trim();
+  var eq = document.getElementById('eqg-eq-' + p).value, st = document.getElementById('eqg-st-' + p).value;
+  var useSt = (t === 'joueurs' || t === 'besoins');
+  return (EQ_DATA[t] || []).filter(function(d) {
+    if (eq && d.equipe !== eq) return false;
+    if (useSt && st && d.statut !== st) return false;
+    if (!q) return true;
+    return Object.keys(d).map(function(k) { return typeof d[k] === 'object' ? '' : d[k]; }).join(' ').toLowerCase().indexOf(q) !== -1;
+  });
+}
+function eqgBadge(st) {
+  var c = { 'En attente': ['#FEF3C7', '#92400E'], 'Validé': ['#E8F5EC', '#1B6B3A'], 'Refusé': ['#FBEAE8', '#A12622'], 'Traité': ['#E0E7FF', '#3730A3'], 'Radié': ['#E5E7EB', '#374151'],
+    'Programmé': ['#E0F2FE', '#075985'], 'Joué': ['#E8F5EC', '#1B6B3A'], 'Annulé': ['#FBEAE8', '#A12622'], 'Reporté': ['#FEF3C7', '#92400E'],
+    'Victoire': ['#E8F5EC', '#1B6B3A'], 'Nul': ['#FEF3C7', '#92400E'], 'Défaite': ['#FBEAE8', '#A12622'],
+    'Convoqué': ['#FEF3C7', '#92400E'], 'Sanctionné': ['#FBEAE8', '#A12622'], 'Relaxé': ['#E8F5EC', '#1B6B3A'] }[st];
+  if (!c) return esc(st || '');
   return '<span class="badge" style="background:' + c[0] + ';color:' + c[1] + ';">' + esc(st) + '</span>';
 }
-function eqActions(d, node) {
-  var n = JSON.stringify(String(d.num)).replace(/"/g, '&quot;'), nd = "'" + node + "'";
-  var sel = '<select onchange="eqSetStatut(' + nd + ',' + n + ',this.value)" style="font-size:12px;">' +
-    ['En attente', 'Validé', 'Refusé', 'Traité'].map(function(x) { return '<option' + (x === d.statut ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>';
-  var act = d.statut === 'Validé' ? ' <button class="btn-danger-sm" style="color:#3730A3;border-color:#3730A3;" onclick="eqSetStatut(' + nd + ',' + n + ',\'Traité\')">▶ Passer à l\'action</button>' : '';
-  return sel + act + ' <button class="btn-danger-sm" onclick="eqSupprimer(' + nd + ',' + n + ')">🗑️</button>';
+function eqgSel(opts, cur, onchange) {
+  return '<select onchange="' + onchange + '" style="font-size:12px;">' + opts.map(function(x) { return '<option' + (x === cur ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select>';
 }
-function eqRender() {
-  var th = document.getElementById('eq-thead'), tb = document.getElementById('eq-tbody'), st = document.getElementById('eq-stats');
-  if (!th || !tb) return;
-  var all = eqVue === 'joueurs' ? eqJoueurs : eqBesoins, c = function(s) { return all.filter(function(d) { return d.statut === s; }).length; };
-  st.innerHTML = '<div class="stat-card"><div class="stat-num">' + all.length + '</div><div class="stat-lbl">Total</div></div>' +
-    '<div class="stat-card" style="border-color:#F59E0B;"><div class="stat-num" style="color:#92400E;">' + c('En attente') + '</div><div class="stat-lbl">En attente</div></div>' +
-    '<div class="stat-card" style="border-color:var(--vert);"><div class="stat-num" style="color:var(--vert);">' + c('Validé') + '</div><div class="stat-lbl">Validés</div></div>' +
-    '<div class="stat-card" style="border-color:#3730A3;"><div class="stat-num" style="color:#3730A3;">' + c('Traité') + '</div><div class="stat-lbl">Traités</div></div>' +
-    '<div class="stat-card" style="border-color:var(--rouge);"><div class="stat-num" style="color:var(--rouge);">' + c('Refusé') + '</div><div class="stat-lbl">Refusés</div></div>';
-  var l = eqFiltres();
-  if (eqVue === 'joueurs') {
-    th.innerHTML = '<tr><th>N°</th><th>Date</th><th>Joueur</th><th>Matricule</th><th>Licence</th><th>Équipe</th><th>Poste</th><th>Tenue</th><th>Pointure</th><th>Remarque</th><th>Statut</th><th>Action</th></tr>';
-    tb.innerHTML = l.map(function(d) {
-      return '<tr><td>' + esc(d.num) + '</td><td>' + esc(d.date) + '</td><td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td><td>' + esc(d.mat) + '</td><td>' + esc(d.licence || '—') +
-        '</td><td>' + esc(d.equipe) + '</td><td>' + esc(d.poste) + '</td><td>' + esc(d.taille) + '</td><td>' + esc(d.pointure) + '</td><td>' + esc(d.remarque || '') +
-        '</td><td>' + eqBadge(d.statut) + '</td><td style="white-space:nowrap;">' + eqActions(d, 'sportJoueurs') + '</td></tr>';
-    }).join('') || '<tr><td colspan="12" style="text-align:center;color:#999;">Aucune fiche.</td></tr>';
-  } else {
-    th.innerHTML = '<tr><th>N°</th><th>Date</th><th>Équipe</th><th>Secrétaire</th><th>Matricule</th><th>Tél</th><th>Effectif</th><th>Besoins</th><th>Remarques</th><th>Statut</th><th>Action</th></tr>';
-    tb.innerHTML = l.map(function(d) {
-      return '<tr><td>' + esc(d.num) + '</td><td>' + esc(d.date) + '</td><td>' + esc(d.equipe) + (d.nomEquipe ? ' — ' + esc(d.nomEquipe) : '') + '</td><td>' + esc(d.nom) + ' ' + esc(d.prenom) +
-        '</td><td>' + esc(d.mat) + '</td><td>' + esc(d.tel) + '</td><td>' + esc(d.effectif || '') + '</td><td>' + esc(d.besoins || '') + (d.autre ? '<br><em>' + esc(d.autre) + '</em>' : '') +
-        '</td><td>' + esc(d.remarque || '') + '</td><td>' + eqBadge(d.statut) + '</td><td style="white-space:nowrap;">' + eqActions(d, 'sportBesoins') + '</td></tr>';
-    }).join('') || '<tr><td colspan="11" style="text-align:center;color:#999;">Aucun besoin enregistré.</td></tr>';
+function eqgTbl(cols, rows, vide) {
+  return '<table class="tab"><thead><tr>' + cols.map(function(c) { return '<th>' + c + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    (rows.join('') || '<tr><td colspan="' + cols.length + '" style="text-align:center;color:#999;">' + vide + '</td></tr>') + '</tbody></table>';
+}
+function eqgUp(t, num, patch) {
+  window.fbUpdateEq(EQ_NODE[t], num, patch).catch(function(e) { console.error(e); alert('Mise à jour refusée. Vérifiez les règles Firebase.'); eqgRefreshAll(); });
+}
+function eqgDel(t, num) {
+  if (!confirm('Supprimer définitivement cet élément ?')) return;
+  window.fbDeleteEq(EQ_NODE[t], num).catch(function(e) { console.error(e); alert('Suppression refusée.'); });
+}
+function eqgSetStatut(t, num, v) {
+  if (v === 'Radié' && !confirm('Radier ce joueur de l\'équipe ?')) { eqgRefreshAll(); return; }
+  var patch = { statut: v }, now = new Date().toLocaleDateString('fr-DZ');
+  if (v === 'Validé') patch.dateValidation = now;
+  if (v === 'Traité') patch.dateAction = now;
+  if (v === 'Radié') patch.dateRadiation = now;
+  eqgUp(t, num, patch);
+}
+function eqgToday() { var n = new Date(); return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0'); }
+
+/* --- formulaires d'ajout (zone statique) --- */
+function eqgFormHtml(p, t) {
+  var I = function(id, lab, type, ph) { return '<div class="grp"><label>' + lab + '</label><input id="eqg-' + p + '-' + id + '" type="' + (type || 'text') + '"' + (ph ? ' placeholder="' + ph + '"' : '') + '></div>'; };
+  var S = function(id, lab, opts) { return '<div class="grp"><label>' + lab + '</label><select id="eqg-' + p + '-' + id + '">' + opts.map(function(o) { return '<option>' + o + '</option>'; }).join('') + '</select></div>'; };
+  var det = function(titre, corps) { return '<details style="margin-bottom:12px;"><summary class="btn btn-outline" style="display:inline-block;cursor:pointer;padding:6px 12px;font-size:13px;">' + titre + '</summary><div style="margin-top:12px;border:1px solid var(--ligne);border-radius:10px;padding:14px;">' + corps + '</div></details>'; };
+  if (t === 'joueurs') {
+    var tailles = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'], pts = []; for (var i = 28; i <= 50; i++) pts.push(i);
+    return det('➕ Ajouter un joueur', '<div class="cols2">' + I('j-nom', 'Nom *') + I('j-prenom', 'Prénom *') + '</div><div class="cols2">' + I('j-mat', 'Matricule *') + I('j-lic', 'N° licence (facultatif)') + '</div>' +
+      '<div class="cols2">' + S('j-equipe', 'Équipe *', ['Football', 'Pétanque']) + I('j-poste', 'Poste', 'text', 'Ex : Gardien de but') + '</div>' +
+      '<div class="cols2">' + S('j-taille', 'Tenue', tailles) + S('j-pt', 'Pointure', pts) + '</div><div class="cols2">' + I('j-maillot', 'N° de maillot', 'number') + I('j-rem', 'Remarque') + '</div>' +
+      '<button class="btn btn-primary" onclick="eqgAjouterJoueur(\'' + p + '\')">✅ Ajouter (validé d\'office)</button> <span id="eqg-m-' + p + '" style="font-size:13px;"></span>');
+  }
+  if (t === 'matchs') {
+    return det('➕ Programmer un match', '<div class="cols2">' + S('m-equipe', 'Équipe *', ['Football', 'Pétanque']) + S('m-comp', 'Compétition *', EQ_COMP) + '</div>' +
+      '<div class="cols2">' + I('m-detail', 'Nom de la compétition', 'text', 'Ex : Coupe d\'Algérie, Tournoi Ramadan') + I('m-adv', 'Adversaire *') + '</div>' +
+      '<div class="cols2">' + I('m-lieu', 'Lieu *') + I('m-date', 'Date *', 'date') + '</div><div class="cols2">' + I('m-heure', 'Heure', 'time') + I('m-rem', 'Remarque') + '</div>' +
+      '<button class="btn btn-primary" onclick="eqgAjouterMatch(\'' + p + '\')">✅ Enregistrer le match</button> <span id="eqg-m-' + p + '" style="font-size:13px;"></span>');
+  }
+  if (t === 'entrainements') {
+    return det('➕ Saisir un entraînement', '<div class="cols2">' + S('e-equipe', 'Équipe *', ['Football', 'Pétanque']).replace('<select ', '<select onchange="eqgEntrListe(\'' + p + '\')" ') + I('e-date', 'Date *', 'date') + '</div>' +
+      '<div class="cols2">' + I('e-heure', 'Heure', 'time') + I('e-lieu', 'Lieu') + '</div>' +
+      '<div class="grp"><label>Joueurs présents / absents</label><div id="eqg-e-liste-' + p + '" style="font-size:13.5px;"></div></div>' + I('e-rem', 'Remarque') +
+      '<button class="btn btn-primary" onclick="eqgAjouterEntr(\'' + p + '\')">✅ Enregistrer l\'entraînement</button> <span id="eqg-m-' + p + '" style="font-size:13px;"></span>');
+  }
+  return '';
+}
+function eqgV(p, id) { var e = document.getElementById('eqg-' + p + '-' + id); return e ? e.value.trim() : ''; }
+function eqgFlash(p, ok, txt) { var m = document.getElementById('eqg-m-' + p); if (m) { m.style.color = ok ? '#1B6B3A' : '#A12622'; m.textContent = txt; } }
+function eqgAjouterJoueur(p) {
+  var nom = eqgV(p, 'j-nom').toUpperCase(), prenom = eqgV(p, 'j-prenom'), mat = eqgV(p, 'j-mat');
+  if (!nom || !prenom || !mat || /[.#$\[\]\/]/.test(mat)) { eqgFlash(p, false, 'Nom, prénom et matricule valides obligatoires.'); return; }
+  var d = Object.assign({ num: _eqNum('JO'), nom: nom, prenom: prenom, mat: mat, licence: eqgV(p, 'j-lic'), equipe: eqgV(p, 'j-equipe'), poste: eqgV(p, 'j-poste'),
+    taille: eqgV(p, 'j-taille'), pointure: eqgV(p, 'j-pt'), maillot: eqgV(p, 'j-maillot'), remarque: eqgV(p, 'j-rem'), statut: 'Validé', ajoutePar: 'Président / Admin', dateValidation: new Date().toLocaleDateString('fr-DZ') }, _eqNow());
+  window.fbCreateEq('sportJoueurs', d).then(function() { eqgFlash(p, true, '✅ Joueur ajouté.'); ['j-nom', 'j-prenom', 'j-mat', 'j-lic', 'j-poste', 'j-maillot', 'j-rem'].forEach(function(i) { document.getElementById('eqg-' + p + '-' + i).value = ''; }); })
+    .catch(function(e) { console.error(e); eqgFlash(p, false, 'Refusé (règles Firebase).'); });
+}
+function eqgAjouterMatch(p) {
+  var adv = eqgV(p, 'm-adv'), lieu = eqgV(p, 'm-lieu'), date = eqgV(p, 'm-date');
+  if (!adv || !lieu || !date) { eqgFlash(p, false, 'Adversaire, lieu et date obligatoires.'); return; }
+  var d = Object.assign({ num: _eqNum('MA'), equipe: eqgV(p, 'm-equipe'), competition: eqgV(p, 'm-comp'), detail: eqgV(p, 'm-detail'), adversaire: adv, lieu: lieu,
+    dateMatch: date, heure: eqgV(p, 'm-heure'), remarque: eqgV(p, 'm-rem'), statut: 'Programmé', score: '', resultat: '' }, _eqNow());
+  window.fbCreateEq('sportMatchs', d).then(function() { eqgFlash(p, true, '✅ Match enregistré.'); ['m-adv', 'm-lieu', 'm-rem', 'm-detail'].forEach(function(i) { document.getElementById('eqg-' + p + '-' + i).value = ''; }); })
+    .catch(function(e) { console.error(e); eqgFlash(p, false, 'Refusé (règles Firebase).'); });
+}
+function eqgJoueursActifs(equipe) { return EQ_DATA.joueurs.filter(function(j) { return j.equipe === equipe && (j.statut === 'Validé' || j.statut === 'Traité'); }).sort(function(a, b) { return (a.nom + a.prenom).localeCompare(b.nom + b.prenom); }); }
+function eqgEntrListe(p) {
+  var box = document.getElementById('eqg-e-liste-' + p); if (!box) return;
+  var js = eqgJoueursActifs(eqgV(p, 'e-equipe') || 'Football');
+  box.innerHTML = js.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px 14px;">' + js.map(function(j) {
+    return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><span>' + (j.maillot ? '<b>#' + esc(j.maillot) + '</b> ' : '') + esc(j.nom) + ' ' + esc(j.prenom) + '</span>' +
+      '<select data-jn="' + esc(j.num) + '" style="font-size:12px;"><option value="P">✅ Présent</option><option value="A">❌ Absent</option></select></div>';
+  }).join('') + '</div>' : '<em style="color:#999;">Aucun joueur validé dans cette équipe (la liste se remplit dès que des joueurs sont validés).</em>';
+}
+function eqgAjouterEntr(p) {
+  var date = eqgV(p, 'e-date'); if (!date) { eqgFlash(p, false, 'La date est obligatoire.'); return; }
+  var equipe = eqgV(p, 'e-equipe'), pres = {}, np = [], na = [];
+  document.querySelectorAll('#eqg-e-liste-' + p + ' select[data-jn]').forEach(function(s) {
+    var j = EQ_DATA.joueurs.filter(function(x) { return x.num === s.getAttribute('data-jn'); })[0]; if (!j) return;
+    pres[j.num] = s.value; (s.value === 'P' ? np : na).push(j.nom + ' ' + j.prenom);
+  });
+  var d = Object.assign({ num: _eqNum('EN'), equipe: equipe, dateEntr: date, heure: eqgV(p, 'e-heure'), lieu: eqgV(p, 'e-lieu'), remarque: eqgV(p, 'e-rem'),
+    pres: pres, presents: np.join(', '), absents: na.join(', '), nbPresents: np.length, nbAbsents: na.length }, _eqNow());
+  window.fbCreateEq('sportEntrainements', d).then(function() { eqgFlash(p, true, '✅ Entraînement enregistré.'); eqgEntrListe(p); })
+    .catch(function(e) { console.error(e); eqgFlash(p, false, 'Refusé (règles Firebase).'); });
+}
+function eqgConvoquer(num) {
+  var j = EQ_DATA.joueurs.filter(function(x) { return x.num === num; })[0]; if (!j) return;
+  var motif = prompt('Conseil de discipline — motif pour ' + j.nom + ' ' + j.prenom + ' :'); if (!motif) return;
+  var d = Object.assign({ num: _eqNum('DI'), joueurNum: j.num, nom: j.nom, prenom: j.prenom, mat: j.mat, equipe: j.equipe, motif: motif, dateDossier: eqgToday(), statut: 'Convoqué', sanction: '' }, _eqNow());
+  window.fbCreateEq('sportDiscipline', d).then(function() { alert('Dossier ouvert : voir l\'onglet Discipline.'); }).catch(function(e) { console.error(e); alert('Refusé (règles Firebase).'); });
+}
+function eqgScore(num, v) {
+  var m = /^\s*(\d+)\s*[-:]\s*(\d+)\s*$/.exec(v || '');
+  if (!m && (v || '').trim() !== '') { alert('Format du score : 3-1 (nous - adversaire)'); eqgRefreshAll(); return; }
+  if (!m) { eqgUp('matchs', num, { score: '', scoreNous: '', scoreEux: '', resultat: '' }); return; }
+  var a = +m[1], b = +m[2];
+  eqgUp('matchs', num, { score: a + '-' + b, scoreNous: a, scoreEux: b, resultat: a > b ? 'Victoire' : (a < b ? 'Défaite' : 'Nul'), statut: 'Joué' });
+}
+
+/* --- corps (tableaux / statistiques) --- */
+function eqgRefresh(p) {
+  var t = EQG[p].tab, body = document.getElementById('eqg-body-' + p), it = (t === 'stats') ? [] : eqgItems(p, t), n, rows;
+  if (t === 'stats') { body.innerHTML = eqgStatsHtml(p); return; }
+  if (t === 'joueurs') {
+    rows = it.map(function(d) {
+      var nd = EQ_DATA.discipline.filter(function(x) { return x.joueurNum === d.num; }).length;
+      return '<tr><td>' + esc(d.num) + '</td><td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td><td>' + esc(d.mat) + '</td><td>' + esc(d.licence || '—') + '</td><td>' + esc(d.equipe) + '</td><td>' + esc(d.poste) + '</td><td>' + esc(d.taille) + '</td><td>' + esc(d.pointure) + '</td>' +
+        '<td><input type="text" value="' + esc(d.maillot || '') + '" size="3" style="width:54px;" onchange="eqgUp(\'joueurs\',' + _q(d.num) + ',{maillot:this.value.trim()})"></td><td>' + esc(d.remarque || '') + '</td><td>' + eqgBadge(d.statut) + (nd ? ' <span title="Dossiers disciplinaires">⚖️' + nd + '</span>' : '') + '</td>' +
+        '<td style="white-space:nowrap;">' + eqgSel(['En attente', 'Validé', 'Refusé', 'Traité', 'Radié'], d.statut, 'eqgSetStatut(\'joueurs\',' + _q(d.num) + ',this.value)') +
+        (d.statut === 'Validé' ? ' <button class="btn-danger-sm" style="color:#3730A3;border-color:#3730A3;" onclick="eqgSetStatut(\'joueurs\',' + _q(d.num) + ',\'Traité\')">▶ Action</button>' : '') +
+        ' <button class="btn-danger-sm" title="Conseil de discipline" onclick="eqgConvoquer(' + _q(d.num) + ')">⚖️</button> <button class="btn-danger-sm" onclick="eqgDel(\'joueurs\',' + _q(d.num) + ')">🗑️</button></td></tr>';
+    });
+    body.innerHTML = eqgTbl(['N°', 'Joueur', 'Matricule', 'Licence', 'Équipe', 'Poste', 'Tenue', 'Pointure', 'Maillot', 'Remarque', 'Statut', 'Action'], rows, 'Aucun joueur.');
+  } else if (t === 'besoins') {
+    rows = it.map(function(d) {
+      return '<tr><td>' + esc(d.num) + '</td><td>' + esc(d.date) + '</td><td>' + esc(d.equipe) + (d.nomEquipe ? ' — ' + esc(d.nomEquipe) : '') + '</td><td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td><td>' + esc(d.mat) + '</td><td>' + esc(d.tel) + '</td><td>' + esc(d.effectif || '') +
+        '</td><td>' + esc(d.besoins || '') + (d.autre ? '<br><em>' + esc(d.autre) + '</em>' : '') + '</td><td>' + esc(d.remarque || '') + '</td><td>' + eqgBadge(d.statut) + '</td><td style="white-space:nowrap;">' +
+        eqgSel(['En attente', 'Validé', 'Refusé', 'Traité'], d.statut, 'eqgSetStatut(\'besoins\',' + _q(d.num) + ',this.value)') +
+        (d.statut === 'Validé' ? ' <button class="btn-danger-sm" style="color:#3730A3;border-color:#3730A3;" onclick="eqgSetStatut(\'besoins\',' + _q(d.num) + ',\'Traité\')">▶ Passer à l\'action</button>' : '') +
+        ' <button class="btn-danger-sm" onclick="eqgDel(\'besoins\',' + _q(d.num) + ')">🗑️</button></td></tr>';
+    });
+    body.innerHTML = eqgTbl(['N°', 'Date', 'Équipe', 'Secrétaire', 'Matricule', 'Tél', 'Effectif', 'Besoins', 'Remarques', 'Statut', 'Action'], rows, 'Aucune demande.');
+  } else if (t === 'matchs') {
+    it = it.slice().sort(function(a, b) { return String(b.dateMatch || '').localeCompare(String(a.dateMatch || '')); });
+    rows = it.map(function(d) {
+      return '<tr><td>' + _fd(d.dateMatch) + '<br><small>' + esc(d.heure || '') + '</small></td><td>' + esc(d.equipe) + '</td><td>' + esc(d.competition) + (d.detail ? '<br><small>' + esc(d.detail) + '</small>' : '') + '</td><td>' + esc(d.adversaire) + '</td><td>' + esc(d.lieu) + '</td>' +
+        '<td><input type="text" value="' + esc(d.score || '') + '" size="5" placeholder="3-1" style="width:64px;" onchange="eqgScore(' + _q(d.num) + ',this.value)"></td><td>' + eqgBadge(d.resultat) + '</td><td>' + eqgSel(['Programmé', 'Joué', 'Annulé', 'Reporté'], d.statut, 'eqgUp(\'matchs\',' + _q(d.num) + ',{statut:this.value})') +
+        '</td><td><input type="text" value="' + esc(d.remarque || '') + '" style="width:130px;" onchange="eqgUp(\'matchs\',' + _q(d.num) + ',{remarque:this.value.trim()})"></td><td><button class="btn-danger-sm" onclick="eqgDel(\'matchs\',' + _q(d.num) + ')">🗑️</button></td></tr>';
+    });
+    body.innerHTML = eqgTbl(['Date', 'Équipe', 'Compétition', 'Adversaire', 'Lieu', 'Score (nous-eux)', 'Résultat', 'Statut', 'Remarque', ''], rows, 'Aucun match.');
+  } else if (t === 'entrainements') {
+    it = it.slice().sort(function(a, b) { return String(b.dateEntr || '').localeCompare(String(a.dateEntr || '')); });
+    rows = it.map(function(d) {
+      return '<tr><td>' + _fd(d.dateEntr) + '<br><small>' + esc(d.heure || '') + '</small></td><td>' + esc(d.equipe) + '</td><td>' + esc(d.lieu || '') + '</td><td><b>' + (d.nbPresents || 0) + '</b> : ' + esc(d.presents || '—') + '</td><td><b>' + (d.nbAbsents || 0) + '</b> : ' + esc(d.absents || '—') + '</td><td>' + esc(d.remarque || '') + '</td><td><button class="btn-danger-sm" onclick="eqgDel(\'entrainements\',' + _q(d.num) + ')">🗑️</button></td></tr>';
+    });
+    body.innerHTML = eqgTbl(['Date', 'Équipe', 'Lieu', 'Présents', 'Absents', 'Remarque', ''], rows, 'Aucun entraînement saisi.');
+  } else if (t === 'discipline') {
+    rows = it.map(function(d) {
+      return '<tr><td>' + _fd(d.dateDossier) + '</td><td>' + esc(d.nom) + ' ' + esc(d.prenom) + '</td><td>' + esc(d.mat) + '</td><td>' + esc(d.equipe) + '</td><td>' + esc(d.motif) + '</td><td>' + eqgBadge(d.statut) + ' ' + eqgSel(['Convoqué', 'Sanctionné', 'Relaxé'], d.statut, 'eqgUp(\'discipline\',' + _q(d.num) + ',{statut:this.value})') +
+        '</td><td><input type="text" value="' + esc(d.sanction || '') + '" placeholder="Ex : 2 matchs de suspension" style="width:190px;" onchange="eqgUp(\'discipline\',' + _q(d.num) + ',{sanction:this.value.trim()})"></td><td><button class="btn-danger-sm" onclick="eqgDel(\'discipline\',' + _q(d.num) + ')">🗑️</button></td></tr>';
+    });
+    body.innerHTML = eqgTbl(['Date', 'Joueur', 'Matricule', 'Équipe', 'Motif', 'Décision', 'Sanction', ''], rows, 'Aucun dossier disciplinaire. (Utilisez le bouton ⚖️ dans l\'onglet Joueurs.)');
   }
 }
-function eqSetStatut(node, num, statut) {
-  var patch = { statut: statut };
-  var now = new Date().toLocaleDateString('fr-DZ');
-  if (statut === 'Validé') patch.dateValidation = now;
-  if (statut === 'Traité') patch.dateAction = now;
-  window.fbUpdateEq(node, num, patch).catch(function(e) { console.error(e); alert('Mise à jour refusée (êtes-vous connecté en administrateur ?).'); });
+function eqgStatsHtml(p) {
+  var eqs = ['Football', 'Pétanque'], f = document.getElementById('eqg-eq-' + p).value;
+  if (f) eqs = [f];
+  var cell = function(fn) { return eqs.map(function(e) { return '<td>' + fn(e) + '</td>'; }).join(''); };
+  var cnt = function(t, e, fn) { return EQ_DATA[t].filter(function(d) { return d.equipe === e && (!fn || fn(d)); }).length; };
+  var row = function(lab, fn, bold) { return '<tr><td' + (bold ? ' style="font-weight:700;"' : '') + '>' + lab + '</td>' + cell(fn) + '</tr>'; };
+  var rows = [
+    '<tr><th colspan="' + (eqs.length + 1) + '" style="background:#E8F5EC;color:#14503C;">👕 Effectif</th></tr>',
+    row('Joueurs actifs (validés / traités)', function(e) { return '<b>' + cnt('joueurs', e, function(d) { return d.statut === 'Validé' || d.statut === 'Traité'; }) + '</b>'; }, true),
+    row('Fiches en attente', function(e) { return cnt('joueurs', e, function(d) { return d.statut === 'En attente'; }); }),
+    row('Joueurs radiés', function(e) { return cnt('joueurs', e, function(d) { return d.statut === 'Radié'; }); }),
+    row('Fiches refusées', function(e) { return cnt('joueurs', e, function(d) { return d.statut === 'Refusé'; }); }),
+    row('Joueurs avec n° de maillot', function(e) { return cnt('joueurs', e, function(d) { return !!d.maillot && (d.statut === 'Validé' || d.statut === 'Traité'); }); }),
+    '<tr><th colspan="' + (eqs.length + 1) + '" style="background:#E8F5EC;color:#14503C;">📋 Besoins de l\'équipe</th></tr>',
+    row('Demandes en attente', function(e) { return cnt('besoins', e, function(d) { return d.statut === 'En attente'; }); }),
+    row('Validées', function(e) { return cnt('besoins', e, function(d) { return d.statut === 'Validé'; }); }),
+    row('Traitées (action faite)', function(e) { return cnt('besoins', e, function(d) { return d.statut === 'Traité'; }); }),
+    row('Refusées', function(e) { return cnt('besoins', e, function(d) { return d.statut === 'Refusé'; }); }),
+    '<tr><th colspan="' + (eqs.length + 1) + '" style="background:#E8F5EC;color:#14503C;">📅 Matchs</th></tr>',
+    row('Programmés', function(e) { return cnt('matchs', e, function(d) { return d.statut === 'Programmé'; }); }),
+    row('Joués', function(e) { return cnt('matchs', e, function(d) { return d.statut === 'Joué'; }); }, true),
+    row('Victoires / Nuls / Défaites', function(e) { var r = function(x) { return cnt('matchs', e, function(d) { return d.resultat === x; }); }; return r('Victoire') + ' / ' + r('Nul') + ' / ' + r('Défaite'); }),
+    row('Points marqués / encaissés', function(e) { var m = EQ_DATA.matchs.filter(function(d) { return d.equipe === e && d.resultat; }); return m.reduce(function(a, d) { return a + (+d.scoreNous || 0); }, 0) + ' / ' + m.reduce(function(a, d) { return a + (+d.scoreEux || 0); }, 0); })
+  ];
+  EQ_COMP.forEach(function(c) {
+    rows.push(row('— ' + c + ' (joués : V/N/D)', function(e) { var m = EQ_DATA.matchs.filter(function(d) { return d.equipe === e && d.competition === c && d.resultat; });
+      var r = function(x) { return m.filter(function(d) { return d.resultat === x; }).length; }; return m.length + ' (' + r('Victoire') + '/' + r('Nul') + '/' + r('Défaite') + ')'; }));
+  });
+  rows.push(row('Prochain match', function(e) { var m = EQ_DATA.matchs.filter(function(d) { return d.equipe === e && d.statut === 'Programmé' && d.dateMatch >= eqgToday(); }).sort(function(a, b) { return a.dateMatch.localeCompare(b.dateMatch); })[0];
+    return m ? _fd(m.dateMatch) + ' — ' + esc(m.adversaire) + ' (' + esc(m.lieu) + ')' : '—'; }));
+  rows.push('<tr><th colspan="' + (eqs.length + 1) + '" style="background:#E8F5EC;color:#14503C;">🏋️ Entraînements &amp; ⚖️ Discipline</th></tr>');
+  rows.push(row('Séances d\'entraînement', function(e) { return cnt('entrainements', e); }));
+  rows.push(row('Taux de présence moyen', function(e) { var s = EQ_DATA.entrainements.filter(function(d) { return d.equipe === e; }); var P = s.reduce(function(a, d) { return a + (+d.nbPresents || 0); }, 0), A = s.reduce(function(a, d) { return a + (+d.nbAbsents || 0); }, 0); return (P + A) ? Math.round(100 * P / (P + A)) + ' %' : '—'; }));
+  rows.push(row('Dossiers disciplinaires (convoqués / sanctionnés)', function(e) { return cnt('discipline', e, function(d) { return d.statut === 'Convoqué'; }) + ' / ' + cnt('discipline', e, function(d) { return d.statut === 'Sanctionné'; }); }));
+  return '<table class="tab"><thead><tr><th>Indicateur</th>' + eqs.map(function(e) { return '<th>' + (e === 'Football' ? '⚽ ' : '🎯 ') + e + '</th>'; }).join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table>';
 }
-function eqSupprimer(node, num) {
-  if (!confirm('Supprimer définitivement cette fiche ?')) return;
-  window.fbDeleteEq(node, num).catch(function(e) { console.error(e); alert('Suppression refusée.'); });
-}
-function eqLignesExport() {
-  var l = eqFiltres();
-  if (eqVue === 'joueurs') return { titre: 'Fiches joueurs', cols: ['N°', 'Date', 'Nom', 'Prénom', 'Matricule', 'Licence', 'Équipe', 'Poste', 'Tenue', 'Pointure', 'Remarque', 'Statut'],
-    rows: l.map(function(d) { return [d.num, d.date, d.nom, d.prenom, d.mat, d.licence || '', d.equipe, d.poste, d.taille, d.pointure, d.remarque || '', d.statut]; }) };
-  return { titre: "Besoins des équipes", cols: ['N°', 'Date', 'Équipe', 'Nom équipe', 'Secrétaire', 'Matricule', 'Téléphone', 'Effectif', 'Besoins', 'Autres besoins', 'Remarques', 'Statut'],
+
+/* --- export / impression --- */
+function eqgData(p) {
+  var t = EQG[p].tab, l = eqgItems(p, t);
+  if (t === 'joueurs') return { titre: 'Fiches joueurs', cols: ['N°', 'Date', 'Nom', 'Prénom', 'Matricule', 'Licence', 'Équipe', 'Poste', 'Tenue', 'Pointure', 'Maillot', 'Remarque', 'Statut'],
+    rows: l.map(function(d) { return [d.num, d.date, d.nom, d.prenom, d.mat, d.licence || '', d.equipe, d.poste, d.taille, d.pointure, d.maillot || '', d.remarque || '', d.statut]; }) };
+  if (t === 'besoins') return { titre: 'Besoins des équipes', cols: ['N°', 'Date', 'Équipe', 'Nom équipe', 'Secrétaire', 'Matricule', 'Téléphone', 'Effectif', 'Besoins', 'Autres besoins', 'Remarques', 'Statut'],
     rows: l.map(function(d) { return [d.num, d.date, d.equipe, d.nomEquipe || '', d.nom + ' ' + d.prenom, d.mat, d.tel, d.effectif || '', d.besoins || '', d.autre || '', d.remarque || '', d.statut]; }) };
+  if (t === 'matchs') return { titre: 'Matchs et résultats', cols: ['Date', 'Heure', 'Équipe', 'Compétition', 'Nom compétition', 'Adversaire', 'Lieu', 'Score', 'Résultat', 'Statut', 'Remarque'],
+    rows: l.slice().sort(function(a, b) { return String(b.dateMatch).localeCompare(String(a.dateMatch)); }).map(function(d) { return [_fd(d.dateMatch), d.heure || '', d.equipe, d.competition, d.detail || '', d.adversaire, d.lieu, d.score || '', d.resultat || '', d.statut, d.remarque || '']; }) };
+  if (t === 'entrainements') return { titre: 'Entraînements', cols: ['Date', 'Heure', 'Lieu', 'Équipe', 'Nb présents', 'Présents', 'Nb absents', 'Absents', 'Remarque'],
+    rows: l.slice().sort(function(a, b) { return String(b.dateEntr).localeCompare(String(a.dateEntr)); }).map(function(d) { return [_fd(d.dateEntr), d.heure || '', d.lieu || '', d.equipe, d.nbPresents || 0, d.presents || '', d.nbAbsents || 0, d.absents || '', d.remarque || '']; }) };
+  if (t === 'discipline') return { titre: 'Discipline', cols: ['Date', 'Joueur', 'Matricule', 'Équipe', 'Motif', 'Décision', 'Sanction'],
+    rows: l.map(function(d) { return [_fd(d.dateDossier), d.nom + ' ' + d.prenom, d.mat, d.equipe, d.motif, d.statut, d.sanction || '']; }) };
+  return null;
 }
-function eqExporter() {
-  var x = eqLignesExport();
-  if (!x.rows.length) { alert('Rien à exporter.'); return; }
+function eqgExporter(p) {
+  var x = eqgData(p); if (!x || !x.rows.length) { alert('Rien à exporter.'); return; }
   var ws = XLSX.utils.aoa_to_sheet([x.cols].concat(x.rows)), wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, x.titre.slice(0, 30));
   XLSX.writeFile(wb, 'SCHB_Sport_' + x.titre.replace(/\s+/g, '_') + '_' + new Date().toLocaleDateString('fr-DZ').replace(/\//g, '-') + '.xlsx');
@@ -11714,36 +11926,34 @@ function _eqFenetre(titre, corps) {
   if (!w) { alert('Autorisez les fenêtres pop-up pour imprimer.'); return; }
   w.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' + esc(titre) + '</title><style>' +
     'body{font-family:Arial,sans-serif;margin:24px;color:#111}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 6px}p{font-size:12px;color:#555;margin:0 0 12px}' +
-    'table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #888;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eee}' +
-    '.sig{margin-top:40px;display:flex;justify-content:space-between;font-size:12px}@media print{button{display:none}}</style></head><body>' +
-    '<button onclick="window.print()" style="margin-bottom:12px;padding:6px 14px;">🖨️ Imprimer / Enregistrer en PDF</button>' +
-    '<h1>SCHB — Comité de Participation · Sport &amp; Travail</h1>' + corps +
+    'table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #888;padding:4px 6px;text-align:left;vertical-align:top}th{background:#eee}input,select,button{display:none}' +
+    '.sig{margin-top:40px;display:flex;justify-content:space-between;font-size:12px}@media print{.nop{display:none}}</style></head><body>' +
+    '<button class="nop" onclick="window.print()" style="display:inline-block;margin-bottom:12px;padding:6px 14px;">🖨️ Imprimer / Enregistrer en PDF</button>' +
+    '<h1>SCHB — Comité de Participation · Sport &amp; Travail</h1><p>' + esc(titre) + ' — édité le ' + new Date().toLocaleDateString('fr-DZ') + '</p>' + corps +
     '<div class="sig"><div>Le Président de l\'équipe</div><div>L\'Administrateur</div></div></body></html>');
   w.document.close();
 }
-function eqImprimer() {
-  var x = eqLignesExport();
-  if (!x.rows.length) { alert('Rien à imprimer.'); return; }
-  var t = '<table><thead><tr>' + x.cols.map(function(c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-    x.rows.map(function(r) { return '<tr>' + r.map(function(v) { return '<td>' + esc(v) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
-  _eqFenetre(x.titre, '<p>' + esc(x.titre) + ' — édité le ' + new Date().toLocaleDateString('fr-DZ') + ' — ' + x.rows.length + ' ligne(s)</p>' + t);
+function eqgImprimer(p) {
+  var t = EQG[p].tab;
+  if (t === 'stats') { _eqFenetre('Statistiques des équipes', eqgStatsHtml(p)); return; }
+  var x = eqgData(p); if (!x || !x.rows.length) { alert('Rien à imprimer.'); return; }
+  _eqFenetre(x.titre + ' — ' + x.rows.length + ' ligne(s)', '<table><thead><tr>' + x.cols.map(function(c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    x.rows.map(function(r) { return '<tr>' + r.map(function(v) { return '<td>' + esc(v) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>');
 }
-function eqRecap() {
-  var l = eqFiltres().filter(function(d) { return d.statut !== 'Refusé'; });
-  if (!l.length) { alert('Aucune fiche (hors refusées) à récapituler.'); return; }
-  var tailles = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'], corps = '<p>Récapitulatif des tenues et pointures (fiches non refusées, selon les filtres) — ' + new Date().toLocaleDateString('fr-DZ') + '</p>';
+function eqgRecap(p) {
+  var l = eqgItems(p, 'joueurs').filter(function(d) { return d.statut !== 'Refusé' && d.statut !== 'Radié'; });
+  if (!l.length) { alert('Aucun joueur à récapituler.'); return; }
+  var tailles = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL'], corps = '';
   ['Football', 'Pétanque'].forEach(function(eq) {
-    var j = l.filter(function(d) { return d.equipe === eq; });
-    if (!j.length) return;
+    var j = l.filter(function(d) { return d.equipe === eq; }); if (!j.length) return;
     var ct = {}, cp = {}, cpo = {};
     j.forEach(function(d) { ct[d.taille] = (ct[d.taille] || 0) + 1; cp[d.pointure] = (cp[d.pointure] || 0) + 1; cpo[d.poste] = (cpo[d.poste] || 0) + 1; });
     var row = function(o, keys) { return '<tr>' + keys.map(function(k) { return '<th>' + esc(k) + '</th>'; }).join('') + '<th>Total</th></tr><tr>' + keys.map(function(k) { return '<td>' + (o[k] || 0) + '</td>'; }).join('') + '<td><b>' + j.length + '</b></td></tr>'; };
-    var pts = Object.keys(cp).sort(function(a, b) { return a - b; }), pos = Object.keys(cpo).sort();
-    corps += '<h2>' + esc(eq) + ' — ' + j.length + ' joueur(s)</h2><table>' + row(ct, tailles) + '</table><br><table>' + row(cp, pts) + '</table><br><table>' + row(cpo, pos) + '</table>';
-    corps += '<h2>Liste nominative</h2><table><thead><tr><th>Joueur</th><th>Matricule</th><th>Licence</th><th>Poste</th><th>Tenue</th><th>Pointure</th><th>Statut</th></tr></thead><tbody>' +
-      j.map(function(d) { return '<tr><td>' + esc(d.nom + ' ' + d.prenom) + '</td><td>' + esc(d.mat) + '</td><td>' + esc(d.licence || '') + '</td><td>' + esc(d.poste) + '</td><td>' + esc(d.taille) + '</td><td>' + esc(d.pointure) + '</td><td>' + esc(d.statut) + '</td></tr>'; }).join('') + '</tbody></table>';
+    corps += '<h2>' + esc(eq) + ' — ' + j.length + ' joueur(s)</h2><table>' + row(ct, tailles) + '</table><br><table>' + row(cp, Object.keys(cp).sort(function(a, b) { return a - b; })) + '</table><br><table>' + row(cpo, Object.keys(cpo).sort()) + '</table>' +
+      '<h2>Liste nominative</h2><table><thead><tr><th>N° maillot</th><th>Joueur</th><th>Matricule</th><th>Licence</th><th>Poste</th><th>Tenue</th><th>Pointure</th><th>Statut</th></tr></thead><tbody>' +
+      j.slice().sort(function(a, b) { return (+a.maillot || 999) - (+b.maillot || 999); }).map(function(d) { return '<tr><td>' + esc(d.maillot || '') + '</td><td>' + esc(d.nom + ' ' + d.prenom) + '</td><td>' + esc(d.mat) + '</td><td>' + esc(d.licence || '') + '</td><td>' + esc(d.poste) + '</td><td>' + esc(d.taille) + '</td><td>' + esc(d.pointure) + '</td><td>' + esc(d.statut) + '</td></tr>'; }).join('') + '</tbody></table>';
   });
-  _eqFenetre('Récap tenues et pointures', corps);
+  _eqFenetre('Récapitulatif tenues, pointures et maillots', corps);
 }
 </script>
 <div id="fete-voeux" role="note">🎄 <b>Joyeuses fêtes</b> &amp; <b>Bonne année 2027</b> ✨ — Le Comité de Participation SCHB vous souhaite santé, bonheur et prospérité. <span dir="rtl" style="margin-inline-start:8px;">كل عام وأنتم بخير</span></div>
