@@ -834,6 +834,17 @@
         _saisonHandlers[cle] = function(snapshot) { callback(!!snapshot.val()); };
         _saisonRefs[cle].on('value', _saisonHandlers[cle], errorCallback || function(err){ console.error(err); });
       };
+      // Valeur texte dans meta/ (ex. thème de fête choisi par l'admin) : lecture publique, écriture admin.
+      var _metaTxtRefs = {};
+      window.fbSetMetaTexte = function(cle, valeur) {
+        return _fbDb.ref('meta/' + cle).set(String(valeur || ''));
+      };
+      window.fbListenMetaTexte = function(cle, callback, errorCallback) {
+        if (_metaTxtRefs[cle]) _metaTxtRefs[cle].ref.off('value', _metaTxtRefs[cle].h);
+        var ref = _fbDb.ref('meta/' + cle), h = function(snap) { var v = snap.val(); callback(typeof v === 'string' ? v : ''); };
+        _metaTxtRefs[cle] = { ref: ref, h: h };
+        ref.on('value', h, errorCallback || function(err) { console.error(err); });
+      };
       window.fbStopListenSaison = function(cle) {
         if (_saisonRefs[cle] && _saisonHandlers[cle]) _saisonRefs[cle].off('value', _saisonHandlers[cle]);
         delete _saisonRefs[cle]; delete _saisonHandlers[cle];
@@ -1402,7 +1413,7 @@ nav button.nav-mgmc:hover,nav button.nav-mgmc.actif{background:#fff;color:#1A3FC
 #vue-mgmc .mg-ok.ok{background:#E7EEFF;color:#0B2A8F;display:block;}#vue-mgmc .mg-ok.ko{background:#FDECEA;color:#A12622;display:block;}
 </style>
 <style id="fete-style">
-/* ===== Thème Fêtes : Noël & Nouvel An 2027 (désactivable via le bouton ❄️) ===== */
+/* ===== Thèmes de fêtes (Noël & Nouvel An, 8 mars, 1er mai) — activés par l'administrateur ===== */
 html.fete{--bleu:#14503C;--bleu2:#1F6B4E;--rouge:#B3262E;--or:#E7B04A;--or-clair:#F8E2A6;--creme:#FFF9F0;--ligne:#E8D9BD;
   --ombre:0 4px 20px rgba(20,80,60,.14);}
 html.fete .bandeau{height:8px;background:repeating-linear-gradient(45deg,#B3262E 0 12px,#fff 12px 18px,#14503C 18px 30px,#fff 30px 36px);}
@@ -1433,6 +1444,33 @@ html.fete #fete-neige{display:block;}
 #fete-toggle:hover{transform:scale(1.08);}
 html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
 @media (prefers-reduced-motion:reduce){#fete-guirlande i{animation:none;}}
+/* --- 8 mars : Fête de la femme --- */
+html.fete-femme{--bleu:#6A1B6E;--bleu2:#8E3A92;--rouge:#C2185B;--or:#E8A0C0;--or-clair:#F8DCEA;--creme:#FFF7FB;--ligne:#EBD3E2;--ombre:0 4px 20px rgba(106,27,110,.14);}
+html.fete-femme .bandeau{background:repeating-linear-gradient(45deg,#C2185B 0 12px,#fff 12px 18px,#6A1B6E 18px 30px,#fff 30px 36px);}
+html.fete-femme .hdr-overlay{background:linear-gradient(100deg,rgba(45,10,50,.94) 0%,rgba(90,25,95,.88) 36%,rgba(140,40,120,.72) 66%,rgba(194,24,91,.45) 100%) !important;}
+html.fete-femme header::after{background:radial-gradient(circle at 85% 20%,rgba(232,160,192,.35),transparent 55%) !important;}
+html.fete-femme nav button.actif{background:linear-gradient(135deg,#C2185B,#8E1245) !important;box-shadow:0 6px 16px rgba(194,24,91,.32) !important;}
+html.fete-femme nav button:hover{color:#6A1B6E;background:rgba(106,27,110,.08);}
+html.fete-femme .hero-m{background:linear-gradient(112deg,rgba(45,10,50,.94) 0%,rgba(90,25,95,.86) 48%,rgba(194,24,91,.55) 100%),var(--img-cp) !important;background-size:cover !important;background-position:center 58% !important;}
+html.fete-femme .hero-h1 em{color:#F8DCEA;}
+html.fete-femme .hdr-eyebrow::before{background:#E8A0C0;}
+html.fete-femme ::selection{background:#F8DCEA;}
+html.fete-femme #fete-voeux{background:linear-gradient(90deg,#6A1B6E,#C2185B 50%,#8E3A92);}
+html.fete-femme #fete-guirlande{display:none;}
+html.fete-femme .sec-title::after{content:" 🌸";}
+/* --- 1er mai : Fête des travailleurs --- */
+html.fete-travail{--bleu:#7A1417;--bleu2:#A32226;--rouge:#C62828;--or:#E7B04A;--or-clair:#F8E2A6;--creme:#FFFAF2;--ligne:#EBD9C0;--ombre:0 4px 20px rgba(122,20,23,.14);}
+html.fete-travail .bandeau{background:repeating-linear-gradient(45deg,#C62828 0 12px,#fff 12px 18px,#E7B04A 18px 30px,#fff 30px 36px);}
+html.fete-travail .hdr-overlay{background:linear-gradient(100deg,rgba(60,8,10,.94) 0%,rgba(110,18,22,.88) 36%,rgba(160,30,34,.72) 66%,rgba(231,176,74,.40) 100%) !important;}
+html.fete-travail header::after{background:radial-gradient(circle at 85% 20%,rgba(231,176,74,.35),transparent 55%) !important;}
+html.fete-travail nav button.actif{background:linear-gradient(135deg,#C62828,#8E1B1B) !important;box-shadow:0 6px 16px rgba(198,40,40,.32) !important;}
+html.fete-travail nav button:hover{color:#7A1417;background:rgba(122,20,23,.08);}
+html.fete-travail .hero-m{background:linear-gradient(112deg,rgba(60,8,10,.94) 0%,rgba(110,18,22,.86) 48%,rgba(198,40,40,.55) 100%),var(--img-cp) !important;background-size:cover !important;background-position:center 58% !important;}
+html.fete-travail .hero-h1 em{color:#F8E2A6;}
+html.fete-travail ::selection{background:#F8E2A6;}
+html.fete-travail #fete-voeux{background:linear-gradient(90deg,#7A1417,#C62828 50%,#B8860B);}
+html.fete-travail #fete-guirlande{display:none;}
+html.fete-travail .sec-title::after{content:" 🛠️";}
 @media print{#fete-neige,#fete-guirlande,#fete-voeux{display:none !important;}}
 </style>
 </head>
@@ -3058,10 +3096,15 @@ html.fete .sec-title::after{content:" 🎄";font-size:.7em;}
     <div id="admin-tab-vue">
       <div class="panneau" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
         <div>
-          <h3 class="serif" style="color:var(--bleu);margin-bottom:4px;font-size:16px;">🎄 Thème des fêtes (Noël / Nouvel An)</h3>
+          <h3 class="serif" style="color:var(--bleu);margin-bottom:4px;font-size:16px;">🎉 Thème des fêtes</h3>
           <div id="fete-admin-etat" style="font-size:13.5px;color:#5C5142;">Chargement…</div>
         </div>
-        <button id="btn-toggle-fete" class="btn btn-primary" onclick="toggleFeteAdmin()">…</button>
+        <select id="fete-admin-select" onchange="choisirFeteAdmin(this.value)" style="min-width:260px;">
+          <option value="off">⛔ Aucun thème (site habituel)</option>
+          <option value="noel">🎄 Noël &amp; Nouvel An (1er janvier)</option>
+          <option value="femme">🌸 Fête de la femme (8 mars)</option>
+          <option value="travail">🛠️ Fête des travailleurs (1er mai)</option>
+        </select>
       </div>
       <div id="vue-globale"></div>
     </div>
@@ -12089,11 +12132,20 @@ function eqgRecap(p) {
 <canvas id="fete-neige" aria-hidden="true"></canvas>
 <script>
 (function () {
-  var KEY = 'schb_fete', root = document.documentElement;
+  var KEY = 'schb_fete_theme', root = document.documentElement;
+  var TH = {
+    noel:    { cls: 'fete-noel',    cols: ['rgba(255,255,255,.88)'], forme: 'rond',
+               txt: '🎄 <b>Joyeuses fêtes</b> &amp; <b>Bonne année</b> ✨ — Le Comité de Participation SCHB vous souhaite santé, bonheur et prospérité. <span dir="rtl" style="margin-inline-start:8px;">كل عام وأنتم بخير</span>' },
+    femme:   { cls: 'fete-femme',   cols: ['#F8BBD9', '#F48FB1', '#CE93D8', '#fff'], forme: 'petale',
+               txt: '🌸 <b>8 mars — Journée internationale des droits des femmes</b> · Le Comité de Participation SCHB souhaite une très belle fête à toutes les travailleuses et à toutes les femmes ! 💐 <span dir="rtl" style="margin-inline-start:8px;">كل عام ونساؤنا بخير</span>' },
+    travail: { cls: 'fete-travail', cols: ['#E53935', '#FBC02D', '#fff', '#C62828'], forme: 'confetti',
+               txt: '🛠️ <b>1er mai — Fête internationale des travailleurs</b> · Le Comité de Participation SCHB rend hommage à toutes les travailleuses et à tous les travailleurs de la SCHB ! ✊ <span dir="rtl" style="margin-inline-start:8px;">عيد العمال سعيد</span>' }
+  };
   function lire() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   function ecrire(v) { try { localStorage.setItem(KEY, v); } catch (e) {} }
-  var actif = lire() === 'on';   // piloté par l'administrateur (meta/feteActive)
-  // Guirlande dans l'en-tête
+  var theme = TH[lire()] ? lire() : 'off';   // piloté par l'administrateur (meta/feteTheme)
+  var actif = theme !== 'off';
+  // Guirlande dans l'en-tête (thème Noël uniquement, masquée par CSS sinon)
   var hdr = document.querySelector('header');
   if (hdr) {
     var g = document.createElement('div'); g.id = 'fete-guirlande'; g.setAttribute('aria-hidden', 'true');
@@ -12110,55 +12162,66 @@ function eqgRecap(p) {
     var v = document.getElementById('fete-voeux');
     if (v && hdr.parentNode) hdr.parentNode.insertBefore(v, hdr);
   }
-  // Neige
+  // Particules : neige (Noël), pétales (8 mars), confettis (1er mai)
   var cv = document.getElementById('fete-neige'), ctx = cv.getContext('2d'), fl = [], raf = 0;
   var reduit = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   function taille() { cv.width = innerWidth; cv.height = innerHeight; }
   function init() {
-    fl = []; var n = Math.min(90, Math.round(innerWidth / 14));
-    for (var i = 0; i < n; i++) fl.push({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, r: 1 + Math.random() * 2.8, v: .4 + Math.random() * 1.1, d: Math.random() * Math.PI * 2 });
+    fl = []; var n = Math.min(90, Math.round(innerWidth / 14)), c = TH[theme].cols;
+    for (var i = 0; i < n; i++) fl.push({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, r: 1 + Math.random() * 2.8, v: .4 + Math.random() * 1.1, d: Math.random() * Math.PI * 2, c: c[i % c.length] });
   }
   function boucle() {
-    ctx.clearRect(0, 0, cv.width, cv.height); ctx.fillStyle = 'rgba(255,255,255,.88)';
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    var f0 = TH[theme].forme;
     fl.forEach(function (f) {
       f.y += f.v; f.d += .01; f.x += Math.sin(f.d) * .5;
       if (f.y > cv.height + 5) { f.y = -5; f.x = Math.random() * cv.width; }
-      ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.283); ctx.fill();
+      ctx.fillStyle = f.c; ctx.beginPath();
+      if (f0 === 'petale') { ctx.ellipse(f.x, f.y, f.r * 1.9, f.r, f.d * 2, 0, 6.283); }
+      else if (f0 === 'confetti') { ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.d * 3); ctx.rect(-f.r, -f.r / 2, f.r * 2.2, f.r); ctx.restore(); }
+      else ctx.arc(f.x, f.y, f.r, 0, 6.283);
+      ctx.fill();
     });
     raf = requestAnimationFrame(boucle);
   }
   function appliquer() {
     root.classList.toggle('fete', actif);
+    Object.keys(TH).forEach(function (k) { root.classList.toggle(TH[k].cls, actif && k === theme); });
     cancelAnimationFrame(raf);
+    var vx = document.getElementById('fete-voeux'); if (vx && actif) vx.innerHTML = TH[theme].txt;
     if (actif && !reduit) { taille(); init(); boucle(); } else ctx.clearRect(0, 0, cv.width, cv.height);
   }
   addEventListener('resize', function () { if (actif) { taille(); init(); } });
   document.addEventListener('visibilitychange', function () { cancelAnimationFrame(raf); if (actif && !reduit && !document.hidden) boucle(); });
-  window._feteEtat = function (v) { v = !!v; ecrire(v ? 'on' : 'off'); if (v !== actif) { actif = v; appliquer(); } if (typeof window._feteAdminUI === 'function') window._feteAdminUI(v); };
+  window._feteEtat = function (v) {
+    v = TH[v] ? v : 'off'; ecrire(v);
+    if (v !== theme) { theme = v; actif = v !== 'off'; appliquer(); }
+    if (typeof window._feteAdminUI === 'function') window._feteAdminUI(v);
+  };
   appliquer();
-  // Écoute en temps réel de l'état choisi par l'administrateur (dès que Firebase est prêt)
+  // Écoute en temps réel du thème choisi par l'administrateur (dès que Firebase est prêt)
   var essais = 0, t = setInterval(function () {
-    if (typeof window.fbListenSaison === 'function') {
+    if (typeof window.fbListenMetaTexte === 'function') {
       clearInterval(t);
-      window.fbListenSaison('feteActive', function (v) { window._feteEtat(v); });
+      window.fbListenMetaTexte('feteTheme', function (v) { window._feteEtat(v); });
     } else if (++essais > 100) clearInterval(t);
   }, 300);
 })();
 </script>
 <script>
+var _FETE_LIB = { noel: '🎄 Noël &amp; Nouvel An', femme: '🌸 Fête de la femme (8 mars)', travail: '🛠️ Fête des travailleurs (1er mai)' };
 function _feteAdminUI(v) {
-  var b = document.getElementById('btn-toggle-fete'), e = document.getElementById('fete-admin-etat');
-  if (b) { b.textContent = v ? '🔕 Désactiver le thème des fêtes' : '🎄 Activer le thème des fêtes'; b.style.background = v ? 'var(--rouge)' : ''; b.style.borderColor = v ? 'var(--rouge)' : ''; }
-  if (e) e.innerHTML = v ? '<span class="badge b-ok">🎄 Activé</span> — guirlande, neige et bandeau de vœux visibles par tous les visiteurs.' : '<span class="badge b-clo">⛔ Désactivé</span> — le site s\'affiche avec son thème habituel.';
+  var sel = document.getElementById('fete-admin-select'), e = document.getElementById('fete-admin-etat');
+  if (sel) sel.value = _FETE_LIB[v] ? v : 'off';
+  if (e) e.innerHTML = _FETE_LIB[v] ? '<span class="badge b-ok">Activé</span> — ' + _FETE_LIB[v] + ' : thème, animation et bandeau de vœux visibles par tous les visiteurs.' : '<span class="badge b-clo">⛔ Désactivé</span> — le site s\'affiche avec son thème habituel.';
 }
-function toggleFeteAdmin() {
-  var nouveau = !(document.documentElement.classList.contains('fete'));
-  if (typeof window.fbSetSaison !== 'function') { alert('Base de données indisponible. Réessayez dans un instant.'); return; }
-  window.fbSetSaison('feteActive', nouveau).catch(function (err) {
-    alert("Impossible de modifier le thème des fêtes : " + (err && err.message || 'erreur inconnue') + "\nVérifiez les règles Firebase (meta/feteActive : lecture publique, écriture admin).");
+function choisirFeteAdmin(v) {
+  if (typeof window.fbSetMetaTexte !== 'function') { alert('Base de données indisponible. Réessayez dans un instant.'); _feteAdminUI(window._feteCourant || 'off'); return; }
+  window.fbSetMetaTexte('feteTheme', v).catch(function (err) {
+    alert("Impossible de modifier le thème des fêtes : " + (err && err.message || 'erreur inconnue') + "\nVérifiez les règles Firebase (meta/feteTheme : lecture publique, écriture admin).");
   });
 }
-document.addEventListener('DOMContentLoaded', function () { _feteAdminUI(document.documentElement.classList.contains('fete')); });
+document.addEventListener('DOMContentLoaded', function () { _feteAdminUI((document.documentElement.className.match(/fete-(noel|femme|travail)/) || [0, 'off'])[1]); });
 </script>
 </body>
 </html>
