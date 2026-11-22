@@ -6932,11 +6932,35 @@ function renderTableau() {
     }
     if (wasValide(d)) {
       rows += '<button class="btn-pdf-sm" onclick="genererPDF(&quot;' + d.num + '&quot;)">📥 PDF</button>';
+      rows += '<button class="btn-success-sm" onclick="envoyerPCWhatsApp(&quot;' + d.num + '&quot;)">📲 WhatsApp</button>';
     }
-    rows += '<button class="btn-del-sm" onclick="supprimerDemande(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
+    if (SUPPRESSION_PRISE_EN_CHARGE) rows += '<button class="btn-del-sm" onclick="supprimerDemande(&quot;' + d.num + '&quot;)">🗑 Supprimer</button>';
     rows += '</div></td></tr>';
   });
   tbody.innerHTML = rows;
+}
+
+// ===== Envoi WhatsApp de la prise en charge validée =====
+var WA_ENVOI_AUTO_VALIDATION = true;       // false = ne plus déclencher l'envoi à la validation
+var WA_ADMIN_NUM = '0660877538';           // numéro WhatsApp de l'administrateur (affiché dans le message)
+function waNumero(t) {
+  var n = String(t || '').replace(/[\s.\-()]/g, '');
+  if (n.indexOf('+') === 0) n = n.slice(1);
+  else if (n.indexOf('00') === 0) n = n.slice(2);
+  else if (n.indexOf('0') === 0) n = '213' + n.slice(1);   // Algérie
+  return /^\d{11,15}$/.test(n) ? n : '';
+}
+function envoyerPCWhatsApp(num) {
+  var d = demandes.find(function(x){ return x.num === num; });
+  if (!d || !wasValide(d)) { alert("Cette demande n'est pas validée."); return; }
+  var n = waNumero(d.tel);
+  if (!n) { alert("Aucun numéro de téléphone valide sur la demande " + num + " : envoi WhatsApp impossible."); return; }
+  var txt = 'Bonjour ' + d.nom + ' ' + d.prenom + ',\n\nVotre prise en charge médicale n° ' + (d.numPC || d.num) + ' (demande ' + d.num + ') a été *validée* par le Comité de Participation de la SCHB.\n' +
+    'Veuillez trouver ci-joint le document PDF à présenter à l\'établissement.\n\nComité de Participation SCHB — ' + WA_ADMIN_NUM.replace(/(\d{4})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4');
+  // 1) le PDF est généré et téléchargé ; 2) la discussion WhatsApp s'ouvre avec le message prêt à envoyer
+  try { genererPDF(num); } catch (e) { console.error(e); alert('Génération du PDF impossible.'); }
+  var w = window.open('https://wa.me/' + n + '?text=' + encodeURIComponent(txt), '_blank');
+  if (!w) alert('Autorisez les fenêtres pop-up pour ouvrir WhatsApp, ou utilisez le bouton « 📲 WhatsApp » de la ligne.');
 }
 
 function validerDemande(num) {
@@ -6949,6 +6973,8 @@ function validerDemande(num) {
   d.validatedAt = Date.now();
   d.numPC = String(demandes.filter(wasValide).length).padStart(2,'0');
   saveData(); renderStats(); renderTableau();
+  // Envoi WhatsApp de la prise en charge (PDF + message) au numéro inscrit sur la demande
+  if (WA_ENVOI_AUTO_VALIDATION) envoyerPCWhatsApp(num);
   // Sync to Firebase
   if (typeof window.fbUpdateDemande === 'function') {
     window.fbUpdateDemande(num, { statut: d.statut, dateValidation: d.dateValidation, numPC: d.numPC, validatedAt: d.validatedAt }, d.trackingCode || '')
@@ -7063,7 +7089,7 @@ function voirDetail(num) {
   if (wasValide(d)) {
     body += '<button class="btn btn-or" onclick="genererPDF(&quot;' + d.num + '&quot;)">📥 Télécharger PDF</button>';
   }
-  body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerDemande(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer la demande</button>';
+  if (SUPPRESSION_PRISE_EN_CHARGE) body += '<button class="btn" style="background:var(--rouge);color:white;" onclick="supprimerDemande(&quot;' + d.num + '&quot;);closeModal()">🗑 Supprimer la demande</button>';
   body += '</div>';
   document.getElementById('modal-title').textContent = 'Demande ' + d.num;
   document.getElementById('modal-body').innerHTML = body;
@@ -7081,7 +7107,10 @@ function voirDetail(num) {
 
 function closeModal() { document.getElementById('overlay').classList.remove('open'); }
 
+// Suppression des prises en charge enregistrées : DÉSACTIVÉE (mettre true pour la réactiver).
+var SUPPRESSION_PRISE_EN_CHARGE = false;
 function supprimerDemande(num) {
+  if (!SUPPRESSION_PRISE_EN_CHARGE) { alert('La suppression des prises en charge enregistrées est désactivée.'); return; }
   if (!adminLive) { alert('Synchronisation en cours, réessayez dans un instant.'); return; }
   var d = demandes.find(function(x){ return x.num === num; });
   if (!d) return;
@@ -10306,7 +10335,7 @@ function _livreExpire(d) {
 function purgerAutomatique() {
   if (!_adminAuthed) return;
   try {
-    if (adminLive && Array.isArray(demandes)) {
+    if (SUPPRESSION_PRISE_EN_CHARGE && adminLive && Array.isArray(demandes)) {
       var exp = demandes.filter(_demandeExpiree);
       if (exp.length) {
         demandes = demandes.filter(function(x){ return !_demandeExpiree(x); });
