@@ -567,7 +567,7 @@
       };
       window.fbGetTelEffectif = function(mat) {
         if (!mat || /[.#$\[\]\/]/.test(mat)) return Promise.resolve(null);
-        return _fbDb.ref('telephones/' + mat + '/tel').once('value').then(function(x) { return x.val(); }).catch(function() { return null; });
+        return _fbDb.ref('telephones/' + mat + '/tel').once('value').then(function(x) { return x.val(); }).catch(function(err) { console.warn('Lecture du téléphone refusée ou impossible :', err); return null; });
       };
       var _refTels = null, _hTels = null;
       window.fbListenAdminTelephones = function(callback, errorCallback) {
@@ -4472,6 +4472,13 @@ function sauverTelEffectif(prefix) {
   var mat = g(prefix + '-matricule');
   var s = _acSession();
   var nz = function(x) { return String(x || '').trim().replace(/^0+/, ''); };
+  if (_adminAuthed) {
+    // Admin : on enregistre seulement pour un matricule retrouvé dans l'effectif.
+    var champ = document.getElementById(prefix + '-matricule');
+    s = (champ && champ.dataset.cle && champ.dataset.auto === mat)
+      ? { mat: champ.dataset.cle, nom: g(prefix + '-nom'), prenom: g(prefix + '-prenom') } : null;
+    if (s) mat = s.mat;
+  }
   if (!mat || !s || nz(s.mat) !== nz(mat) || typeof window.fbSaveTelEffectif !== 'function') { if (mat && s) console.warn('Infos non enregistrées : matricule différent de la session', mat, s.mat); return; }
   mat = String(s.mat);
   var obj = {}, tel = g(prefix + '-tel');
@@ -4494,10 +4501,6 @@ function choisirEtablissement(carte) {
   sel.dispatchEvent(new Event('change', { bubbles: true }));
   document.querySelectorAll('.grid-spec .card-spec').forEach(function(c) { c.classList.toggle('selectionnee', c === carte); });
   _accesPrefill('demande');
-  var s = _acSession(), tel = document.getElementById('f-tel');
-  if (!_adminAuthed && s && tel && !tel.value.trim() && typeof window.fbGetTelEffectif === 'function') {
-    window.fbGetTelEffectif(s.mat).then(function(t) { if (t && !tel.value.trim()) tel.value = t; });
-  }
   var cible = document.getElementById('f-nom') || sel;
   var form = sel.closest('.form-card, form, .card') || sel;
   form.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -4516,6 +4519,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+// Remplit le champ Téléphone avec le numéro enregistré dans l'effectif (champ vide uniquement).
+// cle = matricule tel qu'enregistré dans la base (sans les zéros perdus à l'import, le cas échéant).
+function remplirTelEffectif(p, cle) {
+  var tel = document.getElementById(p + '-tel'), champ = document.getElementById(p + '-matricule');
+  if (!tel || !champ || !cle || tel.value.trim() || typeof window.fbGetTelEffectif !== 'function') return;
+  var saisi = champ.value.trim();
+  window.fbGetTelEffectif(String(cle)).then(function(t) {
+    if (t && !tel.value.trim() && champ.value.trim() === saisi) tel.value = t;
+  });
+}
 function _accesPrefill(id) {
   var s = _acSession(), p = VUES_PROTEGEES[id];
   if (_adminAuthed || !s || !p) return;
@@ -4525,6 +4538,9 @@ function _accesPrefill(id) {
   };
   put('nom', s.nom); put('prenom', s.prenom); put('matricule', s.mat);
   put(p === 'fp' ? 'fonction' : 'service', s.service);
+  var m = document.getElementById(p + '-matricule');
+  var nz = function(x) { return String(x || '').trim().replace(/^0+/, ''); };
+  if (m && nz(m.value) === nz(s.mat)) remplirTelEffectif(p, s.mat);
 }
 // Admin : la saisie d'un matricule remplit la fiche du travailleur (et remplace celle du précédent).
 document.addEventListener('DOMContentLoaded', function() {
@@ -4533,10 +4549,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!champ) return;
     champ.addEventListener('change', function() {
       var mat = champ.value.trim();
+      champ.dataset.cle = '';
+      // Travailleur : uniquement son propre numéro.
+      var s = _acSession(), nz = function(x) { return String(x || '').trim().replace(/^0+/, ''); };
+      if (!_adminAuthed && s && mat && nz(mat) === nz(s.mat)) remplirTelEffectif(p, s.mat);
       if (!_adminAuthed || !mat || /[.#$\[\]\/]/.test(mat) || typeof window.fbFindEffectifPublic !== 'function') return;
       var sansZeros = mat.replace(/^0+/, '');
+      var cle = mat;
       window.fbFindEffectifPublic(mat).then(function(e) {
-        return (!e && sansZeros && sansZeros !== mat) ? window.fbFindEffectifPublic(sansZeros) : e;
+        if (!e && sansZeros && sansZeros !== mat) { cle = sansZeros; return window.fbFindEffectifPublic(sansZeros); }
+        return e;
       }).then(function(e) {
         if (champ.value.trim() !== mat) return; // matricule modifié entre-temps
         var avant = champ.dataset.auto; // matricule de la fiche remplie précédemment
@@ -4548,6 +4570,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var put = function(suffixe, val) { var el = document.getElementById(p + '-' + suffixe); if (el) el.value = val || ''; };
         put('nom', e && e.nom); put('prenom', e && e.prenom);
         put(p === 'fp' ? 'fonction' : 'service', service);
+        if (e) { champ.dataset.cle = cle; remplirTelEffectif(p, cle); }
       }).catch(function(err) { console.warn('Fiche travailleur introuvable :', err); });
     });
   });
